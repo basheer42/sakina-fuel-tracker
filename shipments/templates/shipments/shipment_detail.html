@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto bg-white p-8 rounded-lg shadow-lg mt-8">
+    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+        <h2 class="text-3xl font-semibold text-blue-700">{{ page_title }}</h2>
+        <div>
+             {% if can_change_shipment %} {# Show Edit button if user can change #}
+            <a href="{% url 'shipments:shipment-edit' shipment.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm text-sm mr-2">
+                Edit
+            </a>
+            {% endif %}
+             {% if can_delete_shipment %} {# Show Delete button if user can delete #}
+            <a href="{% url 'shipments:shipment-delete' shipment.pk %}" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm text-sm">
+                Delete
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4 text-gray-700">
+        <div>
+            <strong class="font-medium text-gray-900">Import Date:</strong>
+            <p>{{ shipment.import_date|date:"F j, Y" }}</p>
+        </div>
+        <div>
+            <strong class="font-medium text-gray-900">Supplier:</strong>
+            <p>{{ shipment.supplier_name }}</p>
+        </div>
+        <div>
+            <strong class="font-medium text-gray-900">Product:</strong>
+            <p>{{ shipment.product.name }}</p> {# Use product name from FK #}
+        </div>
+        <div>
+            <strong class="font-medium text-gray-900">Quantity:</strong>
+            <p>{{ shipment.quantity_litres|floatformat:2 }} Litres</p>
+        </div>
+        <div>
+            <strong class="font-medium text-gray-900">Price per Litre:</strong>
+            <p>${{ shipment.price_per_litre|floatformat:3 }}</p>
+        </div>
+        <div>
+            <strong class="font-medium text-gray-900">Total Cost:</strong>
+            <p>
+                {% if shipment.total_cost %}
+                    ${{ shipment.total_cost|floatformat:2 }}
+                {% else %}
+                    N/A
+                {% endif %}
+            </p>
+        </div>
+         {# Display the user who owns the shipment - Admin might want to see this #}
+        <div class="md:col-span-2">
+             <strong class="font-medium text-gray-900">Owner:</strong>
+             <p>{{ shipment.user.username }}</p>
+        </div>
+        <div class="md:col-span-2">
+            <strong class="font-medium text-gray-900">Notes:</strong>
+            <p class="mt-1 whitespace-pre-wrap">{{ shipment.notes|default_if_none:"No notes provided." }}</p>
+        </div>
+        <div class="md:col-span-2 pt-4 border-t border-gray-200 mt-4">
+            <p class="text-xs text-gray-500">Record created: {{ shipment.created_at|date:"F j, Y, P" }}</p>
+            <p class="text-xs text-gray-500">Last updated: {{ shipment.updated_at|date:"F j, Y, P" }}</p>
+        </div>
+    </div>
+
+    <div class="mt-8 text-center">
+        <a href="{% url 'shipments:shipment-list' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+            ← Back to Shipment List
+        </a>
+    </div>
+</div>
+{% endblock content %}

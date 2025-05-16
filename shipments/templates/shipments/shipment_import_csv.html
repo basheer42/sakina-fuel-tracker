@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-lg mt-10">
+    <h2 class="text-3xl font-semibold text-blue-700 mb-6 text-center">{{ page_title }}</h2>
+
+    {# Display messages (success/error from view) #}
+    {# Messages are handled in base.html, but you might want specific error display here later #}
+
+    <form method="post" enctype="multipart/form-data"> {# IMPORTANT: enctype for file uploads #}
+        {% csrf_token %}
+
+        {# Form field #}
+        <div class="mb-6">
+             {{ form.csv_file.label_tag }} {# Renders the label #}
+             {{ form.csv_file }} {# Renders the file input with its widget #}
+             {% for error in form.csv_file.errors %} {# Display field errors #}
+                 <p class="mt-1 text-xs text-red-600">{{ error }}</p>
+             {% endfor %}
+             {% if form.csv_file.help_text %} {# Display help text #}
+                 <p class="mt-1 text-xs text-gray-500">{{ form.csv_file.help_text|safe }}</p>
+             {% endif %}
+        </div>
+
+        {# Display non-field errors #}
+        {% if form.non_field_errors %}
+            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        <div class="mt-8">
+            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Upload CSV
+            </button>
+        </div>
+    </form>
+
+    <p class="mt-6 text-center text-sm text-gray-600">
+        <a href="{% url 'shipments:shipment-list' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+            ← Back to Shipment List
+        </a>
+    </p>
+
+    {# Add instructions/CSV format examples here later #}
+    {# Example CSV format: import_date,supplier_name,product_name,quantity_litres,price_per_litre,notes #}
+    {# e.g. 2025-05-15,"FuelCo","Diesel",1000.5,1.234,"Notes go here" #}
+
+</div>
+{% endblock content %}

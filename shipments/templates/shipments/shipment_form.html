@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+    <h2 class="text-3xl font-semibold text-blue-700 mb-6 text-center">{{ page_title }}</h2>
+
+    <form method="post" novalidate>
+        {% csrf_token %} {# Important for security! #}
+
+        {# This first block for looping through fields is commented out line by line #}
+        {# {% for field in form %} #}
+        {#     <div class="mb-4"> #}
+        {#         <label for="{{ field.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-1"> #}
+        {#             {{ field.label }} #}
+        {#         </label> #}
+        {#         {{ field }} #}
+        {#         {% if field.help_text %} #}
+        {#             <p class="mt-1 text-xs text-gray-500">{{ field.help_text }}</p> #}
+        {#         {% endif %} #}
+        {#         {% for error in field.errors %} #}
+        {#             <p class="mt-1 text-xs text-red-600">{{ error }}</p> #}
+        {#         {% endfor %} #}
+        {#     </div> #}
+        {# {% endfor %} #}
+        {# --- End of COMMENTED OUT loop block --- #}
+
+
+        {# This second block for rendering fields individually IS THE ONE WE ARE USING #}
+        <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
+            {# Display non-field errors here too for forms #}
+            {% if form.non_field_errors %}
+                <div class="sm:col-span-2 mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                    {% for error in form.non_field_errors %}
+                        <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <div class="sm:col-span-2 mb-4">
+                <label for="{{ form.import_date.id_for_label }}" class="block text-sm font-medium text-gray-700">Import Date</label>
+                {{ form.import_date }} {# Styled by global CSS #}
+                {% for error in form.import_date.errors %}
+                    <p class="text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.supplier_name.id_for_label }}" class="block text-sm font-medium text-gray-700">Supplier Name</label>
+                {{ form.supplier_name }} {# Styled by global CSS #}
+                {% for error in form.supplier_name.errors %}
+                    <p class="text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.product.id_for_label }}" class="block text-sm font-medium text-gray-700">Product</label> {# Use product label #}
+                {{ form.product }} {# Styled by global CSS #}
+                {% for error in form.product.errors %}
+                    <p class="text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.quantity_litres.id_for_label }}" class="block text-sm font-medium text-gray-700">Quantity (Litres)</label>
+                {{ form.quantity_litres }} {# Styled by global CSS #}
+                {% for error in form.quantity_litres.errors %}
+                    <p class="text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="mb-4">
+                <label for="{{ form.price_per_litre.id_for_label }}" class="block text-sm font-medium text-gray-700">Price per Litre</label>
+                {{ form.price_per_litre }} {# Styled by global CSS #}
+                {% for error in form.price_per_litre.errors %}
+                    <p class="text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+
+            <div class="sm:col-span-2 mb-4">
+                <label for="{{ form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">Notes</label>
+                {{ form.notes }} {# Styled by global CSS #}
+                {% for error in form.notes.errors %}
+                    <p class="text-red-600">{{ error }}</p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="mt-8 pt-5">
+            <div class="flex justify-end">
+                <a href="{% url 'shipments:shipment-list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium mr-3">
+                    Cancel
+                </a>
+                {# The button type and text can be adjusted based on whether it's add/edit #}
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Save Shipment
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock content %}

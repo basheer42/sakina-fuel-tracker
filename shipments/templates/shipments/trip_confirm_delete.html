@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-lg mt-10">
+    <h2 class="text-2xl font-semibold text-red-700 mb-6">{{ page_title }}</h2>
+
+    <p class="text-gray-700 mb-4">
+        Are you sure you want to delete the loading:
+        <strong class="font-medium">"{{ trip }}"</strong>? {# Uses the Trip's __str__ method #}
+    </p>
+    <p class="text-gray-600 mb-6">This action cannot be undone and will delete all associated compartment details.</p>
+
+    {# The @permission_required decorator on the view primarily handles access control. #}
+    {# If a user reaches this page, they generally have permission to see the confirm options. #}
+    <form method="post">
+        {% csrf_token %} {# Important for security! #}
+        <div class="flex justify-end space-x-3">
+            <a href="{% url 'shipments:trip-list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium">
+                Cancel
+            </a>
+            <button type="submit" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                Yes, Delete
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock content %}

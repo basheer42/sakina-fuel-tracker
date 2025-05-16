@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-lg mt-10">
+    <h2 class="text-2xl font-semibold text-red-700 mb-6">{{ page_title }}</h2>
+
+    <p class="text-gray-700 mb-4">
+        Are you sure you want to delete the shipment:
+        <strong class="font-medium">"{{ shipment.product.name }} from {{ shipment.supplier_name }} on {{ shipment.import_date|date:"Y-m-d" }}"</strong>?
+    </p>
+    <p class="text-gray-600 mb-6">This action cannot be undone.</p>
+
+    {# Show delete button ONLY if user has permission (redundant with decorator but good practice) #}
+    {# The 'can_delete_shipment' variable is passed from the view context #}
+    {% if can_delete_shipment %} 
+        <form method="post">
+            {% csrf_token %} {# Important for security! #}
+            <div class="flex justify-end space-x-3">
+                <a href="{% url 'shipments:shipment-list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium">
+                    Cancel
+                </a>
+                {# This is the DELETE button #}
+                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                    Yes, Delete
+                </button>
+            </div>
+        </form>
+    {% else %}
+         {# Show only Cancel if delete permission is missing #}
+         <div class="flex justify-end">
+              <a href="{% url 'shipments:shipment-list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium">
+                  Cancel
+              </a>
+         </div>
+    {% endif %}
+</div>
+{% endblock content %}

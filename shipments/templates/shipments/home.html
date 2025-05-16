@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-3xl font-semibold text-blue-700">{{ message }}</h2>
+</div>
+
+{% if user.is_authenticated %}
+    <div class="mb-8">
+        <p class="text-lg text-gray-600">{{ description }}</p>
+    </div>
+
+    {# --- AGING STOCK NOTIFICATIONS --- #}
+    {% if aging_stock_notifications %}
+        <div class="mb-6 p-4 bg-orange-100 border-l-4 border-orange-500 text-orange-700 rounded-md shadow">
+            <h4 class="font-bold mb-2 text-orange-800">Aging Stock Alert!</h4>
+            <ul class="list-disc list-inside text-sm">
+                {% for notification_message in aging_stock_notifications %}
+                    <li>{{ notification_message }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+    {# --- END AGING STOCK NOTIFICATIONS --- #}
+
+    {# --- INACTIVE PRODUCT NOTIFICATIONS (DETAILED) --- #}
+    {% if inactive_product_notifications %}
+        <div class="mb-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-md shadow">
+            <h4 class="font-bold mb-2 text-yellow-900">Product Inactivity Alert!</h4>
+            {% for notification_item in inactive_product_notifications %}
+                <div class="mb-3 pb-2 border-b border-yellow-300 last:border-b-0 last:pb-0 last:mb-0">
+                    <p class="text-sm font-semibold">{{ notification_item.message }}</p>
+                    {% if notification_item.shipments %}
+                        <p class="text-xs mt-1 mb-1 text-gray-700">Contributing idle shipment batches:</p>
+                        <ul class="list-disc list-inside text-xs pl-4 text-gray-600">
+                            {% for batch in notification_item.shipments %}
+                                <li>
+                                    Imported: {{ batch.import_date|date:"Y-m-d" }} from {{ batch.supplier_name }} - Remaining: {{ batch.quantity_remaining|floatformat:2 }}L
+                                    (<a href="{% url 'shipments:shipment-detail' batch.id %}" class="text-yellow-700 hover:text-yellow-900 underline">View Batch</a>)
+                                </li>
+                            {% empty %}
+                                <li class="text-gray-500 italic">No specific batches found for this inactivity alert.</li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                         <p class="text-xs mt-1 text-gray-500 italic">No specific shipment batches to list for this alert.</p>
+                    {% endif %}
+                </div>
+            {% empty %}
+                 <p class="text-sm italic">No products are currently flagged for inactivity.</p>
+            {% endfor %}
+        </div>
+    {% endif %}
+    {# --- END INACTIVE PRODUCT NOTIFICATIONS --- #}
+
+    {# --- UTILIZED SHIPMENT NOTIFICATIONS --- #}
+    {% if utilized_shipment_notifications %}
+        <div class="mb-6 p-4 bg-gray-100 border-l-4 border-gray-400 text-gray-700 rounded-md shadow">
+            <h4 class="font-bold mb-2 text-gray-800">Utilized Shipments Ready for Review/Archival:</h4>
+            <ul class="list-disc list-inside text-sm">
+                {% for item in utilized_shipment_notifications %}
+                    <li>
+                        Product: <strong>{{ item.product_name }}</strong> from {{ item.supplier_name }} (Imported: {{ item.import_date|date:"Y-m-d" }}).
+                        Fully utilized on {{ item.utilized_date|date:"Y-m-d" }} ({{ item.days_since_utilized }} day{{ item.days_since_utilized|pluralize }} ago).
+                        (<a href="{% url 'shipments:shipment-detail' item.id %}" class="text-gray-600 hover:text-gray-800 underline">View</a>
+                        {% if perms.shipments.delete_shipment %}
+                        | <a href="{% url 'shipments:shipment-delete' item.id %}" class="text-red-600 hover:text-red-800 underline">Delete</a>
+                        {% endif %})
+                    </li>
+                {% empty %}
+                    <li class="italic">No shipments are currently flagged as fully utilized for review.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+    {# --- END UTILIZED SHIPMENT NOTIFICATIONS --- #}
+
+
+    {# Show Dashboard Stats and Links ONLY if the user has permission to view relevant data #}
+    {% if can_view_shipments or can_view_trip or can_view_product or can_view_customer or can_view_vehicle %}
+
+        {# ... (Overall Stats Cards remain the same as before) ... #}
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {% if can_view_shipments %}
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <div class="text-xl font-bold text-blue-600">{{ total_shipments|default:0 }}</div>
+                    <div class="text-gray-600 text-sm mt-1">Total Shipments (Received)</div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <div class="text-xl font-bold text-blue-600">{{ total_quantity_shipments|floatformat:2|default:0 }} L</div>
+                    <div class="text-gray-600 text-sm mt-1">Total Quantity (Received)</div>
+                </div>
+                <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                    <div class="text-xl font-bold text-blue-600">${{ total_value_shipments|floatformat:2|default:0 }}</div>
+                    <div class="text-gray-600 text-sm mt-1">Total Value (Received)</div>
+                </div>
+            {% endif %}
+             {% if can_view_trip %}
+                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                     <div class="text-xl font-bold text-blue-600">{{ total_trips|default:0 }}</div>
+                     <div class="text-gray-600 text-sm mt-1">Total Loadings (Dispatched)</div>
+                 </div>
+                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
+                     <div class="text-xl font-bold text-blue-600">{{ total_quantity_loaded|floatformat:2|default:0 }} L</div>
+                     <div class="text-gray-600 text-sm mt-1">Total Quantity (Dispatched)</div>
+                 </div>
+             {% endif %}
+        </div>
+
+        {# --- Stock Available & Avg Price by Product --- #}
+        {% if can_view_shipments and can_view_trip and stock_by_product %}
+             <h3 class="text-2xl font-semibold text-gray-800 mb-4 mt-8">Product Summary (Stock & Avg. Cost)</h3>
+             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
+                  {% for product_name, data in stock_by_product.items %}
+                      <div class="bg-white p-4 rounded-lg shadow-md">
+                           <div class="text-lg font-bold text-gray-800 mb-1">{{ product_name }}</div>
+                           <div class="text-xs text-gray-500 mb-1">
+                               Received: <span class="font-medium">{{ data.shipped|floatformat:2|default:0 }} L</span>
+                           </div>
+                           <div class="text-xs text-gray-500 mb-2">
+                               Dispatched: <span class="font-medium">{{ data.loaded|floatformat:2|default:0 }} L</span>
+                           </div>
+                           <div class="text-md font-bold
+                               {% if data.available > 0 %} text-green-600
+                               {% elif data.available < 0 %} text-red-600
+                               {% else %} text-gray-700 {% endif %}">
+                               Available: <span class="text-lg">{{ data.available|floatformat:2 }} L</span>
+                           </div>
+                           {% for summary_item in product_shipment_summary %}
+                               {% if summary_item.name == product_name %}
+                                   <div class="text-xs text-gray-500 mt-1">
+                                       Avg. Cost: <span class="font-medium">${{ summary_item.avg_price|floatformat:3|default:0 }}/L</span>
+                                   </div>
+                               {% endif %}
+                           {% endfor %}
+                      </div>
+                  {% endfor %}
+             </div>
+        {% endif %}
+
+        {# --- Total Dispatched by Product (if trips can be viewed) --- #}
+        {% if can_view_trip and trip_quantity_by_product %}
+            <div class="bg-white p-6 rounded-lg shadow-md mb-8 mt-8">
+                <h3 class="text-xl font-semibold text-gray-800 mb-4">Total Dispatched by Product</h3>
+                <ul class="list-disc list-inside text-gray-700 text-sm">
+                    {% for item in trip_quantity_by_product %}
+                        <li class="mb-1">{{ item.product__name }}: <span class="font-medium">{{ item.total_litres|floatformat:2 }} L</span></li>
+                    {% empty %}
+                        <li class="text-gray-500">No loading data yet.</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
+        {# ... (Links to Lists remain the same) ... #}
+        <div class="my-8 text-center space-y-3 md:space-y-0 md:space-x-4">
+            {% if can_view_shipments %}
+                 <a href="{% url 'shipments:shipment-list' %}"
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block">
+                     View Shipments (Received)
+                 </a>
+            {% endif %}
+            {% if can_view_trip %}
+                  <a href="{% url 'shipments:trip-list' %}"
+                     class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block">
+                      View Loadings (Dispatched)
+                  </a>
+             {% endif %}
+        </div>
+
+    {% else %}
+        {% if user.is_authenticated %}
+             <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-6" role="alert">
+                <p class="font-bold">Permissions Notice</p>
+                <p>{{ description }}</p>
+             </div>
+        {% endif %}
+    {% endif %}
+{% else %}
+    <p class="text-lg text-gray-600 mb-2">{{ description }}</p>
+    <p class="text-sm text-gray-500 mb-6">Please log in or sign up to view your fuel tracking data and statistics.</p>
+    <div class="my-6 text-center space-x-4">
+         <a href="{% url 'login' %}" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block">Login</a>
+         <a href="{% url 'shipments:signup' %}" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block">Sign Up</a>
+    </div>
+{% endif %}
+{% endblock content %}
