@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg mt-8">
+    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
+        <h2 class="text-3xl font-semibold text-blue-700">{{ page_title }}</h2>
+        <div>
+            {% if can_change_trip %}
+            <a href="{% url 'shipments:trip-edit' trip.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm text-sm mr-2">
+                Edit Loading
+            </a>
+            {% endif %}
+            {% if can_delete_trip %}
+            <a href="{% url 'shipments:trip-delete' trip.pk %}" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm text-sm">
+                Delete Loading
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    {# --- Trip Details --- #}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 text-gray-700 mb-8"> {# Changed to 3 columns for better layout #}
+        <div>
+            <strong class="font-medium text-gray-900">BOL Date:</strong>
+            <p>{{ trip.loading_date|date:"F j, Y" }}</p>
+        </div>
+        <div>
+            <strong class="font-medium text-gray-900">BOL Time:</strong>
+            <p>{{ trip.loading_time|time:"H:i A" }}</p>
+        </div>
+        <div>
+            <strong class="font-medium text-gray-900">BOL Number:</strong> {# New #}
+            <p>{{ trip.bol_number|default_if_none:"N/A" }}</p>
+        </div>
+         <div>
+            <strong class="font-medium text-gray-900">Status:</strong> {# New #}
+            <p class="font-semibold {% if trip.status == 'GATEPASSED' %}text-green-600{% elif trip.status == 'CANCELLED' %}text-red-600{% elif trip.status == 'PENDING' %}text-yellow-600{% else %}text-blue-600{% endif %}">
+                {{ trip.get_status_display }}
+            </p>
+        </div>
+        <div>
+            <strong class="font-medium text-gray-900">Vehicle:</strong>
+            <p>{{ trip.vehicle.plate_number }}</p>
+        </div>
+         <div>
+            <strong class="font-medium text-gray-900">Product:</strong>
+            <p>{{ trip.product.name }}</p>
+        </div>
+        <div>
+            <strong class="font-medium text-gray-900">Customer (Destination):</strong>
+            <p>{{ trip.customer.name }}</p>
+        </div>
+        <div>
+             <strong class="font-medium text-gray-900">Recorded By:</strong>
+             <p>{{ trip.user.username }}</p>
+        </div>
+        <div class="md:col-span-3"> {# Make notes span full width available in 3 col layout #}
+            <strong class="font-medium text-gray-900">Notes:</strong>
+            <p class="mt-1 whitespace-pre-wrap">{{ trip.notes|default_if_none:"No notes provided." }}</p>
+        </div>
+    </div>
+
+    {# --- Compartment Details --- #}
+    <h3 class="text-xl font-semibold text-gray-800 mb-4 pt-4 border-t border-gray-200">Compartments Loaded</h3>
+    {% if compartments %}
+        <div class="overflow-x-auto bg-gray-50 p-4 rounded-md">
+            <table class="min-w-full text-sm">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="py-2 px-3 text-left font-semibold text-gray-700">Compartment #</th>
+                        <th class="py-2 px-3 text-right font-semibold text-gray-700">Quantity Loaded (L)</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600">
+                    {% for compartment in compartments %}
+                    <tr class="border-b border-gray-100">
+                        <td class="py-2 px-3">{{ compartment.compartment_number }}</td>
+                        <td class="py-2 px-3 text-right">{{ compartment.quantity_loaded_litres|floatformat:2 }}</td>
+                    </tr>
+                    {% endfor %}
+                     <tr class="bg-gray-100 font-semibold">
+                        <td class="py-2 px-3 text-right">Total Loaded:</td>
+                        <td class="py-2 px-3 text-right">{{ trip.total_loaded|floatformat:2 }} L</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-gray-600">No compartment details recorded for this loading.</p>
+    {% endif %}
+
+
+    <div class="mt-8 text-center">
+        <a href="{% url 'shipments:trip-list' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+            ← Back to Loadings List
+        </a>
+    </div>
+</div>
+{% endblock content %}

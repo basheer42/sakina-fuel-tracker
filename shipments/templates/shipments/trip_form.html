@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg">
+    <h2 class="text-3xl font-semibold text-blue-700 mb-6 text-center">{{ page_title }}</h2>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        {# Display non-field errors for the main trip_form (e.g., capacity error) #}
+        {% if trip_form.non_field_errors %}
+            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {% for error in trip_form.non_field_errors %}
+                    <p>{{ error }}</p>
+                {% endfor %}
+            </div>
+        {% endif %}
+
+        {# --- Main Trip Form Fields --- #}
+        <div class="border-b border-gray-200 pb-6 mb-6">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Loading Details</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                {# Vehicle #}
+                <div class="mb-4">
+                    <label for="{{ trip_form.vehicle.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ trip_form.vehicle.label }}</label>
+                    {{ trip_form.vehicle }}
+                    {% for error in trip_form.vehicle.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                </div>
+                {# Customer #}
+                <div class="mb-4">
+                    <label for="{{ trip_form.customer.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ trip_form.customer.label }}</label>
+                    {{ trip_form.customer }}
+                    {% for error in trip_form.customer.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                </div>
+                {# Product #}
+                <div class="mb-4">
+                    <label for="{{ trip_form.product.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ trip_form.product.label }}</label>
+                    {{ trip_form.product }}
+                    {% for error in trip_form.product.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                </div>
+                {# Capacity Display #}
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700">Vehicle Capacity (for selected product):</label>
+                    <div id="vehicle-capacity-display" class="mt-1 p-2 bg-gray-100 rounded-md text-gray-700 h-10 flex items-center">- Select Vehicle and Product -</div>
+                </div>
+                {# Loading Date (BOL Date) #}
+                <div class="mb-4">
+                    <label for="{{ trip_form.loading_date.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ trip_form.loading_date.label }}</label>
+                    {{ trip_form.loading_date }}
+                    {% for error in trip_form.loading_date.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                </div>
+                {# Loading Time (BOL Time) #}
+                <div class="mb-4">
+                    <label for="{{ trip_form.loading_time.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ trip_form.loading_time.label }}</label>
+                    {{ trip_form.loading_time }}
+                    {% for error in trip_form.loading_time.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                </div>
+                {# BOL Number #}
+                <div class="mb-4">
+                    <label for="{{ trip_form.bol_number.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ trip_form.bol_number.label }}</label>
+                    {{ trip_form.bol_number }}
+                    {% for error in trip_form.bol_number.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                </div>
+                {# Status #}
+                <div class="mb-4">
+                    <label for="{{ trip_form.status.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ trip_form.status.label }}</label>
+                    {{ trip_form.status }}
+                    {% for error in trip_form.status.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                </div>
+                {# Notes #}
+                <div class="md:col-span-2 mb-4">
+                    <label for="{{ trip_form.notes.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ trip_form.notes.label }}</label>
+                    {{ trip_form.notes }}
+                    {% for error in trip_form.notes.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        {# --- Loading Compartment Formset --- #}
+        <h3 class="text-xl font-semibold text-gray-800 mb-4">Compartment Details (Exactly 3 Required)</h3>
+        {% if compartment_formset.non_form_errors %}
+            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+                {% for error in compartment_formset.non_form_errors %} <p>{{ error }}</p> {% endfor %}
+            </div>
+        {% endif %}
+        {{ compartment_formset.management_form }}
+        <div id="compartment-forms-container">
+            {% for form in compartment_formset.forms %}
+                <div class="compartment-form border p-4 mb-4 rounded-md bg-gray-50 relative">
+                    {% if form.non_field_errors %}
+                        <div class="mb-2 p-2 bg-red-100 text-red-700 rounded text-sm">
+                            {% for error in form.non_field_errors %} <p>{{ error }}</p> {% endfor %}
+                        </div>
+                    {% endif %}
+                    {% for hidden_field in form.hidden_fields %} {{ hidden_field }} {% endfor %}
+                    
+                    <div class="flex flex-wrap items-end -mx-2">
+                        {# Compartment Number #}
+                        <div class="px-2 mb-3 flex-grow" style="min-width: 120px;">
+                            <label for="{{ form.compartment_number.id_for_label }}" class="block text-xs font-medium text-gray-700">{{ form.compartment_number.label }}</label>
+                            {{ form.compartment_number }} {# Uses widget from forms.py #}
+                            {% for error in form.compartment_number.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                        </div>
+
+                        {# Quantity Requested Litres - CORRECTED FIELD NAME #}
+                        <div class="px-2 mb-3 flex-grow" style="min-width: 150px;">
+                            <label for="{{ form.quantity_requested_litres.id_for_label }}" class="block text-xs font-medium text-gray-700">{{ form.quantity_requested_litres.label }}</label>
+                            {{ form.quantity_requested_litres }} {# Uses widget from forms.py #}
+                            {% for error in form.quantity_requested_litres.errors %} <p class="text-red-600">{{ error }}</p> {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        {# Submit Buttons #}
+        <div class="mt-8 pt-5 border-t border-gray-200">
+            <div class="flex justify-end">
+                <a href="{% url 'shipments:trip-list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium mr-3">Cancel</a>
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">Save Loading</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+{# JavaScript for Autofill #}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const vehicleSelect = document.getElementById('{{ trip_form.vehicle.id_for_label }}');
+        const productSelect = document.getElementById('{{ trip_form.product.id_for_label }}');
+        const capacityDisplay = document.getElementById('vehicle-capacity-display');
+        const capacityUrl = "{% url 'shipments:ajax_get_vehicle_capacity' %}";
+        function fetchAndUpdateCapacity() {
+            const vehicleId = vehicleSelect.value;
+            const productId = productSelect.value;
+            if (vehicleId && productId) {
+                capacityDisplay.textContent = 'Loading capacity...';
+                const urlWithParams = `${capacityUrl}?vehicle_id=${vehicleId}&product_id=${productId}`;
+                fetch(urlWithParams)
+                    .then(response => { if (!response.ok) { throw new Error(`HTTP error! status: ${response.status}`); } return response.json(); })
+                    .then(data => {
+                        if (data.status === 'success' && data.capacity !== null) {
+                            capacityDisplay.textContent = `${parseFloat(data.capacity).toFixed(2)} Litres`;
+                            capacityDisplay.classList.remove('text-red-600'); capacityDisplay.classList.add('text-green-700', 'font-semibold');
+                        } else {
+                            capacityDisplay.textContent = data.message || 'Capacity not defined or error.';
+                            capacityDisplay.classList.remove('text-green-700', 'font-semibold'); capacityDisplay.classList.add('text-red-600');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching vehicle capacity:', error);
+                        capacityDisplay.textContent = 'Error fetching capacity.';
+                        capacityDisplay.classList.remove('text-green-700', 'font-semibold'); capacityDisplay.classList.add('text-red-600');
+                    });
+            } else {
+                capacityDisplay.textContent = '- Select Vehicle and Product -';
+                capacityDisplay.classList.remove('text-red-600', 'text-green-700', 'font-semibold');
+            }
+        }
+        if (vehicleSelect) vehicleSelect.addEventListener('change', fetchAndUpdateCapacity);
+        if (productSelect) productSelect.addEventListener('change', fetchAndUpdateCapacity);
+    });
+</script>
+{% endblock content %}

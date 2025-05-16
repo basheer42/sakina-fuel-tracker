@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg mt-8">
+    <h2 class="text-3xl font-semibold text-blue-700 mb-6">{{ page_title }}</h2>
+
+    {# Summary by Product #}
+    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Summary by Product</h3>
+    {% if product_summary %}
+        <div class="overflow-x-auto bg-white shadow-md rounded-lg mb-8">
+            <table class="min-w-full leading-normal">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Product Name</th>
+                        <th class="py-3 px-6 text-right">Total Quantity (L)</th>
+                        <th class="py-3 px-6 text-right">Total Value</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    {% for item in product_summary %}
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="py-3 px-6 text-left">{{ item.product_name }}</td>
+                        <td class="py-3 px-6 text-right">{{ item.total_quantity|floatformat:2|default:0 }}</td>
+                        <td class="py-3 px-6 text-right">${{ item.total_value|floatformat:2|default:0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+         <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8" role="alert">
+            <p>No product data available for reporting.</p>
+        </div>
+    {% endif %}
+
+
+    {# Summary by Supplier #}
+    <h3 class="text-2xl font-semibold text-gray-800 mb-4">Summary by Supplier</h3>
+    {% if supplier_summary %}
+        <div class="overflow-x-auto bg-white shadow-md rounded-lg mb-8">
+            <table class="min-w-full leading-normal">
+                <thead>
+                    <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Supplier Name</th>
+                        <th class="py-3 px-6 text-right">Total Quantity (L)</th>
+                        <th class="py-3 px-6 text-right">Total Value</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-700 text-sm">
+                    {% for item in supplier_summary %}
+                    <tr class="border-b border-gray-200 hover:bg-gray-50">
+                        <td class="py-3 px-6 text-left">{{ item.supplier_name }}</td>
+                        <td class="py-3 px-6 text-right">{{ item.total_quantity|floatformat:2|default:0 }}</td>
+                        <td class="py-3 px-6 text-right">${{ item.total_value|floatformat:2|default:0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+         <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mb-8" role="alert">
+            <p>No supplier data available for reporting.</p>
+        </div>
+    {% endif %}
+
+
+     <div class="mt-8 text-center">
+        <a href="{% url 'shipments:shipment-list' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+            ← Back to Shipment List
+        </a>
+    </div>
+
+</div>
+{% endblock content %}

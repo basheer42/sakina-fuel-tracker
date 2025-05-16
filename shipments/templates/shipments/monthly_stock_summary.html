@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-3xl font-semibold text-blue-700">{{ page_title }}</h2>
+</div>
+
+{# Month/Year Selection Form #}
+<form method="get" action="{% url 'shipments:monthly-stock-summary' %}" class="mb-8 p-6 bg-gray-50 rounded-lg shadow">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-x-6 gap-y-4 items-end">
+        <div>
+            <label for="month_select" class="block text-sm font-medium text-gray-700">Select Month:</label>
+            <select name="month" id="month_select" class="">
+                {# Iterate over the list of (month_number, month_name) tuples #}
+                {% for month_val, month_display_name in months_for_dropdown %}
+                    <option value="{{ month_val }}" {% if month_val == selected_month %}selected{% endif %}>
+                        {{ month_display_name }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="year_select" class="block text-sm font-medium text-gray-700">Select Year:</label>
+            <select name="year" id="year_select" class="">
+                 {% for year_val in available_years %}
+                    <option value="{{ year_val }}" {% if year_val == selected_year %}selected{% endif %}>
+                        {{ year_val }}
+                    </option>
+                {% endfor %}
+                {% if not available_years %}
+                    <option value="{{ selected_year }}">{{ selected_year }}</option>
+                {% endif %}
+            </select>
+        </div>
+        <div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm">
+                View Report
+            </button>
+        </div>
+    </div>
+</form>
+
+{# Summary Table #}
+{% if summary_data %}
+    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
+        <table class="min-w-full leading-normal">
+            <thead>
+                <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
+                    <th class="py-3 px-6 text-left">Product</th>
+                    <th class="py-3 px-6 text-right">Opening Stock (L)</th>
+                    <th class="py-3 px-6 text-right">Received This Month (L)</th>
+                    <th class="py-3 px-6 text-right">Dispatched This Month (L)</th>
+                    <th class="py-3 px-6 text-right font-semibold">Closing Stock (L)</th>
+                </tr>
+            </thead>
+            <tbody class="text-gray-700 text-sm">
+                {% for item in summary_data %}
+                <tr class="border-b border-gray-200 hover:bg-gray-50">
+                    <td class="py-3 px-6 text-left font-medium">{{ item.product_name }}</td>
+                    <td class="py-3 px-6 text-right">{{ item.opening_stock|floatformat:2 }}</td>
+                    <td class="py-3 px-6 text-right">{{ item.stock_in_month|floatformat:2 }}</td>
+                    <td class="py-3 px-6 text-right">{{ item.stock_out_month|floatformat:2 }}</td>
+                    <td class="py-3 px-6 text-right font-semibold
+                        {% if item.closing_stock > 0 %}text-green-700
+                        {% elif item.closing_stock < 0 %}text-red-700
+                        {% else %}text-gray-700 {% endif %}">
+                        {{ item.closing_stock|floatformat:2 }}
+                    </td>
+                </tr>
+                {% empty %} {# Displayed if summary_data is empty #}
+                    <tr>
+                         <td colspan="5" class="text-center py-4 text-gray-500">No product data to summarize for this period.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-6" role="alert">
+        <p class="font-bold">No Data to Summarize</p>
+        <p>Please select a month and year to view the summary, or there might be no shipment or loading data entered yet.</p>
+    </div>
+{% endif %}
+
+<div class="mt-8 text-center">
+    <a href="{% url 'shipments:home' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+        ← Back to Dashboard
+    </a>
+</div>
+
+{% endblock content %}

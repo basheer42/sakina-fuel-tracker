@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% load shipment_extras %} {# Ensure this is loaded if using has_group filter #}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<div class="mb-6">
+    <h2 class="text-3xl font-semibold text-blue-700">{{ page_title }}</h2>
+</div>
+
+{# Filter Form #}
+<form method="get" action="{% url 'shipments:truck-activity-dashboard' %}" class="mb-8 p-6 bg-gray-50 rounded-lg shadow">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-4 items-end">
+        <div>
+            <label for="product_filter" class="block text-sm font-medium text-gray-700">Product:</label>
+            <select name="product" id="product_filter" class="">
+                 <option value="">All Products</option>
+                 {% for product_item in products %}
+                     <option value="{{ product_item.pk }}" {% if product_item.pk|stringformat:"s" == product_filter_value %} selected {% endif %}>
+                         {{ product_item.name }}
+                     </option>
+                 {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="customer_filter" class="block text-sm font-medium text-gray-700">Customer (Destination):</label>
+            <select name="customer" id="customer_filter" class="">
+                 <option value="">All Customers</option>
+                 {% for customer_item in customers %}
+                     <option value="{{ customer_item.pk }}" {% if customer_item.pk|stringformat:"s" == customer_filter_value %} selected {% endif %}>
+                         {{ customer_item.name }}
+                     </option>
+                 {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="vehicle_filter" class="block text-sm font-medium text-gray-700">Specific Vehicle:</label>
+            <select name="vehicle" id="vehicle_filter" class="">
+                 <option value="">All Vehicles</option>
+                 {% for vehicle_item in vehicles %}
+                     <option value="{{ vehicle_item.pk }}" {% if vehicle_item.pk|stringformat:"s" == vehicle_filter_value %} selected {% endif %}>
+                         {{ vehicle_item.plate_number }}
+                     </option>
+                 {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="status_filter" class="block text-sm font-medium text-gray-700">Status:</label>
+            <select name="status" id="status_filter" class="">
+                 <option value="">All Statuses</option>
+                 {% for value, display_name in status_choices %}
+                     <option value="{{ value }}" {% if value == status_filter_value %} selected {% endif %}>
+                         {{ display_name }}
+                     </option>
+                 {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label for="start_date_filter" class="block text-sm font-medium text-gray-700">Start Date:</label>
+            <input type="date" name="start_date" id="start_date_filter" value="{{ start_date_filter_value|default:'' }}" class="">
+        </div>
+        <div>
+            <label for="end_date_filter" class="block text-sm font-medium text-gray-700">End Date:</label>
+            <input type="date" name="end_date" id="end_date_filter" value="{{ end_date_filter_value|default:'' }}" class="">
+        </div>
+        <div class="lg:col-span-2 xl:col-span-1 flex space-x-2 pt-4 sm:pt-0">
+            <button type="submit" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm">
+                Filter
+            </button>
+            <a href="{% url 'shipments:truck-activity-dashboard' %}" class="w-full md:w-auto bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-md shadow-sm text-center">
+                Clear
+            </a>
+        </div>
+    </div>
+</form>
+
+{# Display data grouped by truck #}
+{% if truck_activities %}
+    {% for vehicle_obj, data in truck_activities.items %}
+        <div class="mb-10 p-6 bg-white shadow-lg rounded-lg">
+            <h3 class="text-2xl font-semibold text-gray-800 mb-2">
+                Truck: {{ vehicle_obj.plate_number }}
+                {% if vehicle_obj.trailer_number %}({{ vehicle_obj.trailer_number }}){% endif %}
+            </h3>
+            <div class="text-sm text-gray-600 mb-4">
+                Summary for filtered period:
+                <span class="font-medium">{{ data.trip_count }} Trip{{ data.trip_count|pluralize }}</span> |
+                Total Loaded: <span class="font-medium">{{ data.total_quantity|floatformat:2 }} L</span>
+            </div>
+
+            {% if data.trips %}
+            <div class="overflow-x-auto border border-gray-200 rounded-md">
+                <table class="min-w-full leading-normal text-sm">
+                    <thead class="bg-gray-100">
+                        <tr class="text-gray-600 uppercase leading-normal">
+                            <th class="py-2 px-4 text-left">BOL Date/Time</th>
+                            <th class="py-2 px-4 text-left">BOL Number</th>
+                            <th class="py-2 px-4 text-left">Product</th>
+                            <th class="py-2 px-4 text-left">Customer</th>
+                            <th class="py-2 px-4 text-right">Qty Loaded (L)</th>
+                            <th class="py-2 px-4 text-left">Status</th>
+                            <th class="py-2 px-4 text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-700">
+                        {% for trip in data.trips %}
+                        <tr class="border-b border-gray-200 hover:bg-gray-50">
+                            <td class="py-2 px-4 text-left whitespace-nowrap">
+                                <a href="{% url 'shipments:trip-detail' trip.pk %}" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                                    {{ trip.loading_date|date:"Y-m-d" }} {{ trip.loading_time|time:"H:i" }}
+                                </a>
+                            </td>
+                            <td class="py-2 px-4 text-left">{{ trip.bol_number|default_if_none:"N/A" }}</td>
+                            <td class="py-2 px-4 text-left">{{ trip.product.name }}</td>
+                            <td class="py-2 px-4 text-left">{{ trip.customer.name }}</td>
+                            <td class="py-2 px-4 text-right">{{ trip.total_loaded|floatformat:2 }}</td>
+                            <td class="py-2 px-4 text-left">{{ trip.get_status_display }}</td>
+                            <td class="py-2 px-4 text-center whitespace-nowrap">
+                                {# --- SIMPLIFIED ACTION LINKS --- #}
+                                {% comment %}
+                                    The view for edit/delete will handle fine-grained permission checks.
+                                    Here, we mainly check general permissions.
+                                    can_change_trip and can_delete_trip are passed from the main trip_list_view context,
+                                    which are general permissions for the user, not specific to this trip instance.
+                                    The actual edit/delete views do the instance-specific ownership check.
+                                {% endcomment %}
+                                {% if perms.shipments.change_trip %}
+                                    <a href="{% url 'shipments:trip-edit' trip.pk %}" class="text-indigo-600 hover:text-indigo-900 mr-2 font-medium">Edit</a>
+                                {% endif %}
+
+                                {% if perms.shipments.delete_trip %}
+                                    <a href="{% url 'shipments:trip-delete' trip.pk %}" class="text-red-600 hover:text-red-900 font-medium">Delete</a>
+                                {% endif %}
+
+                                {% if not perms.shipments.change_trip and not perms.shipments.delete_trip %}
+                                    <span class="text-gray-400 text-xs">No actions</span>
+                                {% endif %}
+                                {# --- END SIMPLIFIED ACTION LINKS --- #}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p class="text-gray-600">No trips recorded for this truck in the selected period.</p>
+            {% endif %}
+        </div>
+    {% empty %}
+        <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-6" role="alert">
+            <p class="font-bold">No Truck Activity Found</p>
+            <p>
+                {% if product_filter_value or customer_filter_value or vehicle_filter_value or status_filter_value or start_date_filter_value or end_date_filter_value %}
+                    No truck activity matches your current filter criteria.
+                    <a href="{% url 'shipments:truck-activity-dashboard' %}" class="text-yellow-800 hover:text-yellow-900 font-semibold underline ml-2">Clear filters</a>
+                {% else %}
+                    There is no truck activity recorded.
+                {% endif %}
+            </p>
+        </div>
+    {% endfor %} {# This was for truck_activities.items loop #}
+
+{% else %} {# This else is for if truck_activities itself is empty/None #}
+    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-6" role="alert">
+        <p class="font-bold">No Truck Activity Found</p>
+        <p>
+            {% if product_filter_value or customer_filter_value or vehicle_filter_value or status_filter_value or start_date_filter_value or end_date_filter_value %}
+                No truck activity matches your current filter criteria.
+                <a href="{% url 'shipments:truck-activity-dashboard' %}" class="text-yellow-800 hover:text-yellow-900 font-semibold underline ml-2">Clear filters</a>
+            {% else %}
+                There is no truck activity recorded.
+            {% endif %}
+        </p>
+    </div>
+{% endif %}
+
+
+<div class="mt-8 text-center">
+    <a href="{% url 'shipments:home' %}" class="text-blue-600 hover:text-blue-800 font-medium">
+        ← Back to Main Dashboard
+    </a>
+</div>
+{% endblock content %}
