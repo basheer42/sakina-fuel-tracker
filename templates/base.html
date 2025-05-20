@@ -80,6 +80,7 @@
             vertical-align: middle;
         }
     </style>
+    {% block extra_head %}{% endblock %} <!-- Added extra_head block if needed -->
 </head>
 <body class="bg-gray-100 text-gray-800 flex flex-col min-h-screen">
     <nav class="bg-blue-600 p-4 shadow-md">
@@ -153,5 +154,10 @@
     <footer class="text-center p-4 mt-6 text-gray-600 text-sm">
         © {% now "Y" %} Fuel Tracker MVP
     </footer>
+
+    <!-- ADD CHART.JS LIBRARY SCRIPT HERE -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    {% block extra_js %}{% endblock %} <!-- Added extra_js block for page-specific JS -->
 </body>
 </html>

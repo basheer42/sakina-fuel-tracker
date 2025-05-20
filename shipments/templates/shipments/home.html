@@ -4,15 +4,15 @@
 
 {% block content %}
 <div class="mb-6">
-    <h2 class="text-3xl font-semibold text-blue-700">{{ message }}</h2>
+    <h2 class="text-2xl sm:text-3xl font-semibold text-blue-700">{{ message }}</h2>
 </div>
 
 {% if user.is_authenticated %}
     <div class="mb-8">
-        <p class="text-lg text-gray-600">{{ description }}</p>
+        <p class="text-base sm:text-lg text-gray-600">{{ description }}</p>
     </div>
 
-    {# --- AGING STOCK NOTIFICATIONS --- #}
+    {# --- NOTIFICATIONS (Keep your existing notification blocks here) --- #}
     {% if aging_stock_notifications %}
         <div class="mb-6 p-4 bg-orange-100 border-l-4 border-orange-500 text-orange-700 rounded-md shadow">
             <h4 class="font-bold mb-2 text-orange-800">Aging Stock Alert!</h4>
@@ -23,9 +23,6 @@
             </ul>
         </div>
     {% endif %}
-    {# --- END AGING STOCK NOTIFICATIONS --- #}
-
-    {# --- INACTIVE PRODUCT NOTIFICATIONS (DETAILED) --- #}
     {% if inactive_product_notifications %}
         <div class="mb-6 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 rounded-md shadow">
             <h4 class="font-bold mb-2 text-yellow-900">Product Inactivity Alert!</h4>
@@ -38,30 +35,23 @@
                             {% for batch in notification_item.shipments %}
                                 <li>
                                     Imported: {{ batch.import_date|date:"Y-m-d" }} from {{ batch.supplier_name }} - Remaining: {{ batch.quantity_remaining|floatformat:2 }}L
+                                    {% if batch.vessel_id_tag %}(Tag: {{ batch.vessel_id_tag }}){% endif %}
                                     (<a href="{% url 'shipments:shipment-detail' batch.id %}" class="text-yellow-700 hover:text-yellow-900 underline">View Batch</a>)
                                 </li>
-                            {% empty %}
-                                <li class="text-gray-500 italic">No specific batches found for this inactivity alert.</li>
                             {% endfor %}
                         </ul>
-                    {% else %}
-                         <p class="text-xs mt-1 text-gray-500 italic">No specific shipment batches to list for this alert.</p>
                     {% endif %}
                 </div>
-            {% empty %}
-                 <p class="text-sm italic">No products are currently flagged for inactivity.</p>
             {% endfor %}
         </div>
     {% endif %}
-    {# --- END INACTIVE PRODUCT NOTIFICATIONS --- #}
-
-    {# --- UTILIZED SHIPMENT NOTIFICATIONS --- #}
     {% if utilized_shipment_notifications %}
         <div class="mb-6 p-4 bg-gray-100 border-l-4 border-gray-400 text-gray-700 rounded-md shadow">
             <h4 class="font-bold mb-2 text-gray-800">Utilized Shipments Ready for Review/Archival:</h4>
             <ul class="list-disc list-inside text-sm">
                 {% for item in utilized_shipment_notifications %}
                     <li>
+                        Shipment ID {% if item.vessel_id_tag and item.vessel_id_tag != '(No Tag)' %}{{ item.vessel_id_tag }}{% else %}{{ item.id }}{% endif %}:
                         Product: <strong>{{ item.product_name }}</strong> from {{ item.supplier_name }} (Imported: {{ item.import_date|date:"Y-m-d" }}).
                         Fully utilized on {{ item.utilized_date|date:"Y-m-d" }} ({{ item.days_since_utilized }} day{{ item.days_since_utilized|pluralize }} ago).
                         (<a href="{% url 'shipments:shipment-detail' item.id %}" class="text-gray-600 hover:text-gray-800 underline">View</a>
@@ -70,101 +60,112 @@
                         {% endif %})
                     </li>
                 {% empty %}
-                    <li class="italic">No shipments are currently flagged as fully utilized for review.</li>
+                     <li class="italic">No shipments are currently flagged as fully utilized for review.</li>
                 {% endfor %}
             </ul>
         </div>
     {% endif %}
-    {# --- END UTILIZED SHIPMENT NOTIFICATIONS --- #}
+    {# --- END NOTIFICATIONS --- #}
 
-
-    {# Show Dashboard Stats and Links ONLY if the user has permission to view relevant data #}
     {% if can_view_shipments or can_view_trip or can_view_product or can_view_customer or can_view_vehicle %}
 
-        {# ... (Overall Stats Cards remain the same as before) ... #}
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-            {% if can_view_shipments %}
-                <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                    <div class="text-xl font-bold text-blue-600">{{ total_shipments|default:0 }}</div>
-                    <div class="text-gray-600 text-sm mt-1">Total Shipments (Received)</div>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                    <div class="text-xl font-bold text-blue-600">{{ total_quantity_shipments|floatformat:2|default:0 }} L</div>
-                    <div class="text-gray-600 text-sm mt-1">Total Quantity (Received)</div>
-                </div>
-                <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                    <div class="text-xl font-bold text-blue-600">${{ total_value_shipments|floatformat:2|default:0 }}</div>
-                    <div class="text-gray-600 text-sm mt-1">Total Value (Received)</div>
-                </div>
-            {% endif %}
-             {% if can_view_trip %}
-                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                     <div class="text-xl font-bold text-blue-600">{{ total_trips|default:0 }}</div>
-                     <div class="text-gray-600 text-sm mt-1">Total Loadings (Dispatched)</div>
-                 </div>
-                 <div class="bg-white p-6 rounded-lg shadow-md text-center">
-                     <div class="text-xl font-bold text-blue-600">{{ total_quantity_loaded|floatformat:2|default:0 }} L</div>
-                     <div class="text-gray-600 text-sm mt-1">Total Quantity (Dispatched)</div>
-                 </div>
-             {% endif %}
-        </div>
-
-        {# --- Stock Available & Avg Price by Product --- #}
-        {% if can_view_shipments and can_view_trip and stock_by_product %}
-             <h3 class="text-2xl font-semibold text-gray-800 mb-4 mt-8">Product Summary (Stock & Avg. Cost)</h3>
-             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 mb-8">
-                  {% for product_name, data in stock_by_product.items %}
+        {# --- Product Summary with Booked Stock (As corrected before) --- #}
+        {% if stock_by_product_detailed %}
+             <h3 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 mt-8">Product Stock Summary</h3>
+             <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
+                  {% for product_name, data in stock_by_product_detailed.items %}
                       <div class="bg-white p-4 rounded-lg shadow-md">
-                           <div class="text-lg font-bold text-gray-800 mb-1">{{ product_name }}</div>
-                           <div class="text-xs text-gray-500 mb-1">
-                               Received: <span class="font-medium">{{ data.shipped|floatformat:2|default:0 }} L</span>
+                           <div class="text-md sm:text-lg font-bold text-gray-800 mb-2">{{ product_name }}</div>
+                           <div class="text-xs text-gray-500">Total Received: <span class="font-medium">{{ data.shipped|floatformat:2|default:0 }} L</span></div>
+                           <div class="text-xs text-gray-500 mb-1">Total Dispatched: <span class="font-medium">{{ data.dispatched|floatformat:2|default:0 }} L</span></div>
+                           <hr class="my-1">
+                           <div class="text-xs text-gray-600 mt-1">Physical Stock: <span class="font-semibold">{{ data.physical_stock|floatformat:2 }} L</span></div>
+                           <div class="text-xs text-orange-600">Booked Stock: <span class="font-semibold">{{ data.booked_stock|floatformat:2 }} L</span></div>
+                           <div class="text-sm font-bold mt-1 {% if data.net_available > 0 %} text-green-600 {% elif data.net_available < 0 %} text-red-700 bg-red-100 px-1 rounded {% else %} text-gray-700 {% endif %}">
+                               Net Available: <span class="text-base sm:text-lg">{{ data.net_available|floatformat:2 }} L</span>
                            </div>
-                           <div class="text-xs text-gray-500 mb-2">
-                               Dispatched: <span class="font-medium">{{ data.loaded|floatformat:2|default:0 }} L</span>
-                           </div>
-                           <div class="text-md font-bold
-                               {% if data.available > 0 %} text-green-600
-                               {% elif data.available < 0 %} text-red-600
-                               {% else %} text-gray-700 {% endif %}">
-                               Available: <span class="text-lg">{{ data.available|floatformat:2 }} L</span>
-                           </div>
-                           {% for summary_item in product_shipment_summary %}
-                               {% if summary_item.name == product_name %}
-                                   <div class="text-xs text-gray-500 mt-1">
-                                       Avg. Cost: <span class="font-medium">${{ summary_item.avg_price|floatformat:3|default:0 }}/L</span>
-                                   </div>
-                               {% endif %}
-                           {% endfor %}
+                           <div class="text-xs text-gray-500 mt-2">Avg. Cost Price: <span class="font-medium">${{ data.avg_price|floatformat:3|default:0 }}/L</span></div>
                       </div>
+                  {% empty %}
+                    <p class="text-gray-600 italic col-span-full">No product stock data to display.</p>
                   {% endfor %}
              </div>
         {% endif %}
 
-        {# --- Total Dispatched by Product (if trips can be viewed) --- #}
+        {# --- MODIFIED: Loadings Charts Section (PMS and AGO) --- #}
+        {% if can_view_trip %} 
+        <div class="my-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {# PMS Chart #}
+            <div class="p-4 sm:p-6 bg-white rounded-lg shadow-md"> 
+                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">PMS Loadings (Last 30 Days)</h3>
+                <div class="relative" style="height: 250px; sm:height: 300px;"> 
+                    <canvas id="pmsLoadingsChart"></canvas>
+                </div>
+            </div>
+            {# AGO Chart #}
+            <div class="p-4 sm:p-6 bg-white rounded-lg shadow-md"> 
+                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">AGO Loadings (Last 30 Days)</h3>
+                <div class="relative" style="height: 250px; sm:height: 300px;"> 
+                    <canvas id="agoLoadingsChart"></canvas>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {# --- END Loadings Charts Section --- #}
+
+        {# --- Total Dispatched by Product (Keep as is) --- #}
         {% if can_view_trip and trip_quantity_by_product %}
-            <div class="bg-white p-6 rounded-lg shadow-md mb-8 mt-8">
-                <h3 class="text-xl font-semibold text-gray-800 mb-4">Total Dispatched by Product</h3>
-                <ul class="list-disc list-inside text-gray-700 text-sm">
+            <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8 mt-8"> 
+                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Total Dispatched by Product (Completed Loadings)</h3>
+                <ul class="list-disc list-inside text-gray-700 text-xs sm:text-sm"> 
                     {% for item in trip_quantity_by_product %}
                         <li class="mb-1">{{ item.product__name }}: <span class="font-medium">{{ item.total_litres|floatformat:2 }} L</span></li>
                     {% empty %}
-                        <li class="text-gray-500">No loading data yet.</li>
+                        <li class="text-gray-500">No completed loading data yet.</li>
                     {% endfor %}
                 </ul>
             </div>
         {% endif %}
 
-        {# ... (Links to Lists remain the same) ... #}
+        {# --- Overall Stats Cards (Keep as is) --- #}
+        <h3 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 mt-12">Overall Company Summary</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            {% if can_view_shipments %}
+                <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center"> 
+                    <div class="text-lg sm:text-xl font-bold text-blue-600">{{ total_shipments|default:0 }}</div>
+                    <div class="text-gray-600 text-xs sm:text-sm mt-1">Total Shipments (Received)</div>
+                </div>
+                <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center">
+                    <div class="text-lg sm:text-xl font-bold text-blue-600">{{ total_quantity_shipments|floatformat:2|default:0 }} L</div>
+                    <div class="text-gray-600 text-xs sm:text-sm mt-1">Total Quantity (Received)</div>
+                </div>
+                <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center">
+                    <div class="text-xl font-bold text-blue-600">${{ total_value_shipments|floatformat:2|default:0 }}</div>
+                    <div class="text-gray-600 text-xs sm:text-sm mt-1">Total Value (Received)</div>
+                </div>
+            {% endif %}
+             {% if can_view_trip %}
+                 <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center">
+                     <div class="text-lg sm:text-xl font-bold text-blue-600">{{ total_trips|default:0 }}</div>
+                     <div class="text-gray-600 text-xs sm:text-sm mt-1">Total Loadings (Dispatched)</div>
+                 </div>
+                 <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center">
+                     <div class="text-lg sm:text-xl font-bold text-blue-600">{{ total_quantity_loaded|floatformat:2|default:0 }} L</div>
+                     <div class="text-gray-600 text-xs sm:text-sm mt-1">Total Quantity (Dispatched)</div>
+                 </div>
+             {% endif %}
+        </div>
+        
         <div class="my-8 text-center space-y-3 md:space-y-0 md:space-x-4">
             {% if can_view_shipments %}
                  <a href="{% url 'shipments:shipment-list' %}"
-                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block">
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 sm:py-3 sm:px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block text-sm sm:text-base"> 
                      View Shipments (Received)
                  </a>
             {% endif %}
             {% if can_view_trip %}
                   <a href="{% url 'shipments:trip-list' %}"
-                     class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block">
+                     class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 sm:py-3 sm:px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block text-sm sm:text-base"> 
                       View Loadings (Dispatched)
                   </a>
              {% endif %}
@@ -187,3 +188,73 @@
     </div>
 {% endif %}
 {% endblock content %}
+
+{% block extra_js %} 
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const chartLabels = {{ loadings_chart_labels|safe|default_if_none:"[]" }};
+
+    // PMS Chart
+    const ctxPmsLoadings = document.getElementById('pmsLoadingsChart');
+    const pmsChartDataValues = {{ pms_loadings_data|safe|default_if_none:"[]" }};
+    if (ctxPmsLoadings && chartLabels.length > 0 && pmsChartDataValues.length > 0 && pmsChartDataValues.some(value => value > 0) ) {
+        new Chart(ctxPmsLoadings, {
+            type: 'bar', 
+            data: {
+                labels: chartLabels, 
+                datasets: [{
+                    label: 'PMS Loaded (L)',
+                    data: pmsChartDataValues, 
+                    backgroundColor: 'rgba(239, 68, 68, 0.6)', // Tailwind red-500
+                    borderColor: 'rgba(239, 68, 68, 1)',   
+                    borderWidth: 1,
+                    hoverBackgroundColor: 'rgba(220, 38, 38, 0.7)', 
+                    hoverBorderColor: 'rgba(220, 38, 38, 1)'
+                }]
+            },
+            options: { /* ... (copy options from previous single chart, adjust if needed) ... */
+                responsive: true, maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: 'Quantity (Litres)'}}, x: {title: {display: true, text: 'Date'}}},
+                plugins: { legend: {display: true, position: 'top'}, tooltip: {callbacks: {label: function(context) { let label = context.dataset.label || ''; if (label) {label += ': ';} if (context.parsed.y !== null) {label += parseFloat(context.parsed.y).toFixed(2) + ' L';} return label;}}}}
+            }
+        });
+    } else if (ctxPmsLoadings) {
+        const pPms = document.createElement('p');
+        pPms.textContent = 'No PMS loading data available for the last 30 days.';
+        pPms.className = 'text-center text-gray-500 italic py-4';
+        ctxPmsLoadings.parentNode.replaceChild(pPms, ctxPmsLoadings); 
+    }
+
+    // AGO Chart
+    const ctxAgoLoadings = document.getElementById('agoLoadingsChart');
+    const agoChartDataValues = {{ ago_loadings_data|safe|default_if_none:"[]" }};
+    if (ctxAgoLoadings && chartLabels.length > 0 && agoChartDataValues.length > 0 && agoChartDataValues.some(value => value > 0) ) {
+        new Chart(ctxAgoLoadings, {
+            type: 'bar', 
+            data: {
+                labels: chartLabels, 
+                datasets: [{
+                    label: 'AGO Loaded (L)',
+                    data: agoChartDataValues, 
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)', // Tailwind blue-500
+                    borderColor: 'rgba(59, 130, 246, 1)',   
+                    borderWidth: 1,
+                    hoverBackgroundColor: 'rgba(37, 99, 235, 0.7)', 
+                    hoverBorderColor: 'rgba(37, 99, 235, 1)'
+                }]
+            },
+            options: { /* ... (copy options from previous single chart, adjust if needed) ... */
+                responsive: true, maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, title: { display: true, text: 'Quantity (Litres)'}}, x: {title: {display: true, text: 'Date'}}},
+                plugins: { legend: {display: true, position: 'top'}, tooltip: {callbacks: {label: function(context) { let label = context.dataset.label || ''; if (label) {label += ': ';} if (context.parsed.y !== null) {label += parseFloat(context.parsed.y).toFixed(2) + ' L';} return label;}}}}
+            }
+        });
+    } else if (ctxAgoLoadings) {
+        const pAgo = document.createElement('p');
+        pAgo.textContent = 'No AGO loading data available for the last 30 days.';
+        pAgo.className = 'text-center text-gray-500 italic py-4';
+        ctxAgoLoadings.parentNode.replaceChild(pAgo, ctxAgoLoadings); 
+    }
+});
+</script>
+{% endblock extra_js %}
