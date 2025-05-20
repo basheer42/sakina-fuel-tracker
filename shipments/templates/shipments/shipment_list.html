@@ -3,29 +3,23 @@
 {% block title %}Shipment List - Fuel Tracker{% endblock title %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h2 class="text-3xl font-semibold text-blue-700">Shipments (Received)</h2>
-    {# Only show "Add New" button if user has add permission #}
-    {# The 'can_add_shipment' variable is passed from the view context #}
+<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
+    <h2 class="text-2xl sm:text-3xl font-semibold text-blue-700">Shipments (Received)</h2>
     {% if can_add_shipment %} 
-    <a href="{% url 'shipments:shipment-add' %}" class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out">
+    <a href="{% url 'shipments:shipment-add' %}" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out text-center">
         Add New Shipment
     </a>
     {% endif %}
 </div>
 
-{# Filter Form #}
+{# Filter Form - Your existing responsive grid is good #}
 <form method="get" action="{% url 'shipments:shipment-list' %}" class="mb-6 p-4 bg-gray-50 rounded-lg shadow">
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
         <div>
             <label for="product_filter" class="block text-sm font-medium text-gray-700">Product:</label>
-             {# Use a select dropdown for product filter #}
-             {# 'products' list is passed from the view context #}
-            <select name="product" id="product_filter"
-                    class=""> {# Use global style from base.html #}
-                 <option value="">All Products</option> {# Option to clear product filter #}
+            <select name="product" id="product_filter" class="mt-1"> 
+                 <option value="">All Products</option>
                  {% for product in products %}
-                     {# Check if the current product's PK matches the filter value passed back #}
                      <option value="{{ product.pk }}" {% if product.pk|stringformat:"s" == product_filter_value %} selected {% endif %}>
                          {{ product.name }}
                      </option>
@@ -34,111 +28,96 @@
         </div>
         <div>
             <label for="supplier_name_filter" class="block text-sm font-medium text-gray-700">Supplier Name:</label>
-            <input type="text" name="supplier_name" id="supplier_name_filter" value="{{ supplier_filter_value|default:'' }}"
-                   class="" {# Use global style #}>
+            <input type="text" name="supplier_name" id="supplier_name_filter" value="{{ supplier_filter_value|default:'' }}" class="mt-1">
         </div>
-        {# Date Filters #}
         <div>
             <label for="start_date_filter" class="block text-sm font-medium text-gray-700">Start Date:</label>
-            <input type="date" name="start_date" id="start_date_filter" value="{{ start_date_filter_value|default:'' }}"
-                   class="" {# Use global style #}>
+            <input type="date" name="start_date" id="start_date_filter" value="{{ start_date_filter_value|default:'' }}" class="mt-1">
         </div>
         <div>
             <label for="end_date_filter" class="block text-sm font-medium text-gray-700">End Date:</label>
-            <input type="date" name="end_date" id="end_date_filter" value="{{ end_date_filter_value|default:'' }}"
-                   class="" {# Use global style #}>
+            <input type="date" name="end_date" id="end_date_filter" value="{{ end_date_filter_value|default:'' }}" class="mt-1">
         </div>
 
-        {# Filter Buttons #}
-        <div class="md:col-span-4 flex space-x-2 justify-end">
-            <button type="submit" class="w-full md:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm">
+        <div class="md:col-span-full flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 justify-end mt-2">
+            <button type="submit" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm">
                 Filter
             </button>
-            <a href="{% url 'shipments:shipment-list' %}" class="w-full md:w-auto bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-md shadow-sm text-center">
+            <a href="{% url 'shipments:shipment-list' %}" class="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-md shadow-sm text-center">
                 Clear
             </a>
         </div>
     </div>
 </form>
 
-{# Check if there are shipments to display (after filtering) #}
 {% if shipments %}
-    <div class="overflow-x-auto bg-white shadow-md rounded-lg">
-        <table class="min-w-full leading-normal">
+    {# Ensure this div handles the overflow for the table #}
+    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
+        <table class="min-w-full w-full leading-normal">
             <thead>
-                <tr class="bg-gray-100 text-gray-600 uppercase text-sm leading-normal">
-                    <th class="py-3 px-6 text-left">Import Date</th>
-                    <th class="py-3 px-6 text-left">Supplier</th>
-                    <th class="py-3 px-6 text-left">Product</th>
-                    <th class="py-3 px-6 text-right">Quantity (L)</th>
-                    <th class="py-3 px-6 text-right">Price/L</th>
-                    <th class="py-3 px-6 text-right">Total Cost</th>
-                    <th class="py-3 px-6 text-left">Notes</th>
-                    <th class="py-3 px-6 text-center">Actions</th>
+                <tr class="bg-gray-100 text-gray-600 uppercase text-xs sm:text-sm leading-normal"> {# Adjusted text size #}
+                    <th class="py-3 px-4 sm:px-6 text-left">Import Date</th>
+                    <th class="py-3 px-4 sm:px-6 text-left">Supplier</th>
+                    <th class="py-3 px-4 sm:px-6 text-left">Product</th>
+                    <th class="py-3 px-4 sm:px-6 text-right">Qty (L)</th> {# Abbreviated for space #}
+                    <th class="py-3 px-4 sm:px-6 text-right">Price/L</th>
+                    <th class="py-3 px-4 sm:px-6 text-right">Total Cost</th>
+                    <th class="py-3 px-4 sm:px-6 text-left hidden md:table-cell">Notes</th> {# Hidden on small, shown on md+ #}
+                    <th class="py-3 px-4 sm:px-6 text-center">Actions</th>
                 </tr>
             </thead>
-            <tbody class="text-gray-700 text-sm">
+            <tbody class="text-gray-700 text-xs sm:text-sm"> {# Adjusted text size #}
                 {% for shipment in shipments %}
                 <tr class="border-b border-gray-200 hover:bg-gray-50">
-                    <td class="py-3 px-6 text-left whitespace-nowrap">{{ shipment.import_date|date:"Y-m-d" }}</td>
-                    <td class="py-3 px-6 text-left">{{ shipment.supplier_name }}</td>
-                    <td class="py-3 px-6 text-left">
-                        {# Link to shipment detail page #}
+                    <td class="py-3 px-4 sm:px-6 text-left whitespace-nowrap">{{ shipment.import_date|date:"Y-m-d" }}</td>
+                    <td class="py-3 px-4 sm:px-6 text-left">{{ shipment.supplier_name }}</td>
+                    <td class="py-3 px-4 sm:px-6 text-left">
                         <a href="{% url 'shipments:shipment-detail' shipment.pk %}" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
                             {{ shipment.product.name }}
+                            {% if shipment.vessel_id_tag %}<span class="block text-xs text-gray-500">({{ shipment.vessel_id_tag }})</span>{% endif %}
                         </a>
                     </td>
-                    <td class="py-3 px-6 text-right">{{ shipment.quantity_litres|floatformat:2 }}</td>
-                    <td class="py-3 px-6 text-right">{{ shipment.price_per_litre|floatformat:3 }}</td>
-                    <td class="py-3 px-6 text-right">
+                    <td class="py-3 px-4 sm:px-6 text-right">{{ shipment.quantity_litres|floatformat:2 }}</td>
+                    <td class="py-3 px-4 sm:px-6 text-right">{{ shipment.price_per_litre|floatformat:3 }}</td>
+                    <td class="py-3 px-4 sm:px-6 text-right">
                         {% if shipment.total_cost %}
                             {{ shipment.total_cost|floatformat:2 }}
                         {% else %}
                             N/A
                         {% endif %}
                     </td>
-                    <td class="py-3 px-6 text-left">
+                    <td class="py-3 px-4 sm:px-6 text-left hidden md:table-cell"> {# Hidden on small, shown on md+ #}
                         <div class="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title="{{ shipment.notes|default_if_none:'' }}">
                             {{ shipment.notes|default_if_none:"-"|truncatechars:30 }}
                         </div>
                     </td>
-                    {# Actions column #}
-                    <td class="py-3 px-6 text-center whitespace-nowrap">
-                        {# Show Edit link ONLY if user has change permission #}
-                        {# The 'can_change_shipment' variable is passed from the view context #}
+                    <td class="py-3 px-4 sm:px-6 text-center whitespace-nowrap">
                         {% if can_change_shipment %} 
-                        <a href="{% url 'shipments:shipment-edit' shipment.pk %}" class="text-indigo-600 hover:text-indigo-900 mr-3 font-medium">Edit</a>
+                        <a href="{% url 'shipments:shipment-edit' shipment.pk %}" class="text-indigo-600 hover:text-indigo-900 mr-2 sm:mr-3 font-medium">Edit</a>
                         {% endif %}
-                        {# Show Delete link ONLY if user has delete permission #}
-                        {# The 'can_delete_shipment' variable is passed from the view context #}
                         {% if can_delete_shipment %} 
                         <a href="{% url 'shipments:shipment-delete' shipment.pk %}" class="text-red-600 hover:text-red-900 font-medium">Delete</a>
                         {% endif %}
-                        {# Show placeholder if no actions available for this user #}
                         {% if not can_change_shipment and not can_delete_shipment %}
-                        <span class="text-gray-500 text-sm">No actions</span> 
+                        <span class="text-gray-500 text-xs sm:text-sm">No actions</span> 
                         {% endif %}
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-         {# Note: Pagination is not implemented yet on this public list view #}
     </div>
 {% else %}
-    {# Message when no shipments are found (either none exist or filtered out) #}
     <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-6" role="alert">
         <p class="font-bold">No Shipments Found</p>
         <p>
-            {# Check if any filters are active to show a different message #}
             {% if product_filter_value or supplier_filter_value or start_date_filter_value or end_date_filter_value %}
                 No shipments match your current filter criteria.
                 <a href="{% url 'shipments:shipment-list' %}" class="text-yellow-800 hover:text-yellow-900 font-semibold underline ml-2">Clear filters</a>
             {% else %}
-                There are currently no shipments recorded in the system for your account.
+                There are currently no shipments recorded in the system.
             {% endif %}
         </p>
-        {# Show "Add first one" link ONLY if user can add shipments AND no filters are active #}
         {% if can_add_shipment %} 
         {% if not product_filter_value and not supplier_filter_value and not start_date_filter_value and not end_date_filter_value %}
         <p class="mt-2">
@@ -150,4 +129,7 @@
         {% endif %}
     </div>
 {% endif %}
+
+{# PAGINATION WILL GO HERE LATER - We are not adding it in this step #}
+
 {% endblock content %}

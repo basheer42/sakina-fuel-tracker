@@ -1,32 +1,21 @@
 # shipments/admin.py
 from django.contrib import admin
-from django.db.models import Sum
+from django.db.models import Sum 
 from .models import (
-    Shipment, Customer, Vehicle, Product,
-    Trip, LoadingCompartment, ShipmentDepletion # Added ShipmentDepletion
+    Shipment, Customer, Vehicle, Product, Destination, # Added Destination
+    Trip, LoadingCompartment, ShipmentDepletion
 )
 
-# --- Define Inlines for the admin ---
+# Register Destination model if you want to manage Destinations in admin
+@admin.register(Destination)
+class DestinationAdmin(admin.ModelAdmin):
+    list_display = ('name', 'created_at', 'updated_at')
+    search_fields = ('name',)
 
 class LoadingCompartmentInline(admin.TabularInline):
     model = LoadingCompartment
-    extra = 1 # For new Trips, show 1 by default (formset itself ensures 3)
+    extra = 1 
     fields = ('compartment_number', 'quantity_requested_litres')
-    # For editing existing trips, this will show existing compartments
-
-# Inline to show depletions for a Trip (read-only is often best for depletions)
-class ShipmentDepletionInline(admin.TabularInline):
-    model = ShipmentDepletion
-    extra = 0 # Don't show extra blank forms for depletions
-    fields = ('shipment_batch', 'quantity_depleted', 'created_at')
-    readonly_fields = ('shipment_batch', 'quantity_depleted', 'created_at') # Make them read-only
-    can_delete = False # Usually, depletions shouldn't be manually deleted from here
-
-    def has_add_permission(self, request, obj=None): # Prevent adding depletions manually via Trip admin
-        return False
-
-
-# --- Define ModelAdmins ---
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
@@ -45,13 +34,18 @@ class VehicleAdmin(admin.ModelAdmin):
 
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
-   list_display = ('loading_date', 'loading_time', 'bol_number', 'vehicle', 'product', 'customer', 'status', 'user', 'total_loaded')
-   list_filter = ('loading_date', 'status', 'product', 'vehicle', 'customer', 'user')
-   search_fields = ('vehicle__plate_number', 'customer__name', 'product__name', 'bol_number')
+   list_display = ('loading_date', 'bol_number', 'vehicle', 'product', 'customer', 'destination', 'status', 'user', 'total_loaded') # Added destination
+   list_filter = ('loading_date', 'status', 'product', 'vehicle', 'customer', 'destination', 'user') # Added destination
+   search_fields = ('vehicle__plate_number', 'customer__name', 'product__name', 'bol_number', 'destination__name') # Added destination
    date_hierarchy = 'loading_date'
-   # Show requested compartments first, then the depletions
-   inlines = [LoadingCompartmentInline, ShipmentDepletionInline] 
-   readonly_fields = ('user',)
+   inlines = [LoadingCompartmentInline]
+   readonly_fields = ('user',) 
+
+   fieldsets = (
+        (None, {'fields': ('user', ('loading_date', 'loading_time'), 'bol_number', 'status')}),
+        ('Participants', {'fields': ('vehicle', 'customer', 'product', 'destination')}), # Added destination
+        ('Additional Information', {'fields': ('notes','kpc_comments'), 'classes': ('collapse',)}), # Added kpc_comments
+   )
 
    def get_changeform_initial_data(self, request):
        initial = super().get_changeform_initial_data(request)
@@ -60,44 +54,41 @@ class TripAdmin(admin.ModelAdmin):
        return initial
 
    def save_model(self, request, obj, form, change):
-       if not change: # New object
+       if not obj.pk: 
            obj.user = request.user
        super().save_model(request, obj, form, change)
-       # FIFO logic and ShipmentDepletion creation will be handled by the public-facing view's save.
-       # For admin, we might need to add similar logic or a signal if direct admin Trip creation/editing should trigger FIFO.
-       # For now, admin is for raw data management; FIFO processing is for user-facing forms.
 
-
-@admin.register(Shipment) # <-- MODIFIED
+@admin.register(Shipment)
 class ShipmentAdmin(admin.ModelAdmin):
     list_display = (
-        'import_date', 'supplier_name', 'product', 
-        'quantity_litres', 'quantity_remaining', # Added quantity_remaining
-        'price_per_litre', 'user', 'created_at'
+        'vessel_id_tag', 
+        'import_date', 
+        'supplier_name', 
+        'product', 
+        'destination', # Added destination
+        'quantity_litres', 
+        'quantity_remaining',
+        'price_per_litre', 
+        'user', 
+        'created_at'
     )
-    list_filter = ('product', 'supplier_name', 'import_date', 'user')
-    search_fields = ('supplier_name', 'product__name', 'notes')
+    list_filter = ('product', 'supplier_name', 'import_date', 'destination', 'user') # Added destination
+    search_fields = ('vessel_id_tag', 'supplier_name', 'product__name', 'destination__name', 'notes') # Added destination
     date_hierarchy = 'import_date'
-    ordering = ('import_date',) # Changed to oldest first to see FIFO order
-    # Make user and quantity_remaining read-only in the form. 
-    # quantity_remaining is managed by FIFO logic.
+    ordering = ('import_date',) 
     readonly_fields = ('user', 'quantity_remaining',) 
 
     def save_model(self, request, obj, form, change):
-        if not change: # If this is a new object being added
+        if not obj.pk: 
             obj.user = request.user
-            # Initialize quantity_remaining to full quantity for new shipments
-            obj.quantity_remaining = form.cleaned_data.get('quantity_litres', 0) 
+        # quantity_remaining handled by model's save method
         super().save_model(request, obj, form, change)
 
-# Register ShipmentDepletion to make it visible (optional, mostly for debugging)
 @admin.register(ShipmentDepletion)
 class ShipmentDepletionAdmin(admin.ModelAdmin):
     list_display = ('trip', 'shipment_batch', 'quantity_depleted', 'created_at')
-    list_filter = ('trip__product', 'created_at')
-    readonly_fields = ('trip', 'shipment_batch', 'quantity_depleted') # Generally, these shouldn't be edited directly
+    list_filter = ('trip__product', 'created_at', 'shipment_batch__product')
+    readonly_fields = ('trip', 'shipment_batch', 'quantity_depleted', 'created_at')
 
     def has_add_permission(self, request): return False
     def has_change_permission(self, request, obj=None): return False
-    # Allow deletion for admin cleanup if necessary, but typically these are system-generated
-    # def has_delete_permission(self, request, obj=None): return False 

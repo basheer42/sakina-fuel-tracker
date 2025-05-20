@@ -3,17 +3,17 @@
 {% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg mt-8">
-    <div class="flex justify-between items-center mb-6 pb-4 border-b border-gray-200">
-        <h2 class="text-3xl font-semibold text-blue-700">{{ page_title }}</h2>
-        <div>
+<div class="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-lg shadow-lg mt-8">
+    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 pb-4 border-b border-gray-200 gap-2">
+        <h2 class="text-2xl sm:text-3xl font-semibold text-blue-700">{{ page_title }}</h2>
+        <div class="flex space-x-2 mt-2 sm:mt-0">
             {% if can_change_trip %}
-            <a href="{% url 'shipments:trip-edit' trip.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-4 rounded-md shadow-sm text-sm mr-2">
+            <a href="{% url 'shipments:trip-edit' trip.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-3 sm:px-4 rounded-md shadow-sm text-xs sm:text-sm text-center">
                 Edit Loading
             </a>
             {% endif %}
             {% if can_delete_trip %}
-            <a href="{% url 'shipments:trip-delete' trip.pk %}" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm text-sm">
+            <a href="{% url 'shipments:trip-delete' trip.pk %}" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 sm:px-4 rounded-md shadow-sm text-xs sm:text-sm text-center">
                 Delete Loading
             </a>
             {% endif %}
@@ -21,76 +21,126 @@
     </div>
 
     {# --- Trip Details --- #}
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-4 text-gray-700 mb-8"> {# Changed to 3 columns for better layout #}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 sm:gap-x-8 gap-y-4 text-sm text-gray-700 mb-8">
         <div>
-            <strong class="font-medium text-gray-900">BOL Date:</strong>
-            <p>{{ trip.loading_date|date:"F j, Y" }}</p>
+            <strong class="block font-medium text-gray-900">BOL Date:</strong>
+            <span>{{ trip.loading_date|date:"F j, Y" }}</span>
         </div>
         <div>
-            <strong class="font-medium text-gray-900">BOL Time:</strong>
-            <p>{{ trip.loading_time|time:"H:i A" }}</p>
+            <strong class="block font-medium text-gray-900">BOL Time:</strong>
+            <span>{{ trip.loading_time|time:"H:i A" }}</span>
         </div>
         <div>
-            <strong class="font-medium text-gray-900">BOL Number:</strong> {# New #}
-            <p>{{ trip.bol_number|default_if_none:"N/A" }}</p>
+            <strong class="block font-medium text-gray-900">KPC Order / BOL Number:</strong>
+            <span>{{ trip.bol_number|default_if_none:"N/A" }}</span>
         </div>
          <div>
-            <strong class="font-medium text-gray-900">Status:</strong> {# New #}
-            <p class="font-semibold {% if trip.status == 'GATEPASSED' %}text-green-600{% elif trip.status == 'CANCELLED' %}text-red-600{% elif trip.status == 'PENDING' %}text-yellow-600{% else %}text-blue-600{% endif %}">
+            <strong class="block font-medium text-gray-900">Status:</strong>
+            <span class="font-semibold {% if trip.status == 'GATEPASSED' or trip.status == 'DELIVERED' %}text-green-600{% elif trip.status == 'CANCELLED' or trip.status == 'REJECTED'%}text-red-600{% elif trip.status == 'PENDING' or trip.status == 'LOADING' %}text-yellow-600{% else %}text-blue-600{% endif %}">
                 {{ trip.get_status_display }}
-            </p>
+            </span>
         </div>
         <div>
-            <strong class="font-medium text-gray-900">Vehicle:</strong>
-            <p>{{ trip.vehicle.plate_number }}</p>
+            <strong class="block font-medium text-gray-900">Vehicle:</strong>
+            <span>{{ trip.vehicle.plate_number }} {% if trip.vehicle.trailer_number %}({{trip.vehicle.trailer_number}}){% endif %}</span>
         </div>
          <div>
-            <strong class="font-medium text-gray-900">Product:</strong>
-            <p>{{ trip.product.name }}</p>
+            <strong class="block font-medium text-gray-900">Product:</strong>
+            <span>{{ trip.product.name }}</span>
         </div>
         <div>
-            <strong class="font-medium text-gray-900">Customer (Destination):</strong>
-            <p>{{ trip.customer.name }}</p>
+            <strong class="block font-medium text-gray-900">Customer:</strong>
+            <span>{{ trip.customer.name }}</span>
         </div>
+        {% if trip.destination %}
         <div>
-             <strong class="font-medium text-gray-900">Recorded By:</strong>
-             <p>{{ trip.user.username }}</p>
+            <strong class="block font-medium text-gray-900">Destination:</strong>
+            <span>{{ trip.destination.name }}</span>
         </div>
-        <div class="md:col-span-3"> {# Make notes span full width available in 3 col layout #}
-            <strong class="font-medium text-gray-900">Notes:</strong>
-            <p class="mt-1 whitespace-pre-wrap">{{ trip.notes|default_if_none:"No notes provided." }}</p>
+        {% endif %}
+        <div>
+             <strong class="block font-medium text-gray-900">Recorded By:</strong>
+             <span>{{ trip.user.username }}</span>
         </div>
+        <div class="lg:col-span-3 md:col-span-2">
+            <strong class="block font-medium text-gray-900">Notes:</strong>
+            <p class="mt-1 whitespace-pre-wrap">{{ trip.notes|default_if_none:"-" }}</p>
+        </div>
+        {% if trip.kpc_comments %}
+        <div class="lg:col-span-3 md:col-span-2">
+            <strong class="block font-medium text-gray-900">KPC Comments:</strong>
+            <p class="mt-1 whitespace-pre-wrap">{{ trip.kpc_comments }}</p>
+        </div>
+        {% endif %}
     </div>
 
-    {# --- Compartment Details --- #}
-    <h3 class="text-xl font-semibold text-gray-800 mb-4 pt-4 border-t border-gray-200">Compartments Loaded</h3>
+    {# --- Compartment Details (Requested Quantities) --- #}
+    <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4 pt-4 border-t border-gray-200">Compartments Requested</h3>
+    {# The 'compartments' variable is already trip.requested_compartments.all() from the view #}
     {% if compartments %}
-        <div class="overflow-x-auto bg-gray-50 p-4 rounded-md">
-            <table class="min-w-full text-sm">
+        <div class="overflow-x-auto bg-gray-50 p-4 rounded-md mb-6">
+            <table class="min-w-full text-xs sm:text-sm">
                 <thead class="bg-gray-200">
                     <tr>
                         <th class="py-2 px-3 text-left font-semibold text-gray-700">Compartment #</th>
-                        <th class="py-2 px-3 text-right font-semibold text-gray-700">Quantity Loaded (L)</th>
+                        <th class="py-2 px-3 text-right font-semibold text-gray-700">Quantity Requested (L)</th>
                     </tr>
                 </thead>
                 <tbody class="text-gray-600">
                     {% for compartment in compartments %}
-                    <tr class="border-b border-gray-100">
+                    <tr class="border-b border-gray-100 last:border-b-0">
                         <td class="py-2 px-3">{{ compartment.compartment_number }}</td>
-                        <td class="py-2 px-3 text-right">{{ compartment.quantity_loaded_litres|floatformat:2 }}</td>
+                        <td class="py-2 px-3 text-right">{{ compartment.quantity_requested_litres|floatformat:2 }}</td>
                     </tr>
                     {% endfor %}
                      <tr class="bg-gray-100 font-semibold">
-                        <td class="py-2 px-3 text-right">Total Loaded:</td>
+                        <td class="py-2 px-3 text-right">Total Requested:</td>
+                        <td class="py-2 px-3 text-right">{{ trip.total_requested_from_compartments|floatformat:2 }} L</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-gray-600 italic mb-6">No compartment details were recorded for this loading request.</p>
+    {% endif %}
+
+    {# --- Actual Stock Depletions (FIFO) --- #}
+    <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4 pt-4 border-t border-gray-200">Actual Stock Depletions (FIFO)</h3>
+    {# The 'actual_depletions' variable is already trip.depletions_for_trip.select_related(...) from the view #}
+    {% if actual_depletions %}
+        <div class="overflow-x-auto bg-gray-50 p-4 rounded-md">
+            <table class="min-w-full text-xs sm:text-sm">
+                <thead class="bg-gray-200">
+                    <tr>
+                        <th class="py-2 px-3 text-left font-semibold text-gray-700">Shipment Batch (ID/Tag)</th>
+                        <th class="py-2 px-3 text-left font-semibold text-gray-700">Product</th>
+                        <th class="py-2 px-3 text-right font-semibold text-gray-700">Quantity Depleted (L)</th>
+                        <th class="py-2 px-3 text-left font-semibold text-gray-700">Depletion Date</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600">
+                    {% for depletion in actual_depletions %}
+                    <tr class="border-b border-gray-100 last:border-b-0">
+                        <td class="py-2 px-3">
+                            <a href="{% url 'shipments:shipment-detail' depletion.shipment_batch.pk %}" class="text-blue-600 hover:underline">
+                            Shpmt {% if depletion.shipment_batch.vessel_id_tag %}{{ depletion.shipment_batch.vessel_id_tag }}{% else %}{{ depletion.shipment_batch.id }}{% endif %}
+                            </a>
+                        </td>
+                        <td class="py-2 px-3">{{ depletion.shipment_batch.product.name }}</td>
+                        <td class="py-2 px-3 text-right">{{ depletion.quantity_depleted|floatformat:2 }}</td>
+                        <td class="py-2 px-3 whitespace-nowrap">{{ depletion.created_at|date:"Y-m-d H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                    <tr class="bg-gray-100 font-semibold">
+                        <td class="py-2 px-3 text-right" colspan="3">Total Actually Depleted (FIFO):</td> {# Adjusted colspan #}
                         <td class="py-2 px-3 text-right">{{ trip.total_loaded|floatformat:2 }} L</td>
                     </tr>
                 </tbody>
             </table>
         </div>
     {% else %}
-        <p class="text-gray-600">No compartment details recorded for this loading.</p>
+        <p class="text-gray-600 italic">No actual stock depletions recorded for this trip yet.</p>
     {% endif %}
-
 
     <div class="mt-8 text-center">
         <a href="{% url 'shipments:trip-list' %}" class="text-blue-600 hover:text-blue-800 font-medium">
