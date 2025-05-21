@@ -30,8 +30,6 @@ class Customer(models.Model):
 class Vehicle(models.Model):
     plate_number = models.CharField(max_length=50, unique=True)
     trailer_number = models.CharField(max_length=50, blank=True, null=True, unique=True) 
-    capacity_pms = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Total capacity when configured for PMS")
-    capacity_ago = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, help_text="Total capacity when configured for AGO")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self): return self.plate_number
@@ -54,7 +52,6 @@ class Shipment(models.Model):
     import_date = models.DateField(default=timezone.now)
     supplier_name = models.CharField(max_length=200)
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    # Destination for Shipment: can remain nullable if shipments are not always pre-assigned
     destination = models.ForeignKey(Destination, on_delete=models.PROTECT, null=True, blank=True, help_text="Destination this shipment is earmarked for, if any.")
     quantity_litres = models.DecimalField(max_digits=10, decimal_places=2)
     price_per_litre = models.DecimalField(max_digits=7, decimal_places=3)
@@ -77,8 +74,9 @@ class Shipment(models.Model):
         return Decimal('0.00') 
     
     def save(self, *args, **kwargs):
-        if not self.pk and self.quantity_litres is not None and self.quantity_remaining == Decimal('0.00'):
-            self.quantity_remaining = self.quantity_litres
+        is_new = self.pk is None
+        if is_new and self.quantity_litres is not None:
+            self.quantity_remaining = self.quantity_litres 
         super().save(*args, **kwargs)
     
     class Meta:
@@ -87,7 +85,7 @@ class Shipment(models.Model):
 class Trip(models.Model):
     STATUS_CHOICES = [
         ('PENDING', 'Pending KPC Action'), 
-        ('KPC_APPROVED', 'KPC Approved (Stock Booked)'),
+        ('KPC_APPROVED', 'KPC Approved (Stock Booked)'), 
         ('KPC_REJECTED', 'KPC Rejected'),  
         ('LOADING', 'Loading @ Depot'),   
         ('LOADED', 'Loaded from Depot'),  
@@ -96,12 +94,13 @@ class Trip(models.Model):
         ('DELIVERED', 'Delivered to Customer'),  
         ('CANCELLED', 'Cancelled'),
     ]
+    DEPLETION_TRIGGER_STATUSES = ['KPC_APPROVED'] 
+    DEPLETED_STOCK_STATUSES = ['KPC_APPROVED', 'LOADING', 'LOADED', 'GATEPASSED', 'TRANSIT', 'DELIVERED'] 
+
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT)
     customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    # Destination for Trip: Made non-nullable (blank=False, null=False by default)
-    # This assumes all new Trips created (e.g. from PDF) will have a destination.
     destination = models.ForeignKey(Destination, on_delete=models.PROTECT, blank=False, help_text="Destination for this loading.") 
     loading_date = models.DateField(default=timezone.now, verbose_name="Authority/BOL Date")
     loading_time = models.TimeField(default=timezone.now, verbose_name="Authority/BOL Time")
@@ -112,10 +111,15 @@ class Trip(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def perform_stock_depletion(self):
-        # ... (this method remains the same as last provided) ...
+    def _get_original_status(self):
+        if self.pk:
+            try: return Trip.objects.get(pk=self.pk).status
+            except Trip.DoesNotExist: return None
+        return None
+
+    def perform_stock_depletion(self, raise_error=True):
         if ShipmentDepletion.objects.filter(trip=self).exists():
-            print(f"Trip {self.id} ({self.bol_number}): Stock depletion already performed or initiated.")
+            print(f"Trip {self.id} ({self.bol_number}): Stock depletion already performed.")
             return True 
         print(f"Trip {self.id} ({self.bol_number}): Attempting stock depletion for {self.product.name} to {self.destination.name if self.destination else 'Unknown Destination'}")
         total_quantity_to_deplete = self.total_requested_from_compartments
@@ -123,13 +127,15 @@ class Trip(models.Model):
             print(f"Trip {self.id}: No quantity requested in compartments (Total: {total_quantity_to_deplete}). Skipping depletion.")
             return True 
         if not self.destination: 
-             raise ValidationError("Cannot perform stock depletion: Trip destination is not set.")
+             if raise_error: raise ValidationError("Cannot perform stock depletion: Trip destination is not set.")
+             return False
         available_shipments = Shipment.objects.filter(product=self.product, destination=self.destination, quantity_remaining__gt=Decimal('0.00')).order_by('import_date', 'created_at')
         current_stock_for_product_dest = available_shipments.aggregate(total=Sum('quantity_remaining'))['total'] or Decimal('0.00')
         if total_quantity_to_deplete > current_stock_for_product_dest:
             error_message = (f"Insufficient stock for {self.product.name} destined for {self.destination.name}. Available: {current_stock_for_product_dest}L, Requested for this trip: {total_quantity_to_deplete}L.")
             print(f"ERROR for Trip {self.id}: {error_message}")
-            raise ValidationError({'status': error_message}) 
+            if raise_error: raise ValidationError(error_message)
+            return False
         depleted_amount_for_trip = Decimal('0.00')
         for batch in available_shipments:
             if depleted_amount_for_trip >= total_quantity_to_deplete: break
@@ -143,28 +149,64 @@ class Trip(models.Model):
         if depleted_amount_for_trip < total_quantity_to_deplete:
             error_message = (f"Critical Error: Could not source the full quantity for Trip {self.id} ({self.bol_number}) for {self.product.name} to {self.destination.name}. Requested: {total_quantity_to_deplete}L, Sourced: {depleted_amount_for_trip}L. Stock might be inconsistent.")
             print(f"ERROR for Trip {self.id}: {error_message}")
-            raise ValidationError({'status': error_message})
+            if raise_error: raise ValidationError(error_message)
+            return False
         print(f"Trip {self.id}: Stock depletion successful. Depleted: {depleted_amount_for_trip}L")
         return True
 
+    def reverse_stock_depletion(self):
+        print(f"Trip {self.id} ({self.bol_number}): Attempting to reverse stock depletions.")
+        depletions = ShipmentDepletion.objects.filter(trip=self)
+        if not depletions.exists():
+            print(f"Trip {self.id}: No depletions found to reverse.")
+            return True
+        reversal_successful = True
+        for depletion in depletions:
+            try:
+                shipment_batch = depletion.shipment_batch
+                shipment_batch.quantity_remaining += depletion.quantity_depleted
+                shipment_batch.save(update_fields=['quantity_remaining', 'updated_at'])
+                print(f"  Reversed {depletion.quantity_depleted}L to Shipment ID {shipment_batch.id} ({getattr(shipment_batch, 'vessel_id_tag', 'N/A')})")
+            except Exception as e:
+                print(f"ERROR reversing depletion for shipment_batch {depletion.shipment_batch_id} on Trip {self.id}: {e}")
+                reversal_successful = False 
+        if reversal_successful:
+            num_deleted, _ = depletions.delete()
+            print(f"Trip {self.id}: Reversed and deleted {num_deleted} depletion records.")
+        else:
+            print(f"Trip {self.id}: Some errors occurred during stock reversal. Depletion records NOT deleted to allow investigation.")
+        return reversal_successful
+
     def save(self, *args, **kwargs):
         is_new = self.pk is None
-        original_status = None
-        if not is_new:
-            try: original_status = Trip.objects.get(pk=self.pk).status
-            except Trip.DoesNotExist: pass
+        original_status = self._get_original_status()
         super().save(*args, **kwargs) 
-        if self.status == 'KPC_APPROVED' and (is_new or original_status != 'KPC_APPROVED') and not ShipmentDepletion.objects.filter(trip=self).exists():
-            print(f"Trip {self.id} status changed to KPC_APPROVED. Original: {original_status}. Attempting depletion.")
-            try:
-                with transaction.atomic(): 
-                    self.perform_stock_depletion()
-            except ValidationError as e:
-                print(f"VALIDATION ERROR during automated stock depletion for Trip {self.id}: {e.message if hasattr(e, 'message') else e}")
-                raise 
-            except Exception as e: 
-                print(f"UNEXPECTED ERROR during automated stock depletion for Trip {self.id}: {e}")
-                raise 
+        try:
+            with transaction.atomic():
+                if self.status in self.DEPLETION_TRIGGER_STATUSES and \
+                   (is_new or original_status not in self.DEPLETION_TRIGGER_STATUSES) and \
+                   not ShipmentDepletion.objects.filter(trip=self).exists():
+                    print(f"Trip {self.id} status is '{self.status}'. Original: '{original_status}'. Attempting depletion.")
+                    self.perform_stock_depletion(raise_error=True)
+                elif original_status in self.DEPLETED_STOCK_STATUSES and \
+                     self.status not in self.DEPLETED_STOCK_STATUSES and \
+                     ShipmentDepletion.objects.filter(trip=self).exists():
+                    print(f"Trip {self.id} status changed from '{original_status}' to '{self.status}'. Attempting to reverse depletions.")
+                    self.reverse_stock_depletion()
+        except ValidationError as e:
+            print(f"VALIDATION ERROR during stock operation for Trip {self.id} on status change to '{self.status}': {e}")
+            if not is_new and original_status: # Only revert if it's an update and status changed
+                self.status = original_status
+                self.kpc_comments = (self.kpc_comments or "") + f"\nSTOCK OP. FAILED (status reverted): {str(e)[:200]}"
+                super().save(update_fields=['status', 'kpc_comments']) 
+            raise 
+        except Exception as e: 
+            print(f"UNEXPECTED ERROR during stock operation for Trip {self.id}: {e}")
+            if not is_new and original_status:
+                self.status = original_status
+                self.kpc_comments = (self.kpc_comments or "") + f"\nUNEXPECTED STOCK OP. ERROR (status reverted): {str(e)[:200]}"
+                super().save(update_fields=['status', 'kpc_comments'])
+            raise
 
     class Meta:
          ordering = ['-loading_date', '-loading_time']
@@ -175,14 +217,14 @@ class Trip(models.Model):
 
     @property
     def total_requested_from_compartments(self):
-        if hasattr(self, 'requested_compartments'):
+        if self.pk and hasattr(self, 'requested_compartments'):
             aggregation_result = self.requested_compartments.aggregate(total_sum=Sum('quantity_requested_litres'))
             return aggregation_result.get('total_sum') or Decimal('0.00')
         return Decimal('0.00')
 
     @property
     def total_loaded(self): 
-        if hasattr(self, 'depletions_for_trip'):
+        if self.pk and hasattr(self, 'depletions_for_trip'):
              aggregation_result = self.depletions_for_trip.aggregate(total_sum=Sum('quantity_depleted'))
              return aggregation_result.get('total_sum') or Decimal('0.00')
         return Decimal('0.00')
