@@ -16,7 +16,7 @@ class LoadingCompartmentInline(admin.TabularInline):
     model = LoadingCompartment
     extra = 3
     min_num = 0 
-    fields = ('compartment_number', 'quantity_requested_litres')
+    fields = ('compartment_number', 'quantity_requested_litres', 'quantity_actual_l20', 'temperature', 'density') # Added new fields
     readonly_fields = () 
 
 @admin.register(Product)
@@ -37,15 +37,16 @@ class VehicleAdmin(admin.ModelAdmin):
 
 @admin.register(Trip)
 class TripAdmin(admin.ModelAdmin):
-   list_display = ('id', 'loading_date', 'bol_number', 'vehicle', 'product', 'customer', 'destination', 'status', 'user', 'total_requested_from_compartments', 'total_loaded')
+   list_display = ('id', 'loading_date', 'kpc_order_number', 'bol_number', 'vehicle', 'product', 'customer', 'destination', 'status', 'user', 'total_requested_from_compartments', 'total_loaded') # Added kpc_order_number
    list_filter = ('loading_date', 'status', 'product', 'vehicle', 'customer', 'destination', 'user')
-   search_fields = ('bol_number', 'vehicle__plate_number', 'customer__name', 'product__name', 'destination__name')
+   search_fields = ('kpc_order_number', 'bol_number', 'vehicle__plate_number', 'customer__name', 'product__name', 'destination__name') # Added kpc_order_number
    date_hierarchy = 'loading_date'
    inlines = [LoadingCompartmentInline]
    readonly_fields = ('user', 'total_loaded', 'total_requested_from_compartments', 'created_at', 'updated_at') 
 
    fieldsets = (
-        (None, {'fields': ('user', ('loading_date', 'loading_time'), 'bol_number', 'status')}),
+        (None, {'fields': ('user', ('loading_date', 'loading_time'), 'status')}),
+        ('Order & BoL Numbers', {'fields': ('kpc_order_number', 'bol_number')}), # Grouped order numbers
         ('Participants & Product', {'fields': ('vehicle', 'customer', 'product', 'destination')}),
         ('Quantities (Read-only Summary)', {'fields': ('total_requested_from_compartments', 'total_loaded')}), 
         ('Additional Information', {'fields': ('notes','kpc_comments'), 'classes': ('collapse',)}),
@@ -98,45 +99,23 @@ class ShipmentAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         is_new = not obj.pk
         original_quantity_litres = None
-
-        if is_new:
-            obj.user = request.user # Set user for new objects
-        
+        if is_new: obj.user = request.user
         elif change and 'quantity_litres' in form.changed_data:
-            # This is an existing shipment and quantity_litres was changed
-            try: # Fetch original value before form binding might have changed it on obj
-                original_shipment = Shipment.objects.get(pk=obj.pk)
-                original_quantity_litres = original_shipment.quantity_litres
-            except Shipment.DoesNotExist:
-                 pass # Should not happen on a change form
-
+            try: original_shipment = Shipment.objects.get(pk=obj.pk); original_quantity_litres = original_shipment.quantity_litres
+            except Shipment.DoesNotExist: pass
             new_quantity_litres = form.cleaned_data.get('quantity_litres', obj.quantity_litres)
-            
-            depleted_from_this_batch = ShipmentDepletion.objects.filter(
-                shipment_batch=obj
-            ).aggregate(total_depleted=Sum('quantity_depleted'))['total_depleted'] or Decimal('0.00')
-
+            depleted_from_this_batch = ShipmentDepletion.objects.filter(shipment_batch=obj).aggregate(total_depleted=Sum('quantity_depleted'))['total_depleted'] or Decimal('0.00')
             if new_quantity_litres < depleted_from_this_batch:
                 messages.error(request, f"Cannot set total quantity ({new_quantity_litres}L) less than what has already been depleted ({depleted_from_this_batch}L) for shipment '{obj.vessel_id_tag}'. Update aborted.")
-                # To prevent saving, we might avoid calling super().save_model for this specific case,
-                # but this requires not calling it at all if there's an error.
-                # Or, revert obj.quantity_litres to original_quantity_litres if form allows clean modification.
-                # Simplest is to just return and not save if error.
                 return 
-            
             obj.quantity_remaining = new_quantity_litres - depleted_from_this_batch
-            # obj.quantity_litres will be set by the form data via super().save_model()
             messages.info(request, f"Quantity remaining for shipment {obj.vessel_id_tag} updated to {obj.quantity_remaining}L.")
-
         super().save_model(request, obj, form, change)
-        # The model's save() method handles initial quantity_remaining for new objects
-        # if it was not already set by the form (which it is in shipment_add_view).
 
 @admin.register(ShipmentDepletion)
 class ShipmentDepletionAdmin(admin.ModelAdmin):
     list_display = ('trip', 'shipment_batch', 'quantity_depleted', 'created_at')
     list_filter = ('trip__product', 'created_at', 'shipment_batch__product')
     readonly_fields = ('trip', 'shipment_batch', 'quantity_depleted', 'created_at')
-
     def has_add_permission(self, request): return False
     def has_change_permission(self, request, obj=None): return False
