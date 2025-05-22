@@ -1,5 +1,3 @@
-# fuel_project/settings.py
-
 """
 Django settings for fuel_project project.
 """
@@ -18,7 +16,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'shipments', 
+    'shipments',
 ]
 
 MIDDLEWARE = [
@@ -77,25 +75,34 @@ STATIC_ROOT = BASE_DIR / 'staticfiles' # For collectstatic in production
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Your original redirect URLs
-LOGIN_REDIRECT_URL = '/' 
+LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
-# PASSWORD_CHANGE_REDIRECT_URL = '/' # This one wasn't in your file #3, but often useful
-LOGIN_URL = '/accounts/login/' # Matches your path('accounts/', include('django.contrib.auth.urls'))
+# PASSWORD_CHANGE_REDIRECT_URL = '/'
+LOGIN_URL = '/accounts/login/'
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' # For development email sending (prints to console)
 
 
-# --- NEW: EMAIL ACCOUNT SETTINGS FOR PROCESSING INCOMING STATUS UPDATES ---
+# --- EMAIL ACCOUNT SETTINGS FOR PROCESSING INCOMING EMAILS ---
 # WARNING: DO NOT COMMIT ACTUAL PASSWORDS TO GIT IF THIS IS A PUBLIC REPO.
 # USE ENVIRONMENT VARIABLES OR A SECRETS MANAGER IN PRODUCTION.
-# Replace placeholders below with your actual test credentials.
 
-EMAIL_PROCESSING_HOST = 'mail.sakinagas.com'  # e.g., 'imap.gmail.com', 'outlook.office365.com', etc.
-EMAIL_PROCESSING_PORT = 993                    # Standard IMAP SSL port (usually 993)
+EMAIL_PROCESSING_HOST = 'mail.sakinagas.com'
+EMAIL_PROCESSING_PORT = 993
 EMAIL_PROCESSING_USER = 'system@sakinagas.com' # The email account the system will read from
 EMAIL_PROCESSING_PASSWORD = 'Aziz@2025' # The password for system@sakinagas.com
-EMAIL_PROCESSING_SENDER_FILTER = 'info@sakinagas.com' # The email address that will be sending the test status updates
-EMAIL_PROCESSING_MAILBOX = 'INBOX' # The mailbox/folder to check within system@sakinagas.com
+EMAIL_PROCESSING_MAILBOX = 'INBOX'
+
+# --- SENDER FILTERS FOR TESTING PURPOSES ---
+# For testing, all emails will be sent FROM 'info@sakinagas.com'
+# In production, these will be the actual KPC sender addresses.
+
+# Sender for KPC STATUS UPDATE emails (e.g., APPROVED, REJECTED)
+EMAIL_STATUS_UPDATE_SENDER_FILTER = 'info@sakinagas.com' # WAS: 'truckloading@kpc.co.ke' - CHANGED FOR TESTING
+
+# Sender for KPC BILL OF LADING (BoL) PDF emails
+EMAIL_BOL_SENDER_FILTER = 'info@sakinagas.com' # WAS: 'bolconfirmation@kpc.co.ke' - CHANGED FOR TESTING
+
 
 # If using Gmail and 2-Step Verification, you'll need an "App Password".
 # If using Outlook/Office365, ensure IMAP is enabled for the account.

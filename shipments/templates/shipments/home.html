@@ -12,7 +12,7 @@
         <p class="text-base sm:text-lg text-gray-600">{{ description }}</p>
     </div>
 
-    {# --- NOTIFICATIONS (Keep your existing notification blocks here) --- #}
+    {# --- NOTIFICATIONS --- #}
     {% if aging_stock_notifications %}
         <div class="mb-6 p-4 bg-orange-100 border-l-4 border-orange-500 text-orange-700 rounded-md shadow">
             <h4 class="font-bold mb-2 text-orange-800">Aging Stock Alert!</h4>
@@ -69,7 +69,7 @@
 
     {% if can_view_shipments or can_view_trip or can_view_product or can_view_customer or can_view_vehicle %}
 
-        {# --- Product Summary with Booked Stock (As corrected before) --- #}
+        {# --- Product Summary with Booked Stock --- #}
         {% if stock_by_product_detailed %}
              <h3 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 mt-8">Product Stock Summary</h3>
              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
@@ -77,10 +77,10 @@
                       <div class="bg-white p-4 rounded-lg shadow-md">
                            <div class="text-md sm:text-lg font-bold text-gray-800 mb-2">{{ product_name }}</div>
                            <div class="text-xs text-gray-500">Total Received: <span class="font-medium">{{ data.shipped|floatformat:2|default:0 }} L</span></div>
-                           <div class="text-xs text-gray-500 mb-1">Total Dispatched: <span class="font-medium">{{ data.dispatched|floatformat:2|default:0 }} L</span></div>
+                           <div class="text-xs text-gray-500 mb-1">Total Dispatched (Delivered): <span class="font-medium">{{ data.dispatched|floatformat:2|default:0 }} L</span></div>
                            <hr class="my-1">
                            <div class="text-xs text-gray-600 mt-1">Physical Stock: <span class="font-semibold">{{ data.physical_stock|floatformat:2 }} L</span></div>
-                           <div class="text-xs text-orange-600">Booked Stock: <span class="font-semibold">{{ data.booked_stock|floatformat:2 }} L</span></div>
+                           <div class="text-xs text-orange-600">Booked/Committed Stock: <span class="font-semibold">{{ data.booked_stock|floatformat:2 }} L</span></div>
                            <div class="text-sm font-bold mt-1 {% if data.net_available > 0 %} text-green-600 {% elif data.net_available < 0 %} text-red-700 bg-red-100 px-1 rounded {% else %} text-gray-700 {% endif %}">
                                Net Available: <span class="text-base sm:text-lg">{{ data.net_available|floatformat:2 }} L</span>
                            </div>
@@ -92,17 +92,15 @@
              </div>
         {% endif %}
 
-        {# --- MODIFIED: Loadings Charts Section (PMS and AGO) --- #}
+        {# --- Loadings Charts Section (PMS and AGO) --- #}
         {% if can_view_trip %} 
         <div class="my-8 grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {# PMS Chart #}
             <div class="p-4 sm:p-6 bg-white rounded-lg shadow-md"> 
                 <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">PMS Loadings (Last 30 Days)</h3>
                 <div class="relative" style="height: 250px; sm:height: 300px;"> 
                     <canvas id="pmsLoadingsChart"></canvas>
                 </div>
             </div>
-            {# AGO Chart #}
             <div class="p-4 sm:p-6 bg-white rounded-lg shadow-md"> 
                 <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">AGO Loadings (Last 30 Days)</h3>
                 <div class="relative" style="height: 250px; sm:height: 300px;"> 
@@ -111,23 +109,22 @@
             </div>
         </div>
         {% endif %}
-        {# --- END Loadings Charts Section --- #}
 
-        {# --- Total Dispatched by Product (Keep as is) --- #}
+        {# --- Total Dispatched by Product Card --- #}
         {% if can_view_trip and trip_quantity_by_product %}
             <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8 mt-8"> 
-                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Total Dispatched by Product (Completed Loadings)</h3>
+                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Total Dispatched to Customer by Product</h3>
                 <ul class="list-disc list-inside text-gray-700 text-xs sm:text-sm"> 
                     {% for item in trip_quantity_by_product %}
-                        <li class="mb-1">{{ item.product__name }}: <span class="font-medium">{{ item.total_litres|floatformat:2 }} L</span></li>
+                        <li class="mb-1">{{ item.shipment_batch__product__name }}: <span class="font-medium">{{ item.total_litres|floatformat:2 }} L</span></li>
                     {% empty %}
-                        <li class="text-gray-500">No completed loading data yet.</li>
+                        <li class="text-gray-500">No "Delivered" loading data yet.</li>
                     {% endfor %}
                 </ul>
             </div>
         {% endif %}
 
-        {# --- Overall Stats Cards (Keep as is) --- #}
+        {# --- Overall Stats Cards --- #}
         <h3 class="text-xl sm:text-2xl font-semibold text-gray-800 mb-4 mt-12">Overall Company Summary</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {% if can_view_shipments %}
@@ -147,11 +144,11 @@
              {% if can_view_trip %}
                  <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center">
                      <div class="text-lg sm:text-xl font-bold text-blue-600">{{ total_trips|default:0 }}</div>
-                     <div class="text-gray-600 text-xs sm:text-sm mt-1">Total Loadings (Dispatched)</div>
+                     <div class="text-gray-600 text-xs sm:text-sm mt-1">Total Loadings (Delivered)</div>
                  </div>
                  <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md text-center">
                      <div class="text-lg sm:text-xl font-bold text-blue-600">{{ total_quantity_loaded|floatformat:2|default:0 }} L</div>
-                     <div class="text-gray-600 text-xs sm:text-sm mt-1">Total Quantity (Dispatched)</div>
+                     <div class="text-gray-600 text-xs sm:text-sm mt-1">Total Quantity (Delivered)</div>
                  </div>
              {% endif %}
         </div>
@@ -160,22 +157,30 @@
             {% if can_view_shipments %}
                  <a href="{% url 'shipments:shipment-list' %}"
                     class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 sm:py-3 sm:px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block text-sm sm:text-base"> 
-                     View Shipments (Received)
+                     View Shipments
                  </a>
             {% endif %}
             {% if can_view_trip %}
                   <a href="{% url 'shipments:trip-list' %}"
                      class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 sm:py-3 sm:px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block text-sm sm:text-base"> 
-                      View Loadings (Dispatched)
+                      View Loadings
                   </a>
              {% endif %}
+            {# --- NEW BUTTON FOR UPLOADING LOADING AUTHORITY --- #}
+            {% if can_add_trip %} {# Using the context variable from home_view #}
+                  <a href="{% url 'shipments:trip-upload-authority' %}"
+                     class="bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 sm:py-3 sm:px-6 rounded-lg shadow-md transition duration-150 ease-in-out inline-block text-sm sm:text-base mt-3 md:mt-0"> 
+                      Upload Loading Authority
+                  </a>
+            {% endif %}
+            {# --- END NEW BUTTON --- #}
         </div>
 
     {% else %}
         {% if user.is_authenticated %}
              <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-6" role="alert">
                 <p class="font-bold">Permissions Notice</p>
-                <p>{{ description }}</p>
+                <p>{{ description }}</p> {# This description comes from the home_view when user has no data viewing perms #}
              </div>
         {% endif %}
     {% endif %}
@@ -194,66 +199,40 @@
 document.addEventListener('DOMContentLoaded', function () {
     const chartLabels = {{ loadings_chart_labels|safe|default_if_none:"[]" }};
 
-    // PMS Chart
     const ctxPmsLoadings = document.getElementById('pmsLoadingsChart');
     const pmsChartDataValues = {{ pms_loadings_data|safe|default_if_none:"[]" }};
-    if (ctxPmsLoadings && chartLabels.length > 0 && pmsChartDataValues.length > 0 && pmsChartDataValues.some(value => value > 0) ) {
+    if (ctxPmsLoadings && chartLabels.length > 0 && pmsChartDataValues.some(value => value > 0) ) {
         new Chart(ctxPmsLoadings, {
             type: 'bar', 
-            data: {
-                labels: chartLabels, 
-                datasets: [{
-                    label: 'PMS Loaded (L)',
-                    data: pmsChartDataValues, 
-                    backgroundColor: 'rgba(239, 68, 68, 0.6)', // Tailwind red-500
-                    borderColor: 'rgba(239, 68, 68, 1)',   
-                    borderWidth: 1,
-                    hoverBackgroundColor: 'rgba(220, 38, 38, 0.7)', 
-                    hoverBorderColor: 'rgba(220, 38, 38, 1)'
-                }]
-            },
-            options: { /* ... (copy options from previous single chart, adjust if needed) ... */
-                responsive: true, maintainAspectRatio: false,
+            data: { labels: chartLabels, datasets: [{
+                    label: 'PMS Loaded (L)', data: pmsChartDataValues, 
+                    backgroundColor: 'rgba(239, 68, 68, 0.6)', borderColor: 'rgba(239, 68, 68, 1)',   
+                    borderWidth: 1, hoverBackgroundColor: 'rgba(220, 38, 38, 0.7)', hoverBorderColor: 'rgba(220, 38, 38, 1)'}]},
+            options: { responsive: true, maintainAspectRatio: false,
                 scales: { y: { beginAtZero: true, title: { display: true, text: 'Quantity (Litres)'}}, x: {title: {display: true, text: 'Date'}}},
-                plugins: { legend: {display: true, position: 'top'}, tooltip: {callbacks: {label: function(context) { let label = context.dataset.label || ''; if (label) {label += ': ';} if (context.parsed.y !== null) {label += parseFloat(context.parsed.y).toFixed(2) + ' L';} return label;}}}}
-            }
+                plugins: { legend: {display: true, position: 'top'}, tooltip: {callbacks: {label: function(context) { let label = context.dataset.label || ''; if (label) {label += ': ';} if (context.parsed.y !== null) {label += parseFloat(context.parsed.y).toFixed(2) + ' L';} return label;}}}}}
         });
     } else if (ctxPmsLoadings) {
-        const pPms = document.createElement('p');
-        pPms.textContent = 'No PMS loading data available for the last 30 days.';
-        pPms.className = 'text-center text-gray-500 italic py-4';
-        ctxPmsLoadings.parentNode.replaceChild(pPms, ctxPmsLoadings); 
+        const pPms = document.createElement('p'); pPms.textContent = 'No PMS loading data available for the last 30 days.';
+        pPms.className = 'text-center text-gray-500 italic py-4'; ctxPmsLoadings.parentNode.replaceChild(pPms, ctxPmsLoadings); 
     }
 
-    // AGO Chart
     const ctxAgoLoadings = document.getElementById('agoLoadingsChart');
     const agoChartDataValues = {{ ago_loadings_data|safe|default_if_none:"[]" }};
-    if (ctxAgoLoadings && chartLabels.length > 0 && agoChartDataValues.length > 0 && agoChartDataValues.some(value => value > 0) ) {
+    if (ctxAgoLoadings && chartLabels.length > 0 && agoChartDataValues.some(value => value > 0) ) {
         new Chart(ctxAgoLoadings, {
             type: 'bar', 
-            data: {
-                labels: chartLabels, 
-                datasets: [{
-                    label: 'AGO Loaded (L)',
-                    data: agoChartDataValues, 
-                    backgroundColor: 'rgba(59, 130, 246, 0.6)', // Tailwind blue-500
-                    borderColor: 'rgba(59, 130, 246, 1)',   
-                    borderWidth: 1,
-                    hoverBackgroundColor: 'rgba(37, 99, 235, 0.7)', 
-                    hoverBorderColor: 'rgba(37, 99, 235, 1)'
-                }]
-            },
-            options: { /* ... (copy options from previous single chart, adjust if needed) ... */
-                responsive: true, maintainAspectRatio: false,
+            data: { labels: chartLabels, datasets: [{
+                    label: 'AGO Loaded (L)', data: agoChartDataValues, 
+                    backgroundColor: 'rgba(59, 130, 246, 0.6)', borderColor: 'rgba(59, 130, 246, 1)',   
+                    borderWidth: 1, hoverBackgroundColor: 'rgba(37, 99, 235, 0.7)', hoverBorderColor: 'rgba(37, 99, 235, 1)'}]},
+            options: { responsive: true, maintainAspectRatio: false,
                 scales: { y: { beginAtZero: true, title: { display: true, text: 'Quantity (Litres)'}}, x: {title: {display: true, text: 'Date'}}},
-                plugins: { legend: {display: true, position: 'top'}, tooltip: {callbacks: {label: function(context) { let label = context.dataset.label || ''; if (label) {label += ': ';} if (context.parsed.y !== null) {label += parseFloat(context.parsed.y).toFixed(2) + ' L';} return label;}}}}
-            }
+                plugins: { legend: {display: true, position: 'top'}, tooltip: {callbacks: {label: function(context) { let label = context.dataset.label || ''; if (label) {label += ': ';} if (context.parsed.y !== null) {label += parseFloat(context.parsed.y).toFixed(2) + ' L';} return label;}}}}}
         });
     } else if (ctxAgoLoadings) {
-        const pAgo = document.createElement('p');
-        pAgo.textContent = 'No AGO loading data available for the last 30 days.';
-        pAgo.className = 'text-center text-gray-500 italic py-4';
-        ctxAgoLoadings.parentNode.replaceChild(pAgo, ctxAgoLoadings); 
+        const pAgo = document.createElement('p'); pAgo.textContent = 'No AGO loading data available for the last 30 days.';
+        pAgo.className = 'text-center text-gray-500 italic py-4'; ctxAgoLoadings.parentNode.replaceChild(pAgo, ctxAgoLoadings); 
     }
 });
 </script>
