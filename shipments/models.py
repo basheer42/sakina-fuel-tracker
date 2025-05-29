@@ -2,31 +2,32 @@
 from django.db import models, transaction
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from django.db.models import Sum, F, Value, DecimalField as DjangoDecimalField
+from django.db.models import Sum, F, Value, DecimalField as DjangoDecimalField 
 from decimal import Decimal 
 from django.core.exceptions import ValidationError
 import sys 
 
 User = get_user_model()
 
-# Dummy class for stdout if not passed from management command or tests
-class PrintLikeCommandOutput:
-    def write(self, msg, style_func=None):
-        if style_func:
-            # If a style function is passed (like self.style.SUCCESS), call it
-            print(style_func(msg))
+# Simpler logger for when not called from a management command
+class BasicPrintLogger:
+    def write(self, message, style_func=None):
+        if style_func and callable(style_func): 
+            # If style_func is a callable method like SUCCESS, call it
+            print(style_func(message))
         else:
-            print(msg)
+            # Fallback if style_func is not a callable style method
+            print(message)
 
-    class style:
-        # These are now simple methods that can be called
-        def SUCCESS(self, text): return f"SUCCESS: {text}"
-        def ERROR(self, text): return f"ERROR: {text}"
-        def WARNING(self, text): return f"WARNING: {text}"
-        def NOTICE(self, text): return f"NOTICE: {text}"
-
-# Instantiate the style class directly on the PrintLikeCommandOutput class
-PrintLikeCommandOutput.style = PrintLikeCommandOutput.style()
+    # Provide a dummy style attribute so `stdout_writer.style.METHOD` doesn't error out
+    # if accessed directly, though we try to pass the method itself as style_func.
+    class style_dummy_cls: # Renamed to avoid potential conflicts
+        def SUCCESS(self, text): return f"LOG-SUCCESS: {text}"
+        def ERROR(self, text): return f"LOG-ERROR: {text}"
+        def WARNING(self, text): return f"LOG-WARNING: {text}"
+        def NOTICE(self, text): return f"LOG-NOTICE: {text}"
+    
+    style = style_dummy_cls() # Provide a style attribute that has the methods
 
 
 class Product(models.Model):
@@ -135,16 +136,6 @@ class Trip(models.Model):
     kpc_comments = models.TextField(blank=True, null=True, help_text="Comments from KPC emails")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    _stdout_instance = None # Class attribute to hold the stdout object for model methods
-
-    @property
-    def stdout(self):
-        # This ensures that model methods always have a stdout-like object to write to.
-        # It will be PrintLikeCommandOutput by default, or can be overridden by management commands.
-        if not hasattr(Trip, '_stdout_instance') or Trip._stdout_instance is None:
-            Trip._stdout_instance = PrintLikeCommandOutput()
-        return Trip._stdout_instance
     
     def _get_original_status(self):
         if self.pk:
@@ -175,34 +166,37 @@ class Trip(models.Model):
              return aggregation_result.get('total_sum') or Decimal('0.00')
         return Decimal('0.00')
 
-    def perform_stock_depletion(self, use_actual_l20=False, raise_error=True):
+    def _get_effective_stdout(self, passed_stdout=None):
+        if passed_stdout and hasattr(passed_stdout, 'style') and hasattr(passed_stdout.style, 'SUCCESS') and callable(passed_stdout.style.SUCCESS):
+            return passed_stdout 
+        return BasicPrintLogger() 
+
+    def perform_stock_depletion(self, stdout_writer, use_actual_l20=False, raise_error=True):
         if ShipmentDepletion.objects.filter(trip=self).exists():
             comment_to_add = f"\nATTEMPT TO RE-DEPLETE WITHOUT REVERSAL on {timezone.now().strftime('%Y-%m-%d %H:%M')}. Skipped."
             if self.pk:
-                # Using F() expression to append to existing comment safely
                 Trip.objects.filter(pk=self.pk).update(
                     kpc_comments=F('kpc_comments') + Value(comment_to_add) if Trip.objects.filter(pk=self.pk, kpc_comments__isnull=False).exists() else Value(comment_to_add.strip())
                 )
                 self.refresh_from_db(fields=['kpc_comments'])
-            else: 
-                self.kpc_comments = (self.kpc_comments or "") + comment_to_add
-            self.stdout.write(f"Trip {self.id} ({self.kpc_order_number}): Stock depletion already performed and not reversed. Skipping duplicate depletion attempt.", style_func=self.stdout.style.WARNING)
+            else: self.kpc_comments = (self.kpc_comments or "") + comment_to_add
+            stdout_writer.write(f"Trip {self.id} ({self.kpc_order_number}): Stock depletion already performed and not reversed. Skipping duplicate depletion attempt.", style_func=stdout_writer.style.WARNING)
             return True 
 
         if use_actual_l20:
             total_quantity_to_deplete = self.total_actual_l20_from_compartments
             depletion_basis = "actual L20 quantities"
             if total_quantity_to_deplete <= Decimal('0.00'):
-                self.stdout.write(f"Trip {self.id}: Total actual L20 quantity is zero or not set. No stock will be depleted based on L20 actuals.", style_func=self.stdout.style.WARNING)
+                stdout_writer.write(f"Trip {self.id}: Total actual L20 quantity is zero or not set. No stock will be depleted based on L20 actuals.", style_func=stdout_writer.style.WARNING)
                 return True 
         else:
             total_quantity_to_deplete = self.total_requested_from_compartments
             depletion_basis = "requested quantities"
         
-        self.stdout.write(f"Trip {self.id} ({self.kpc_order_number}): Attempting stock depletion of {total_quantity_to_deplete}L based on {depletion_basis} for {self.product.name} to {self.destination.name if self.destination else 'Unknown Destination'}", style_func=self.stdout.style.NOTICE)
+        stdout_writer.write(f"Trip {self.id} ({self.kpc_order_number}): Attempting stock depletion of {total_quantity_to_deplete}L based on {depletion_basis} for {self.product.name} to {self.destination.name if self.destination else 'Unknown Destination'}", style_func=stdout_writer.style.NOTICE)
 
         if not total_quantity_to_deplete or total_quantity_to_deplete <= Decimal('0.00'):
-            self.stdout.write(f"Trip {self.id}: Quantity to deplete is {total_quantity_to_deplete}L based on {depletion_basis}. Skipping actual depletion steps.", style_func=self.stdout.style.NOTICE)
+            stdout_writer.write(f"Trip {self.id}: Quantity to deplete is {total_quantity_to_deplete}L based on {depletion_basis}. Skipping actual depletion steps.", style_func=stdout_writer.style.NOTICE)
             return True 
 
         if not self.destination: 
@@ -213,13 +207,11 @@ class Trip(models.Model):
             product=self.product, destination=self.destination, 
             quantity_remaining__gt=Decimal('0.00')
         ).order_by('import_date', 'created_at')
-        
         current_stock_for_product_dest = available_shipments.aggregate(total=Sum('quantity_remaining'))['total'] or Decimal('0.00')
         
         if total_quantity_to_deplete > current_stock_for_product_dest:
-            error_message = (f"Insufficient stock for {self.product.name} destined for {self.destination.name}. "
-                             f"Available: {current_stock_for_product_dest}L, Required for depletion: {total_quantity_to_deplete}L (based on {depletion_basis}).")
-            self.stdout.write(error_message, style_func=self.stdout.style.ERROR)
+            error_message = (f"Insufficient stock for {self.product.name} destined for {self.destination.name}. Available: {current_stock_for_product_dest}L, Required: {total_quantity_to_deplete}L ({depletion_basis}).")
+            stdout_writer.write(error_message, style_func=stdout_writer.style.ERROR)
             if raise_error: raise ValidationError({'__all__': error_message})
             return False
 
@@ -230,73 +222,54 @@ class Trip(models.Model):
             take_this_much = min(can_take_from_batch, total_quantity_to_deplete - depleted_amount_for_trip)
             if take_this_much > 0:
                 ShipmentDepletion.objects.create(trip=self, shipment_batch=batch, quantity_depleted=take_this_much)
-                batch.quantity_remaining -= take_this_much
-                batch.save(update_fields=['quantity_remaining', 'updated_at']) 
+                batch.quantity_remaining -= take_this_much; batch.save(update_fields=['quantity_remaining', 'updated_at']) 
                 depleted_amount_for_trip += take_this_much
         
         if depleted_amount_for_trip < total_quantity_to_deplete:
-            error_message = (f"Critical Error during depletion for Trip {self.id} ({self.kpc_order_number}) "
-                             f"for {self.product.name} to {self.destination.name}. "
-                             f"Attempted: {total_quantity_to_deplete}L, Sourced: {depleted_amount_for_trip}L ({depletion_basis}). "
-                             f"Concurrent operations or stock inconsistency likely.")
-            self.stdout.write(error_message, style_func=self.stdout.style.ERROR)
+            error_message = (f"Critical Error: Trip {self.id} ({self.kpc_order_number}) for {self.product.name} to {self.destination.name}. Attempted: {total_quantity_to_deplete}L, Sourced: {depleted_amount_for_trip}L ({depletion_basis}). Stock inconsistency?")
+            stdout_writer.write(error_message, style_func=stdout_writer.style.ERROR)
             if raise_error: raise ValidationError({'__all__': error_message})
             return False
-        
-        self.stdout.write(f"Trip {self.id}: Stock depletion successful. Depleted: {depleted_amount_for_trip}L based on {depletion_basis}.", style_func=self.stdout.style.SUCCESS)
+        stdout_writer.write(f"Trip {self.id}: Stock depletion successful. Depleted: {depleted_amount_for_trip}L based on {depletion_basis}.", style_func=stdout_writer.style.SUCCESS)
         return True
 
-    def reverse_stock_depletion(self): # stdout is now self.stdout
-        self.stdout.write(f"Trip {self.id} ({self.kpc_order_number}): Attempting to reverse stock depletions.", style_func=self.stdout.style.NOTICE)
+    def reverse_stock_depletion(self, stdout_writer):
+        stdout_writer.write(f"Trip {self.id} ({self.kpc_order_number}): Attempting to reverse stock depletions.", style_func=stdout_writer.style.NOTICE)
         depletions = ShipmentDepletion.objects.filter(trip=self)
         if not depletions.exists():
-            self.stdout.write(f"Trip {self.id}: No depletions found to reverse.", style_func=self.stdout.style.WARNING)
+            stdout_writer.write(f"Trip {self.id}: No depletions found to reverse.", style_func=stdout_writer.style.WARNING)
             return True
-        
         reversal_successful_overall = True
         for depletion in depletions:
             try:
                 shipment_batch = Shipment.objects.select_for_update().get(pk=depletion.shipment_batch_id)
                 shipment_batch.quantity_remaining += depletion.quantity_depleted
                 shipment_batch.save(update_fields=['quantity_remaining', 'updated_at'])
-                self.stdout.write(f"  Reversed {depletion.quantity_depleted}L to Shpmt ID {shipment_batch.id} ({getattr(shipment_batch, 'vessel_id_tag', 'N/A')})")
+                stdout_writer.write(f"  Reversed {depletion.quantity_depleted}L to Shpmt ID {shipment_batch.id} ({getattr(shipment_batch, 'vessel_id_tag', 'N/A')})")
             except Shipment.DoesNotExist:
-                self.stdout.write(f"ERROR: Shipment batch ID {depletion.shipment_batch_id} not found during reversal for Trip {self.id}.", style_func=self.stdout.style.ERROR)
+                stdout_writer.write(f"ERROR: Shipment batch ID {depletion.shipment_batch_id} not found during reversal for Trip {self.id}.", style_func=stdout_writer.style.ERROR)
                 reversal_successful_overall = False; break 
             except Exception as e:
-                self.stdout.write(f"ERROR reversing depletion for shipment_batch {depletion.shipment_batch_id} on Trip {self.id}: {e}", style_func=self.stdout.style.ERROR)
+                stdout_writer.write(f"ERROR reversing depletion for shipment_batch {depletion.shipment_batch_id} on Trip {self.id}: {e}", style_func=stdout_writer.style.ERROR)
                 reversal_successful_overall = False; break 
-        
         if reversal_successful_overall:
             num_deleted, _ = depletions.delete()
-            self.stdout.write(f"Trip {self.id}: Successfully reversed and deleted {num_deleted} depletion records.", style_func=self.stdout.style.SUCCESS)
+            stdout_writer.write(f"Trip {self.id}: Successfully reversed and deleted {num_deleted} depletion records.", style_func=stdout_writer.style.SUCCESS)
         else:
-            self.stdout.write(f"Trip {self.id}: Stock reversal failed or was incomplete. Depletion records NOT deleted. Transaction should be rolled back by caller.", style_func=self.stdout.style.ERROR)
-        
+            stdout_writer.write(f"Trip {self.id}: Stock reversal failed or incomplete. Depletion records NOT deleted. Caller should rollback transaction.", style_func=stdout_writer.style.ERROR)
         return reversal_successful_overall
 
     def save(self, *args, **kwargs):
-        # Management commands can pass their own stdout object via kwargs
-        # Views calling .save() will use the default PrintLikeCommandOutput
-        caller_stdout = kwargs.pop('stdout', None)
-        if caller_stdout:
-            Trip._stdout_instance = caller_stdout # Set class-level stdout for this call context
-        elif not hasattr(Trip, '_stdout_instance') or Trip._stdout_instance is None:
-            Trip._stdout_instance = PrintLikeCommandOutput() # Ensure default if never set
+        stdout = self._get_effective_stdout(kwargs.pop('stdout', None))
 
         is_new = self.pk is None
         original_status_in_db = self._get_original_status()
-        
-        old_product = None; old_destination = None
-        old_total_requested = None; old_total_actual_l20 = None
-
+        old_product, old_destination, old_total_requested, old_total_actual_l20 = None, None, None, None
         if not is_new: 
             try:
                 db_instance_before_save = Trip.objects.get(pk=self.pk)
-                old_product = db_instance_before_save.product
-                old_destination = db_instance_before_save.destination
-                old_total_requested = db_instance_before_save.total_requested_from_compartments
-                old_total_actual_l20 = db_instance_before_save.total_actual_l20_from_compartments
+                old_product, old_destination = db_instance_before_save.product, db_instance_before_save.destination
+                old_total_requested, old_total_actual_l20 = db_instance_before_save.total_requested_from_compartments, db_instance_before_save.total_actual_l20_from_compartments
             except Trip.DoesNotExist: pass 
 
         status_being_saved = self.status 
@@ -305,88 +278,65 @@ class Trip(models.Model):
 
         current_total_requested_after_save = self.total_requested_from_compartments
         current_total_actual_l20_after_save = self.total_actual_l20_from_compartments
-        
-        critical_data_changed_for_requested = (not is_new and
-                                           (self.product != old_product or
-                                            self.destination != old_destination or
-                                            current_total_requested_after_save != old_total_requested))
-        
-        critical_data_changed_for_actuals = (not is_new and
-                                           (self.product != old_product or
-                                            self.destination != old_destination or
-                                            current_total_actual_l20_after_save != old_total_actual_l20))
+        critical_data_changed_for_requested = (not is_new and (self.product != old_product or self.destination != old_destination or current_total_requested_after_save != old_total_requested))
+        critical_data_changed_for_actuals = (not is_new and (self.product != old_product or self.destination != old_destination or current_total_actual_l20_after_save != old_total_actual_l20))
         
         try:
-            deplete_now = False
-            use_l20_for_this_depletion = False
+            deplete_now, use_l20_for_this_depletion = False, False
             status_has_changed = (original_status_in_db != status_being_saved)
 
-            if status_being_saved in self.INITIAL_DEPLETION_TRIGGER_STATUSES and \
-               (is_new or (status_has_changed and original_status_in_db not in self.INITIAL_DEPLETION_TRIGGER_STATUSES)):
-                deplete_now = True; use_l20_for_this_depletion = False
-                self.stdout.write(f"Trip {self.id}: Status '{status_being_saved}' triggers initial depletion (requested).", style_func=self.stdout.style.NOTICE)
-
-            elif status_being_saved in self.ACTUAL_L20_DEPLETION_TRIGGER_STATUSES and \
-                 (is_new or (status_has_changed and original_status_in_db not in self.ACTUAL_L20_DEPLETION_TRIGGER_STATUSES) or critical_data_changed_for_actuals):
-                deplete_now = True; use_l20_for_this_depletion = True
-                self.stdout.write(f"Trip {self.id}: Status '{status_being_saved}' triggers L20 actuals depletion.", style_func=self.stdout.style.NOTICE)
-
-            elif status_being_saved in self.INITIAL_DEPLETION_TRIGGER_STATUSES and \
-                 original_status_in_db == status_being_saved and critical_data_changed_for_requested:
-                deplete_now = True; use_l20_for_this_depletion = False
-                self.stdout.write(f"Trip {self.id}: Critical requested data changed while status is '{status_being_saved}'. Re-evaluating initial depletion.", style_func=self.stdout.style.NOTICE)
-
-            elif status_being_saved in self.ACTUAL_L20_DEPLETION_TRIGGER_STATUSES and \
-                 original_status_in_db == status_being_saved and critical_data_changed_for_actuals:
-                deplete_now = True; use_l20_for_this_depletion = True
-                self.stdout.write(f"Trip {self.id}: Critical actuals data changed while status is '{status_being_saved}'. Re-evaluating L20 depletion.", style_func=self.stdout.style.NOTICE)
+            if status_being_saved in self.INITIAL_DEPLETION_TRIGGER_STATUSES and (is_new or (status_has_changed and original_status_in_db not in self.INITIAL_DEPLETION_TRIGGER_STATUSES)):
+                deplete_now, use_l20_for_this_depletion = True, False
+                stdout.write(f"Trip {self.id}: Status '{status_being_saved}' triggers initial depletion (requested).", style_func=stdout.style.NOTICE)
+            elif status_being_saved in self.ACTUAL_L20_DEPLETION_TRIGGER_STATUSES and (is_new or (status_has_changed and original_status_in_db not in self.ACTUAL_L20_DEPLETION_TRIGGER_STATUSES) or critical_data_changed_for_actuals):
+                deplete_now, use_l20_for_this_depletion = True, True
+                stdout.write(f"Trip {self.id}: Status '{status_being_saved}' triggers L20 actuals depletion.", style_func=stdout.style.NOTICE)
+            elif status_being_saved in self.INITIAL_DEPLETION_TRIGGER_STATUSES and original_status_in_db == status_being_saved and critical_data_changed_for_requested:
+                deplete_now, use_l20_for_this_depletion = True, False
+                stdout.write(f"Trip {self.id}: Critical requested data changed while status is '{status_being_saved}'. Re-evaluating initial depletion.", style_func=stdout.style.NOTICE)
+            elif status_being_saved in self.ACTUAL_L20_DEPLETION_TRIGGER_STATUSES and original_status_in_db == status_being_saved and critical_data_changed_for_actuals:
+                deplete_now, use_l20_for_this_depletion = True, True
+                stdout.write(f"Trip {self.id}: Critical actuals data changed while status is '{status_being_saved}'. Re-evaluating L20 depletion.", style_func=stdout.style.NOTICE)
 
             existing_depletions = ShipmentDepletion.objects.filter(trip=self)
             if existing_depletions.exists():
                 if deplete_now: 
-                    self.stdout.write(f"Trip {self.id}: Reversing existing depletions before re-depleting...", style_func=self.stdout.style.NOTICE)
-                    if not self.reverse_stock_depletion():
+                    stdout.write(f"Trip {self.id}: Reversing existing depletions before re-depleting...", style_func=stdout.style.NOTICE)
+                    if not self.reverse_stock_depletion(stdout_writer=stdout):
                         raise ValidationError("Failed to reverse existing stock depletions for re-evaluation.")
                 elif status_has_changed and original_status_in_db in self.DEPLETED_STOCK_STATUSES and status_being_saved not in self.DEPLETED_STOCK_STATUSES:
-                    self.stdout.write(f"Trip {self.id}: Status changed from '{original_status_in_db}' to non-depleted '{status_being_saved}'. Reversing depletions...", style_func=self.stdout.style.NOTICE)
-                    self.reverse_stock_depletion()
+                    stdout.write(f"Trip {self.id}: Status changed from '{original_status_in_db}' to non-depleted '{status_being_saved}'. Reversing depletions...", style_func=stdout.style.NOTICE)
+                    self.reverse_stock_depletion(stdout_writer=stdout)
 
             if deplete_now:
-                self.perform_stock_depletion(use_actual_l20=use_l20_for_this_depletion, raise_error=True)
+                self.perform_stock_depletion(stdout_writer=stdout, use_actual_l20=use_l20_for_this_depletion, raise_error=True)
         
         except ValidationError as e:
-            self.stdout.write(f"VALIDATION ERROR in Trip.save() stock logic for Trip {self.id} (status: {status_being_saved}): {e}", style_func=self.stdout.style.ERROR)
+            stdout.write(f"VALIDATION ERROR in Trip.save() stock logic for Trip {self.id} (status: {status_being_saved}): {e}", style_func=stdout.style.ERROR)
             if not is_new and original_status_in_db is not None:
                 current_kpc_comments = self.kpc_comments or ""
-                error_message_short = str(e.message_dict if hasattr(e, 'message_dict') else e)[:200]
-                new_comment = f"{current_kpc_comments}\nSTOCK OP. FAILED on {timezone.now().strftime('%Y-%m-%d %H:%M')} (status {original_status_in_db} restored): {error_message_short}".strip()
+                error_msg = str(e.message_dict if hasattr(e, 'message_dict') else e)[:200]
+                new_comment = f"{current_kpc_comments}\nSTOCK OP. FAILED ({timezone.now().strftime('%H:%M')}, status {original_status_in_db} restored): {error_msg}".strip()
                 Trip.objects.filter(pk=self.pk).update(status=original_status_in_db, kpc_comments=new_comment, updated_at=timezone.now())
             raise 
         except Exception as e: 
-            self.stdout.write(f"UNEXPECTED ERROR in Trip.save() stock logic for Trip {self.id}: {e}", style_func=self.stdout.style.ERROR)
-            import traceback
-            traceback.print_exc() 
+            stdout.write(f"UNEXPECTED ERROR in Trip.save() stock logic for Trip {self.id}: {e}", style_func=stdout.style.ERROR)
+            import traceback; traceback.print_exc() 
             if not is_new and original_status_in_db is not None:
                 current_kpc_comments = self.kpc_comments or ""
-                error_message_short = str(e)[:200]
-                new_comment = f"{current_kpc_comments}\nUNEXPECTED STOCK OP. ERROR on {timezone.now().strftime('%Y-%m-%d %H:%M')} (status {original_status_in_db} restored): {error_message_short}".strip()
+                error_msg = str(e)[:200]
+                new_comment = f"{current_kpc_comments}\nUNEXPECTED STOCK OP. ERROR ({timezone.now().strftime('%H:%M')}, status {original_status_in_db} restored): {error_msg}".strip()
                 Trip.objects.filter(pk=self.pk).update(status=original_status_in_db, kpc_comments=new_comment, updated_at=timezone.now())
             raise
-        finally:
-            if caller_stdout: # If stdout was passed, reset the class attribute to default
-                Trip._stdout_instance = None
-
 
     class Meta:
          ordering = ['-loading_date', '-loading_time']
-
     def __str__(self):
         order_id_display = self.kpc_order_number or self.bol_number or "N/A"
         dest_name = f" to {self.destination.name}" if self.destination else ""
         product_name_str = self.product.name if self.product else "N/A Product"
         vehicle_plate_str = self.vehicle.plate_number if self.vehicle else "N/A Vehicle"
         return f"Trip {self.id} ({order_id_display}) on {self.loading_date} - {product_name_str} via {vehicle_plate_str}{dest_name}"
-
 
 class LoadingCompartment(models.Model):
     trip = models.ForeignKey(Trip, related_name='requested_compartments', on_delete=models.CASCADE)
@@ -402,8 +352,7 @@ class LoadingCompartment(models.Model):
         ordering = ['compartment_number']
     def __str__(self):
         try: product_name = self.trip.product.name
-        except Product.DoesNotExist: product_name = "N/A Product"
-        except AttributeError: product_name = "N/A (Trip product not set)"
+        except: product_name = "N/A" 
         actual_str = f", Actual L20: {self.quantity_actual_l20}L" if self.quantity_actual_l20 is not None else ""
         return f"Comp {self.compartment_number} ({product_name}): Req: {self.quantity_requested_litres}L{actual_str} for Trip ID {self.trip_id}"
 
