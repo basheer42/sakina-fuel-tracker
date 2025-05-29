@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum, F, Value, DecimalField as DjangoDecimalField 
 from decimal import Decimal 
 from django.core.exceptions import ValidationError
-import sys 
 
 User = get_user_model()
 
@@ -36,7 +35,12 @@ class Product(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self): return self.name
-    class Meta: ordering = ['name']
+    
+    class Meta: 
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
 
 class Customer(models.Model):
     name = models.CharField(max_length=200, unique=True)
@@ -47,7 +51,12 @@ class Customer(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self): return self.name
-    class Meta: ordering = ['name']
+    
+    class Meta: 
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
 
 class Vehicle(models.Model):
     plate_number = models.CharField(max_length=50, unique=True)
@@ -55,14 +64,24 @@ class Vehicle(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self): return self.plate_number
-    class Meta: ordering = ['plate_number']
+    
+    class Meta: 
+        ordering = ['plate_number']
+        indexes = [
+            models.Index(fields=['plate_number']),
+        ]
 
 class Destination(models.Model):
     name = models.CharField(max_length=100, unique=True, help_text="e.g., South Sudan, DRC, Local Nairobi")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     def __str__(self): return self.name
-    class Meta: ordering = ['name']
+    
+    class Meta: 
+        ordering = ['name']
+        indexes = [
+            models.Index(fields=['name']),
+        ]
 
 class Shipment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -103,7 +122,14 @@ class Shipment(models.Model):
         super().save(*args, **kwargs)
     
     class Meta:
-         ordering = ['import_date', 'created_at']
+        ordering = ['import_date', 'created_at']
+        indexes = [
+            models.Index(fields=['import_date']),
+            models.Index(fields=['product', 'destination']),
+            models.Index(fields=['quantity_remaining']),
+            models.Index(fields=['user', 'import_date']),
+            models.Index(fields=['vessel_id_tag']),
+        ]
 
 
 class Trip(models.Model):
@@ -233,7 +259,11 @@ class Trip(models.Model):
         stdout_writer.write(f"Trip {self.id}: Stock depletion successful. Depleted: {depleted_amount_for_trip}L based on {depletion_basis}.", style_func=stdout_writer.style.SUCCESS)
         return True
 
-    def reverse_stock_depletion(self, stdout_writer):
+    def reverse_stock_depletion(self, stdout_writer=None):
+        # FIXED: Added default parameter value
+        if stdout_writer is None:
+            stdout_writer = BasicPrintLogger()
+            
         stdout_writer.write(f"Trip {self.id} ({self.kpc_order_number}): Attempting to reverse stock depletions.", style_func=stdout_writer.style.NOTICE)
         depletions = ShipmentDepletion.objects.filter(trip=self)
         if not depletions.exists():
@@ -330,7 +360,15 @@ class Trip(models.Model):
             raise
 
     class Meta:
-         ordering = ['-loading_date', '-loading_time']
+        ordering = ['-loading_date', '-loading_time']
+        indexes = [
+            models.Index(fields=['loading_date']),
+            models.Index(fields=['status']),
+            models.Index(fields=['kpc_order_number']),
+            models.Index(fields=['product', 'destination']),
+            models.Index(fields=['user', 'loading_date']),
+        ]
+        
     def __str__(self):
         order_id_display = self.kpc_order_number or self.bol_number or "N/A"
         dest_name = f" to {self.destination.name}" if self.destination else ""
@@ -347,9 +385,14 @@ class LoadingCompartment(models.Model):
     density = models.DecimalField(max_digits=7, decimal_places=3, null=True, blank=True) 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
     class Meta:
         unique_together = ('trip', 'compartment_number')
         ordering = ['compartment_number']
+        indexes = [
+            models.Index(fields=['trip', 'compartment_number']),
+        ]
+        
     def __str__(self):
         try: product_name = self.trip.product.name
         except: product_name = "N/A" 
@@ -361,8 +404,16 @@ class ShipmentDepletion(models.Model):
     shipment_batch = models.ForeignKey(Shipment, related_name='depletions_from_batch', on_delete=models.PROTECT)
     quantity_depleted = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True) 
+    
     def __str__(self):
         trip_identifier = self.trip.kpc_order_number or self.trip.bol_number or f"ID {self.trip.id}"
         shipment_identifier = self.shipment_batch.vessel_id_tag or f"ID {self.shipment_batch.id}"
         return f"{self.quantity_depleted}L from Shpmt {shipment_identifier} for Trip {trip_identifier}"
-    class Meta: ordering = ['created_at']
+    
+    class Meta: 
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['trip']),
+            models.Index(fields=['shipment_batch']),
+            models.Index(fields=['created_at']),
+        ]
