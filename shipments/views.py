@@ -11,7 +11,7 @@ from django.utils import timezone
 import datetime
 from decimal import Decimal
 from django.db import transaction
-from django.http import JsonResponse, HttpResponseForbidden
+from django.http import HttpResponseForbidden
 from django import forms
 from calendar import monthrange
 from collections import defaultdict
@@ -222,7 +222,7 @@ def home_view(request):
                                    f"and no dispatch in {days_inactive_notify} days (or ever).")
                 if is_inactive_notify:
                     idle_batches_info_notify = []
-                    for batch_notify in product_shipments_with_stock_qs.order_by('import_date'): # Use the filtered queryset
+                    for batch_notify in product_shipments_with_stock_qs.order_by('import_date'):
                         idle_batches_info_notify.append({
                             'id': batch_notify.id, 'vessel_id_tag': batch_notify.vessel_id_tag,
                             'import_date': batch_notify.import_date, 'supplier_name': batch_notify.supplier_name,
@@ -266,15 +266,11 @@ def home_view(request):
         daily_totals_ago = defaultdict(Decimal)
 
         for trip_chart in trips_for_chart:
-            # Iterate through its depletions (which are pre-fetched if done right)
-            # For the chart, we want the date the depletion effectively happened,
-            # which is often tied to trip.loading_date for simplicity or depletion.created_at.date()
-            chart_date = trip_chart.loading_date # Or depletion.created_at.date() if more granular
+            chart_date = trip_chart.loading_date
             
             # Check if date is within last 30 days
             if (chart_today_date - chart_date).days < 30:
-                # Sum depletions for this trip
-                trip_total_depleted_for_chart = trip_chart.total_loaded # Uses pre-fetched depletions
+                trip_total_depleted_for_chart = trip_chart.total_loaded
 
                 if trip_chart.product.name.upper() == 'PMS':
                     daily_totals_pms[chart_date] += trip_total_depleted_for_chart
@@ -298,8 +294,6 @@ def home_view(request):
 
 # --- PDF Parsing Helper Function ---
 def parse_loading_authority_pdf(pdf_file_obj, request_for_messages=None):
-    # (This function should be the complete version from file #19 / our previous full exchange)
-    # (Ensure it's the one with detailed regex and error handling)
     extracted_data = {'compartment_quantities_litres': [], 'total_quantity_litres': Decimal('0.00')}
     full_text = ""
     try:
@@ -323,7 +317,7 @@ def parse_loading_authority_pdf(pdf_file_obj, request_for_messages=None):
             try: extracted_data['loading_date'] = datetime.datetime.strptime(date_match.group(1).strip(), '%d/%m/%Y').date()
             except ValueError:
                 try: extracted_data['loading_date'] = datetime.datetime.strptime(date_match.group(1).strip(), '%m/%d/%Y').date()
-                except ValueError: print(f"DEBUG PDF PARSE (Auth): Could not parse date: {date_match.group(1)}")
+                except ValueError: print(f"DEBUG PDF PARSE: Could not parse date: {date_match.group(1)}")
         
         dest_match = re.search(r"DESTINATION\s*[:\-]?\s*(.*?)(?=\s*ID NO:|\s*TRUCK\s*NO:|\s*TRAILER\s*NO:|\s*DRIVER:|$)", full_text, re.IGNORECASE | re.DOTALL)
         if dest_match: extracted_data['destination_name'] = dest_match.group(1).replace('\n', ' ').strip()
@@ -384,13 +378,6 @@ def parse_loading_authority_pdf(pdf_file_obj, request_for_messages=None):
                     if unit == 'M³': extracted_data['total_quantity_litres'] = total_qty_val * Decimal('1000')
                     else: extracted_data['total_quantity_litres'] = total_qty_val
                 except: pass
-        
-        driver_match = re.search(r"DRIVER\s*[:\-]?\s*(.*?)(?=\s*ID NO:|\n|$)", full_text, re.IGNORECASE | re.DOTALL)
-        if driver_match: extracted_data['driver_name'] = driver_match.group(1).replace('\n',' ').strip()
-        driver_id_match = re.search(r"ID NO\s*[:\-]?\s*([A-Z0-9\s\/\-]+?)(?=\s*DEPOT:|\s*PRODUCT\s*DESCRIPTION:|\n|$)", full_text, re.IGNORECASE | re.DOTALL)
-        if driver_id_match: extracted_data['driver_id'] = driver_id_match.group(1).replace('\n',' ').strip()
-        depot_match = re.search(r"DEPOT\s*[:\-]?\s*(.*?)(?=\s*SEAL NOS:|\s*DRIVER:|\n|$)", full_text, re.IGNORECASE | re.DOTALL)
-        if depot_match: extracted_data['depot_name'] = depot_match.group(1).replace('\n',' ').strip()
 
     except Exception as e:
         if request_for_messages: messages.error(request_for_messages, f"Error processing PDF: {e}")
@@ -427,7 +414,7 @@ def upload_loading_authority_view(request):
                             kpc_order_no_parsed = parsed_data.get('order_number')
 
                             if not all([product_name_parsed, customer_name_parsed, truck_plate_parsed, destination_name_parsed, kpc_order_no_parsed]):
-                                raise ValidationError("One or more essential fields (Product, Customer, Truck, Destination, KPC Order No) were not found in the PDF.")
+                                raise ValidationError("One or more essential fields were not found in the PDF.")
 
                             product, _ = Product.objects.get_or_create(name__iexact=product_name_parsed, defaults={'name': product_name_parsed.upper()})
                             customer, _ = Customer.objects.get_or_create(name__iexact=customer_name_parsed, defaults={'name': customer_name_parsed})
@@ -438,49 +425,48 @@ def upload_loading_authority_view(request):
                             
                             if Trip.objects.filter(kpc_order_number__iexact=kpc_order_no_parsed).exists():
                                 existing_trip = Trip.objects.get(kpc_order_number__iexact=kpc_order_no_parsed)
-                                messages.warning(request, f"Trip with KPC Order No '{kpc_order_no_parsed}' already exists (ID: {existing_trip.id}). PDF not processed again.")
+                                messages.warning(request, f"Trip with KPC Order No '{kpc_order_no_parsed}' already exists (ID: {existing_trip.id}).")
                                 return redirect(reverse('shipments:trip-detail', kwargs={'pk': existing_trip.pk}))
 
-                            trip_instance = Trip( # Use Trip() constructor then save()
+                            trip_instance = Trip(
                                 user=request.user, vehicle=vehicle, customer=customer, product=product, destination=destination,
                                 loading_date=parsed_data.get('loading_date', timezone.now().date()),
                                 loading_time=parsed_data.get('loading_time', datetime.time(0,0)), 
                                 kpc_order_number=kpc_order_no_parsed,
                                 status='PENDING', 
-                                notes=f"Created from PDF: {pdf_file.name}. Driver: {parsed_data.get('driver_name', 'N/A')}",
-                                kpc_comments=f"Depot: {parsed_data.get('depot_name','N/A')}. Driver ID: {parsed_data.get('driver_id','N/A')}" 
+                                notes=f"Created from PDF: {pdf_file.name}",
                             )
-                            # Pass stdout from the view to the model's save method if needed for detailed logging
-                            # For now, model's save will use its default PrintLikeCommandOutput
-                            trip_instance.save(stdout=DefaultCommandOutput()) # Pass a dummy stdout if needed or make it optional in save
+                            trip_instance.save(stdout=DefaultCommandOutput())
 
                             compartment_quantities = parsed_data.get('compartment_quantities_litres', [])
                             pdf_total_qty_litres = parsed_data.get('total_quantity_litres', Decimal('0.00'))
                             if compartment_quantities:
                                 for i, qty_l in enumerate(compartment_quantities):
                                     if qty_l > 0: LoadingCompartment.objects.create(trip=trip_instance, compartment_number=i + 1, quantity_requested_litres=qty_l)
-                                sum_comp_qty = sum(compartment_quantities)
-                                if abs(sum_comp_qty - pdf_total_qty_litres) > Decimal('1.0'): messages.warning(request, f"For Trip {kpc_order_no_parsed}: Sum of compartment quantities ({sum_comp_qty}L) differs from total quantity in PDF ({pdf_total_qty_litres}L). Check PDF data or compartment parsing.")
                             elif pdf_total_qty_litres > 0 : 
                                  LoadingCompartment.objects.create(trip=trip_instance, compartment_number=1, quantity_requested_litres=pdf_total_qty_litres)
-                                 messages.info(request, f"For Trip {kpc_order_no_parsed}: No compartment breakdown in PDF. Total quantity {pdf_total_qty_litres}L assigned to Compartment 1.")
                             
                             messages.success(request, f"Trip for KPC Order No '{kpc_order_no_parsed}' (ID: {trip_instance.id}) created from PDF.")
                             return redirect(reverse('shipments:trip-detail', kwargs={'pk': trip_instance.pk}))
-                    except ValidationError as e: messages.error(request, f"Data validation error creating Trip: {e.args[0] if hasattr(e, 'args') and e.args else str(e)}")
-                    except Exception as e: messages.error(request, f"An unexpected error occurred while creating Trip: {str(e)}")
+                    except ValidationError as e: 
+                        messages.error(request, f"Data validation error creating Trip: {str(e)}")
+                    except Exception as e: 
+                        messages.error(request, f"An unexpected error occurred while creating Trip: {str(e)}")
     else: form = PdfLoadingAuthorityUploadForm()
-    return render(request, 'shipments/upload_loading_authority.html', {'form': form, 'page_title': 'Upload Loading Authority'})
+    return render(request, 'shipments/upload_loading_authority.html', {'form': form})
+
 
 @login_required
 @permission_required('shipments.view_shipment', raise_exception=True)
 def shipment_list_view(request):
     if is_viewer_or_admin_or_superuser(request.user): queryset = Shipment.objects.all()
     else: queryset = Shipment.objects.filter(user=request.user)
+    
     product_filter_pk = request.GET.get('product', '').strip()
     supplier_filter = request.GET.get('supplier_name', '').strip()
     start_date_str = request.GET.get('start_date', '').strip()
     end_date_str = request.GET.get('end_date', '').strip()
+    
     if product_filter_pk: queryset = queryset.filter(product__pk=product_filter_pk)
     if supplier_filter: queryset = queryset.filter(supplier_name__icontains=supplier_filter)
     if start_date_str:
@@ -489,8 +475,10 @@ def shipment_list_view(request):
     if end_date_str:
          try: queryset = queryset.filter(import_date__lte=datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date())
          except ValueError: messages.error(request, "Invalid end date format.")
+         
     shipments = queryset.select_related('product', 'destination', 'user').order_by('-import_date', '-created_at')
     products_for_filter = Product.objects.all().order_by('name')
+    
     context = {
         'shipments': shipments, 'products': products_for_filter,
         'product_filter_value': product_filter_pk, 'supplier_filter_value': supplier_filter,
@@ -500,7 +488,6 @@ def shipment_list_view(request):
         'can_delete_shipment': request.user.has_perm('shipments.delete_shipment'),
     }
     return render(request, 'shipments/shipment_list.html', context)
-
 @login_required
 @permission_required('shipments.add_shipment', raise_exception=True)
 def shipment_add_view(request):
@@ -511,22 +498,34 @@ def shipment_add_view(request):
                 with transaction.atomic():
                     shipment_instance = form.save(commit=False)
                     shipment_instance.user = request.user
-                    shipment_instance.save() # Model's save() handles initial quantity_remaining
+                    shipment_instance.save()
                     messages.success(request, 'Shipment added successfully!')
                     return redirect(reverse('shipments:shipment-detail', kwargs={'pk': shipment_instance.pk}))
-            except ValidationError as e: form.add_error(None, e); messages.error(request, "Error saving shipment.")
-            except Exception as e: messages.error(request, f"An unexpected error occurred: {e}")
-    else: form = ShipmentForm()
-    context = { 'form': form, 'page_title': 'Add New Shipment'}
+            except ValidationError as e: 
+                form.add_error(None, e)
+                messages.error(request, "Error saving shipment.")
+            except Exception as e: 
+                messages.error(request, f"An unexpected error occurred: {e}")
+    else: 
+        form = ShipmentForm()
+    
+    context = {'form': form, 'page_title': 'Add New Shipment'}
     return render(request, 'shipments/shipment_form.html', context)
 
 @login_required
 def shipment_edit_view(request, pk):
-    if is_admin_or_superuser(request.user): shipment_instance = get_object_or_404(Shipment, pk=pk)
-    else: shipment_instance = get_object_or_404(Shipment.objects.filter(user=request.user), pk=pk)
-    if not request.user.has_perm('shipments.change_shipment'): return HttpResponseForbidden("You do not have permission to change shipments.")
+    if is_admin_or_superuser(request.user): 
+        shipment_instance = get_object_or_404(Shipment, pk=pk)
+    else: 
+        shipment_instance = get_object_or_404(Shipment.objects.filter(user=request.user), pk=pk)
     
-    depleted_quantity = ShipmentDepletion.objects.filter(shipment_batch=shipment_instance).aggregate(total_depleted=Sum('quantity_depleted'))['total_depleted'] or Decimal('0.00')
+    if not request.user.has_perm('shipments.change_shipment'): 
+        return HttpResponseForbidden("You do not have permission to change shipments.")
+    
+    depleted_quantity = ShipmentDepletion.objects.filter(shipment_batch=shipment_instance).aggregate(
+        total_depleted=Sum('quantity_depleted')
+    )['total_depleted'] or Decimal('0.00')
+    
     if request.method == 'POST':
         form = ShipmentForm(request.POST, instance=shipment_instance) 
         if form.is_valid():
@@ -541,42 +540,69 @@ def shipment_edit_view(request, pk):
                         shipment_to_save.save()
                         messages.success(request, f"Shipment '{shipment_to_save.vessel_id_tag}' updated successfully!")
                         return redirect(reverse('shipments:shipment-detail', kwargs={'pk': shipment_to_save.pk}))
-                except ValidationError as e: form.add_error(None, e); messages.error(request, "Error updating shipment.")
-                except Exception as e: messages.error(request, f"An unexpected error: {e}")
-    else: form = ShipmentForm(instance=shipment_instance)
-    if depleted_quantity > 0: messages.info(request, f"Note: {depleted_quantity}L from this shipment has been used. Total quantity cannot be set lower.")
+                except ValidationError as e: 
+                    form.add_error(None, e)
+                    messages.error(request, "Error updating shipment.")
+                except Exception as e: 
+                    messages.error(request, f"An unexpected error: {e}")
+    else: 
+        form = ShipmentForm(instance=shipment_instance)
+    
+    if depleted_quantity > 0: 
+        messages.info(request, f"Note: {depleted_quantity}L from this shipment has been used. Total quantity cannot be set lower.")
+    
     context = {
-        'form': form, 'page_title': f'Edit Shipment: {shipment_instance.vessel_id_tag}',
-        'shipment_instance': shipment_instance, 'depleted_quantity': depleted_quantity,
+        'form': form, 
+        'page_title': f'Edit Shipment: {shipment_instance.vessel_id_tag}',
+        'shipment_instance': shipment_instance, 
+        'depleted_quantity': depleted_quantity,
         'can_delete_shipment': request.user.has_perm('shipments.delete_shipment') and (is_admin_or_superuser(request.user) or shipment_instance.user == request.user),
     }
     return render(request, 'shipments/shipment_form.html', context)
 
 @login_required
 def shipment_delete_view(request, pk):
-    if is_admin_or_superuser(request.user): shipment_instance = get_object_or_404(Shipment, pk=pk)
-    else: shipment_instance = get_object_or_404(Shipment.objects.filter(user=request.user), pk=pk)
-    if not request.user.has_perm('shipments.delete_shipment'): return HttpResponseForbidden("You do not have permission to delete shipments.")
+    if is_admin_or_superuser(request.user): 
+        shipment_instance = get_object_or_404(Shipment, pk=pk)
+    else: 
+        shipment_instance = get_object_or_404(Shipment.objects.filter(user=request.user), pk=pk)
+    
+    if not request.user.has_perm('shipments.delete_shipment'): 
+        return HttpResponseForbidden("You do not have permission to delete shipments.")
+    
     if ShipmentDepletion.objects.filter(shipment_batch=shipment_instance).exists():
         messages.error(request, f"Cannot delete Shipment '{shipment_instance.vessel_id_tag}'. It has associated loadings. Adjust loadings first.")
         return redirect(reverse('shipments:shipment-detail', kwargs={'pk': shipment_instance.pk}))
+    
     if request.method == 'POST':
         try:
-            shipment_tag = shipment_instance.vessel_id_tag; shipment_instance.delete()
+            shipment_tag = shipment_instance.vessel_id_tag
+            shipment_instance.delete()
             messages.success(request, f"Shipment '{shipment_tag}' deleted successfully!")
             return redirect(reverse('shipments:shipment-list'))
-        except Exception as e: messages.error(request, f"Error deleting: {e}"); return redirect(reverse('shipments:shipment-detail', kwargs={'pk': pk})) 
-    context = {'shipment': shipment_instance, 'page_title': f'Confirm Delete: {shipment_instance.vessel_id_tag}'}
+        except Exception as e: 
+            messages.error(request, f"Error deleting: {e}")
+            return redirect(reverse('shipments:shipment-detail', kwargs={'pk': pk}))
+    
+    context = {
+        'shipment': shipment_instance, 
+        'page_title': f'Confirm Delete: {shipment_instance.vessel_id_tag}'
+    }
     return render(request, 'shipments/shipment_confirm_delete.html', context)
 
 @login_required
 def shipment_detail_view(request, pk):
-    if is_viewer_or_admin_or_superuser(request.user): shipment = get_object_or_404(Shipment.objects.select_related('user', 'product', 'destination'), pk=pk)
-    else: shipment = get_object_or_404(Shipment.objects.filter(user=request.user).select_related('user', 'product', 'destination'), pk=pk)
+    if is_viewer_or_admin_or_superuser(request.user): 
+        shipment = get_object_or_404(Shipment.objects.select_related('user', 'product', 'destination'), pk=pk)
+    else: 
+        shipment = get_object_or_404(Shipment.objects.filter(user=request.user).select_related('user', 'product', 'destination'), pk=pk)
+    
     if not request.user.has_perm('shipments.view_shipment') and not (is_viewer_or_admin_or_superuser(request.user) or shipment.user == request.user):
         return HttpResponseForbidden("You do not have permission to view this shipment.")
+    
     context = {
-        'shipment': shipment, 'page_title': f'Shipment Details: {shipment.vessel_id_tag}',
+        'shipment': shipment, 
+        'page_title': f'Shipment Details: {shipment.vessel_id_tag}',
         'can_change_shipment': request.user.has_perm('shipments.change_shipment') and (is_admin_or_superuser(request.user) or shipment.user == request.user),
         'can_delete_shipment': request.user.has_perm('shipments.delete_shipment') and (is_admin_or_superuser(request.user) or shipment.user == request.user),
     }
@@ -585,48 +611,73 @@ def shipment_detail_view(request, pk):
 @login_required
 @permission_required('shipments.view_trip', raise_exception=True)
 def trip_list_view(request):
-    if is_viewer_or_admin_or_superuser(request.user): queryset = Trip.objects.all()
-    else: queryset = Trip.objects.filter(user=request.user)
+    if is_viewer_or_admin_or_superuser(request.user): 
+        queryset = Trip.objects.all()
+    else: 
+        queryset = Trip.objects.filter(user=request.user)
     
-    product_filter_pk = request.GET.get('product', '').strip(); customer_filter_pk = request.GET.get('customer', '').strip()
-    vehicle_filter_pk = request.GET.get('vehicle', '').strip(); status_filter = request.GET.get('status', '').strip()
-    start_date_str = request.GET.get('start_date', '').strip(); end_date_str = request.GET.get('end_date', '').strip()
+    product_filter_pk = request.GET.get('product', '').strip()
+    customer_filter_pk = request.GET.get('customer', '').strip()
+    vehicle_filter_pk = request.GET.get('vehicle', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    start_date_str = request.GET.get('start_date', '').strip()
+    end_date_str = request.GET.get('end_date', '').strip()
 
     if product_filter_pk: queryset = queryset.filter(product__pk=product_filter_pk)
     if customer_filter_pk: queryset = queryset.filter(customer__pk=customer_filter_pk)
     if vehicle_filter_pk: queryset = queryset.filter(vehicle__pk=vehicle_filter_pk)
     if status_filter: queryset = queryset.filter(status=status_filter)
     if start_date_str:
-        try: queryset = queryset.filter(loading_date__gte=datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date())
-        except ValueError: messages.error(request, "Invalid start date format for trips.")
+        try: 
+            queryset = queryset.filter(loading_date__gte=datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date())
+        except ValueError: 
+            messages.error(request, "Invalid start date format for trips.")
     if end_date_str:
-        try: queryset = queryset.filter(loading_date__lte=datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date())
-        except ValueError: messages.error(request, "Invalid end date format for trips.")
+        try: 
+            queryset = queryset.filter(loading_date__lte=datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date())
+        except ValueError: 
+            messages.error(request, "Invalid end date format for trips.")
 
     filtered_trip_count = queryset.count()
-    # Calculate total loaded by iterating through the filtered queryset and using the `total_loaded` property
     filtered_total_loaded_val = sum(trip.total_loaded for trip in queryset.prefetch_related('depletions_for_trip'))
 
     trips = queryset.select_related('vehicle', 'customer', 'product', 'destination', 'user').order_by('-loading_date', '-loading_time')
     
-    products_for_filter = Product.objects.all().order_by('name'); customers_for_filter = Customer.objects.all().order_by('name')
-    vehicles_for_filter = Vehicle.objects.all().order_by('plate_number'); status_choices_for_filter = Trip.STATUS_CHOICES
+    products_for_filter = Product.objects.all().order_by('name')
+    customers_for_filter = Customer.objects.all().order_by('name')
+    vehicles_for_filter = Vehicle.objects.all().order_by('plate_number')
+    status_choices_for_filter = Trip.STATUS_CHOICES
+    
     context = { 
-        'trips': trips, 'products': products_for_filter, 'customers': customers_for_filter, 
-        'vehicles': vehicles_for_filter, 'status_choices': status_choices_for_filter, 
-        'product_filter_value': product_filter_pk, 'customer_filter_value': customer_filter_pk, 
-        'vehicle_filter_value': vehicle_filter_pk, 'status_filter_value': status_filter, 
-        'start_date_filter_value': start_date_str, 'end_date_filter_value': end_date_str, 
-        'filtered_trip_count': filtered_trip_count, 'filtered_total_loaded': filtered_total_loaded_val, 
+        'trips': trips, 
+        'products': products_for_filter, 
+        'customers': customers_for_filter, 
+        'vehicles': vehicles_for_filter, 
+        'status_choices': status_choices_for_filter, 
+        'product_filter_value': product_filter_pk, 
+        'customer_filter_value': customer_filter_pk, 
+        'vehicle_filter_value': vehicle_filter_pk, 
+        'status_filter_value': status_filter, 
+        'start_date_filter_value': start_date_str, 
+        'end_date_filter_value': end_date_str, 
+        'filtered_trip_count': filtered_trip_count, 
+        'filtered_total_loaded': filtered_total_loaded_val, 
         'can_add_trip': request.user.has_perm('shipments.add_trip'), 
         'can_change_trip': request.user.has_perm('shipments.change_trip'), 
         'can_delete_trip': request.user.has_perm('shipments.delete_trip'),
     }
     return render(request, 'shipments/trip_list.html', context)
 
-class DefaultCommandOutput: # For passing to model save method from views
-    def write(self, msg, style_func=None): print(msg)
-    class style: SUCCESS = lambda x: x; ERROR = lambda x: x; WARNING = lambda x: x; NOTICE = lambda x: x
+class DefaultCommandOutput:
+    def write(self, msg, style_func=None): 
+        print(msg)
+    
+    class style: 
+        SUCCESS = lambda x: x
+        ERROR = lambda x: x
+        WARNING = lambda x: x
+        NOTICE = lambda x: x
+    
     style = style()
 
 @login_required
@@ -635,70 +686,93 @@ def trip_add_view(request):
     if request.method == 'POST':
         trip_form = TripForm(request.POST) 
         compartment_formset = LoadingCompartmentFormSet(request.POST, prefix='compartments')
+        
         if trip_form.is_valid() and compartment_formset.is_valid():
             try:
                 with transaction.atomic():
                     trip_instance = trip_form.save(commit=False)
                     trip_instance.user = request.user
-                    # Pass a simple stdout to the model's save method
                     trip_instance.save(stdout=DefaultCommandOutput()) 
                     
                     compartment_formset.instance = trip_instance
                     compartment_formset.save()
+                    
                     messages.success(request, f'Loading for KPC Order {trip_instance.kpc_order_number} recorded. Status: {trip_instance.get_status_display()}.')
                     return redirect(reverse('shipments:trip-detail', kwargs={'pk': trip_instance.pk}))
             except ValidationError as e:
                 error_dict = e.message_dict if hasattr(e, 'message_dict') else {'__all__': getattr(e, 'messages', [str(e)])}
                 for field, errors_list in error_dict.items():
                     for error_item in errors_list:
-                        if field == '__all__' or not hasattr(trip_form, field) or field == 'status': messages.error(request, error_item) 
-                        elif hasattr(trip_form, field): trip_form.add_error(field, error_item)
-                        else: messages.error(request, f"Error: {error_item}")
+                        if field == '__all__' or not hasattr(trip_form, field) or field == 'status': 
+                            messages.error(request, error_item) 
+                        elif hasattr(trip_form, field): 
+                            trip_form.add_error(field, error_item)
+                        else: 
+                            messages.error(request, f"Error: {error_item}")
                 messages.error(request, 'Please correct the errors highlighted.')
-            except Exception as e: messages.error(request, f'An unexpected error occurred: {str(e)}')
-        else: messages.error(request, 'Please correct the form errors (main or compartments).')
+            except Exception as e: 
+                messages.error(request, f'An unexpected error occurred: {str(e)}')
+        else: 
+            messages.error(request, 'Please correct the form errors (main or compartments).')
     else: 
         trip_form = TripForm()
         initial_compartments = [{'compartment_number': i+1} for i in range(3)]
         compartment_formset = LoadingCompartmentFormSet(prefix='compartments', initial=initial_compartments)
-    context = { 'trip_form': trip_form, 'compartment_formset': compartment_formset, 'page_title': 'Record New Loading'}
+    
+    context = {
+        'trip_form': trip_form, 
+        'compartment_formset': compartment_formset, 
+        'page_title': 'Record New Loading'
+    }
     return render(request, 'shipments/trip_form.html', context)
 
 @login_required
 def trip_edit_view(request, pk):
-    if is_admin_or_superuser(request.user): trip_instance = get_object_or_404(Trip, pk=pk)
-    else: trip_instance = get_object_or_404(Trip.objects.filter(user=request.user), pk=pk)
-    if not request.user.has_perm('shipments.change_trip'): return HttpResponseForbidden("You do not have permission to change loadings.")
+    if is_admin_or_superuser(request.user): 
+        trip_instance = get_object_or_404(Trip, pk=pk)
+    else: 
+        trip_instance = get_object_or_404(Trip.objects.filter(user=request.user), pk=pk)
+    
+    if not request.user.has_perm('shipments.change_trip'): 
+        return HttpResponseForbidden("You do not have permission to change loadings.")
 
     if request.method == 'POST':
         trip_form = TripForm(request.POST, instance=trip_instance) 
         compartment_formset = LoadingCompartmentFormSet(request.POST, instance=trip_instance, prefix='compartments')
+        
         if trip_form.is_valid() and compartment_formset.is_valid():
             try:
                 with transaction.atomic():
-                    # No need to manually call reverse_stock_depletion here; Trip.save() will handle it.
                     updated_trip_instance = trip_form.save(commit=False)
-                    updated_trip_instance.save(stdout=DefaultCommandOutput()) # This triggers complex save logic in model
+                    updated_trip_instance.save(stdout=DefaultCommandOutput())
                     
-                    compartment_formset.instance = updated_trip_instance # Ensure formset is linked to the potentially refreshed instance
+                    compartment_formset.instance = updated_trip_instance
                     compartment_formset.save()
+                    
                     messages.success(request, f"Loading '{updated_trip_instance.kpc_order_number}' updated successfully!")
                     return redirect(reverse('shipments:trip-detail', kwargs={'pk': updated_trip_instance.pk}))
             except ValidationError as e:
                 error_dict = e.message_dict if hasattr(e, 'message_dict') else {'__all__': getattr(e, 'messages', [str(e)])}
                 for field, errors_list in error_dict.items():
                     for error_item in errors_list:
-                        if field == '__all__' or not hasattr(trip_form, field) or field == 'status': messages.error(request, error_item) 
-                        elif hasattr(trip_form, field): trip_form.add_error(field, error_item)
-                        else: messages.error(request, f"Error: {error_item}")
+                        if field == '__all__' or not hasattr(trip_form, field) or field == 'status': 
+                            messages.error(request, error_item) 
+                        elif hasattr(trip_form, field): 
+                            trip_form.add_error(field, error_item)
+                        else: 
+                            messages.error(request, f"Error: {error_item}")
                 messages.error(request, 'Please correct the errors highlighted.')
-            except Exception as e: messages.error(request, f'An unexpected error during update: {str(e)}')
-        else: messages.error(request, 'Please correct the form errors (main or compartments).')
+            except Exception as e: 
+                messages.error(request, f'An unexpected error during update: {str(e)}')
+        else: 
+            messages.error(request, 'Please correct the form errors (main or compartments).')
     else: 
         trip_form = TripForm(instance=trip_instance)
         compartment_formset = LoadingCompartmentFormSet(instance=trip_instance, prefix='compartments')
+    
     context = { 
-        'trip_form': trip_form, 'compartment_formset': compartment_formset, 
+        'trip_form': trip_form, 
+        'compartment_formset': compartment_formset, 
         'page_title': f'Edit Loading: {trip_instance.kpc_order_number or f"Trip {trip_instance.id}"}', 
         'trip': trip_instance 
     }
@@ -706,35 +780,61 @@ def trip_edit_view(request, pk):
 
 @login_required
 def trip_delete_view(request, pk):
-    if is_admin_or_superuser(request.user): trip_instance = get_object_or_404(Trip, pk=pk)
-    else: trip_instance = get_object_or_404(Trip.objects.filter(user=request.user), pk=pk)
-    if not request.user.has_perm('shipments.delete_trip'): return HttpResponseForbidden("You do not have permission to delete loadings.")
+    if is_admin_or_superuser(request.user): 
+        trip_instance = get_object_or_404(Trip, pk=pk)
+    else: 
+        trip_instance = get_object_or_404(Trip.objects.filter(user=request.user), pk=pk)
+    
+    if not request.user.has_perm('shipments.delete_trip'): 
+        return HttpResponseForbidden("You do not have permission to delete loadings.")
+    
     if request.method == 'POST':
         try:
             with transaction.atomic():
-                # Pass stdout to ensure model method can log
-                if not trip_instance.reverse_stock_depletion(): # Model method uses its own stdout now
+                if not trip_instance.reverse_stock_depletion():
                     messages.error(request, "Failed to reverse stock depletions. Deletion aborted.")
                     return redirect(reverse('shipments:trip-detail', kwargs={'pk': pk}))
-                trip_desc = str(trip_instance); trip_instance.delete()
+                
+                trip_desc = str(trip_instance)
+                trip_instance.delete()
                 messages.success(request, f"Loading '{trip_desc}' and depletions (if any) deleted successfully!")
                 return redirect(reverse('shipments:trip-list'))
-        except Exception as e: messages.error(request, f"Error during deletion: {str(e)}"); return redirect(reverse('shipments:trip-detail', kwargs={'pk': pk})) 
-    context = {'trip': trip_instance, 'page_title': f'Confirm Delete Loading: {trip_instance.kpc_order_number or f"Trip {trip_instance.id}"}'}
+        except Exception as e: 
+            messages.error(request, f"Error during deletion: {str(e)}")
+            return redirect(reverse('shipments:trip-detail', kwargs={'pk': pk}))
+    
+    context = {
+        'trip': trip_instance, 
+        'page_title': f'Confirm Delete Loading: {trip_instance.kpc_order_number or f"Trip {trip_instance.id}"}'
+    }
     return render(request, 'shipments/trip_confirm_delete.html', context)
 
 @login_required
 def trip_detail_view(request, pk):
     if is_viewer_or_admin_or_superuser(request.user):
-        trip = get_object_or_404(Trip.objects.select_related('user', 'vehicle', 'customer', 'product', 'destination').prefetch_related('requested_compartments', 'depletions_for_trip__shipment_batch__product'), pk=pk)
+        trip = get_object_or_404(
+            Trip.objects.select_related('user', 'vehicle', 'customer', 'product', 'destination')
+            .prefetch_related('requested_compartments', 'depletions_for_trip__shipment_batch__product'), 
+            pk=pk
+        )
     else:
-        trip = get_object_or_404(Trip.objects.filter(user=request.user).select_related('user', 'vehicle', 'customer', 'product', 'destination').prefetch_related('requested_compartments', 'depletions_for_trip__shipment_batch__product'), pk=pk)
+        trip = get_object_or_404(
+            Trip.objects.filter(user=request.user)
+            .select_related('user', 'vehicle', 'customer', 'product', 'destination')
+            .prefetch_related('requested_compartments', 'depletions_for_trip__shipment_batch__product'), 
+            pk=pk
+        )
+    
     if not request.user.has_perm('shipments.view_trip') and not (is_viewer_or_admin_or_superuser(request.user) or trip.user == request.user):
         return HttpResponseForbidden("You do not have permission to view this loading.")
+    
     requested_compartments_qs = trip.requested_compartments.all().order_by('compartment_number')
     actual_depletions_qs = trip.depletions_for_trip.all().order_by('created_at', 'shipment_batch__import_date')
+    
     context = {
-        'trip': trip, 'compartments': requested_compartments_qs, 'actual_depletions': actual_depletions_qs, 
+        'trip': trip, 
+        'compartments': requested_compartments_qs, 
+        'actual_depletions': actual_depletions_qs, 
         'page_title': f'Loading Details: {trip.kpc_order_number or f"Trip {trip.id}"}', 
         'can_change_trip': request.user.has_perm('shipments.change_trip') and (is_admin_or_superuser(request.user) or trip.user == request.user),
         'can_delete_trip': request.user.has_perm('shipments.delete_trip') and (is_admin_or_superuser(request.user) or trip.user == request.user),
@@ -746,42 +846,63 @@ def trip_detail_view(request, pk):
 @permission_required('shipments.view_shipment', raise_exception=True)
 def truck_activity_dashboard_view(request):
     show_global_data = is_viewer_or_admin_or_superuser(request.user)
-    if show_global_data: base_queryset = Trip.objects.all()
-    else: base_queryset = Trip.objects.filter(user=request.user)
+    if show_global_data: 
+        base_queryset = Trip.objects.all()
+    else: 
+        base_queryset = Trip.objects.filter(user=request.user)
     
-    product_filter_pk = request.GET.get('product', '').strip(); customer_filter_pk = request.GET.get('customer', '').strip()
-    vehicle_filter_pk = request.GET.get('vehicle', '').strip(); status_filter = request.GET.get('status', '').strip()
-    start_date_str = request.GET.get('start_date', '').strip(); end_date_str = request.GET.get('end_date', '').strip()
+    product_filter_pk = request.GET.get('product', '').strip()
+    customer_filter_pk = request.GET.get('customer', '').strip()
+    vehicle_filter_pk = request.GET.get('vehicle', '').strip()
+    status_filter = request.GET.get('status', '').strip()
+    start_date_str = request.GET.get('start_date', '').strip()
+    end_date_str = request.GET.get('end_date', '').strip()
 
     if product_filter_pk: base_queryset = base_queryset.filter(product__pk=product_filter_pk)
     if customer_filter_pk: base_queryset = base_queryset.filter(customer__pk=customer_filter_pk)
     if vehicle_filter_pk: base_queryset = base_queryset.filter(vehicle__pk=vehicle_filter_pk)
     if status_filter: base_queryset = base_queryset.filter(status=status_filter)
+    
     if start_date_str:
-        try: base_queryset = base_queryset.filter(loading_date__gte=datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date())
-        except ValueError: messages.error(request, "Invalid start date format.")
+        try: 
+            base_queryset = base_queryset.filter(loading_date__gte=datetime.datetime.strptime(start_date_str, '%Y-%m-%d').date())
+        except ValueError: 
+            messages.error(request, "Invalid start date format.")
     if end_date_str:
-        try: base_queryset = base_queryset.filter(loading_date__lte=datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date())
-        except ValueError: messages.error(request, "Invalid end date format.")
+        try: 
+            base_queryset = base_queryset.filter(loading_date__lte=datetime.datetime.strptime(end_date_str, '%Y-%m-%d').date())
+        except ValueError: 
+            messages.error(request, "Invalid end date format.")
 
     truck_activities = defaultdict(lambda: {'trips': [], 'total_quantity': Decimal('0.00'), 'trip_count': 0})
     filtered_trips = base_queryset.select_related('vehicle', 'product', 'customer', 'user', 'destination').prefetch_related('depletions_for_trip')
+    
     for trip in filtered_trips:
-        vehicle_obj = trip.vehicle; 
+        vehicle_obj = trip.vehicle
         truck_activities[vehicle_obj]['trips'].append(trip)
-        truck_activities[vehicle_obj]['total_quantity'] += trip.total_loaded # Use property
+        truck_activities[vehicle_obj]['total_quantity'] += trip.total_loaded
         truck_activities[vehicle_obj]['trip_count'] += 1
+    
     sorted_truck_activities = dict(sorted(truck_activities.items(), key=lambda item: item[0].plate_number))
     
-    products_for_filter = Product.objects.all().order_by('name'); customers_for_filter = Customer.objects.all().order_by('name')
-    vehicles_for_filter = Vehicle.objects.all().order_by('plate_number'); status_choices_for_filter = Trip.STATUS_CHOICES
+    products_for_filter = Product.objects.all().order_by('name')
+    customers_for_filter = Customer.objects.all().order_by('name')
+    vehicles_for_filter = Vehicle.objects.all().order_by('plate_number')
+    status_choices_for_filter = Trip.STATUS_CHOICES
+    
     context = { 
-        'truck_activities': sorted_truck_activities, 'products': products_for_filter, 
-        'customers': customers_for_filter, 'vehicles': vehicles_for_filter, 
-        'status_choices': status_choices_for_filter, 'product_filter_value': product_filter_pk, 
-        'customer_filter_value': customer_filter_pk, 'vehicle_filter_value': vehicle_filter_pk, 
-        'status_filter_value': status_filter, 'start_date_filter_value': start_date_str, 
-        'end_date_filter_value': end_date_str, 'page_title': 'Truck Activity Dashboard'
+        'truck_activities': sorted_truck_activities, 
+        'products': products_for_filter, 
+        'customers': customers_for_filter, 
+        'vehicles': vehicles_for_filter, 
+        'status_choices': status_choices_for_filter, 
+        'product_filter_value': product_filter_pk, 
+        'customer_filter_value': customer_filter_pk, 
+        'vehicle_filter_value': vehicle_filter_pk, 
+        'status_filter_value': status_filter, 
+        'start_date_filter_value': start_date_str, 
+        'end_date_filter_value': end_date_str, 
+        'page_title': 'Truck Activity Dashboard'
     }
     return render(request, 'shipments/truck_activity_dashboard.html', context)
 
@@ -790,42 +911,83 @@ def truck_activity_dashboard_view(request):
 @permission_required('shipments.view_trip', raise_exception=True) 
 def monthly_stock_summary_view(request):
     show_global_data = is_viewer_or_admin_or_superuser(request.user)
+    
     shipment_years = Shipment.objects.dates('import_date', 'year', order='DESC')
     trip_years = Trip.objects.dates('loading_date', 'year', order='DESC')
-    all_years = sorted(list(set( [d.year for d in shipment_years] + [d.year for d in trip_years] )), reverse=True)
-    if not all_years: all_years.append(datetime.date.today().year)
+    all_years = sorted(list(set([d.year for d in shipment_years] + [d.year for d in trip_years])), reverse=True)
+    if not all_years: 
+        all_years.append(datetime.date.today().year)
+    
     months_for_dropdown = [(i, datetime.date(2000, i, 1).strftime('%B')) for i in range(1, 13)]
-    current_year = datetime.date.today().year; current_month = datetime.date.today().month
-    selected_year_str = request.GET.get('year', str(current_year)); selected_month_str = request.GET.get('month', str(current_month))
+    current_year = datetime.date.today().year
+    current_month = datetime.date.today().month
+    
+    selected_year_str = request.GET.get('year', str(current_year))
+    selected_month_str = request.GET.get('month', str(current_month))
+    
     try:
-        selected_year = int(selected_year_str); selected_month = int(selected_month_str)
-        if not (1 <= selected_month <= 12 and 1900 < selected_year < 2200): raise ValueError("Invalid year or month")
+        selected_year = int(selected_year_str)
+        selected_month = int(selected_month_str)
+        if not (1 <= selected_month <= 12 and 1900 < selected_year < 2200): 
+            raise ValueError("Invalid year or month")
     except (ValueError, TypeError): 
-        messages.error(request, "Invalid year or month. Defaulting to current period."); 
-        selected_year = current_year; selected_month = current_month
+        messages.error(request, "Invalid year or month. Defaulting to current period.")
+        selected_year = current_year
+        selected_month = current_month
+    
     start_of_selected_month = datetime.date(selected_year, selected_month, 1)
     num_days_in_month = monthrange(selected_year, selected_month)[1]
-    end_of_selected_month = datetime.date(selected_year, selected_month, num_days_in_month); summary_data = []
+    end_of_selected_month = datetime.date(selected_year, selected_month, num_days_in_month)
+    
+    summary_data = []
     all_products = Product.objects.all().order_by('name')
+    
     for product_obj in all_products:
         shipments_product_qs = Shipment.objects.filter(product=product_obj)
         depletions_product_qs = ShipmentDepletion.objects.filter(shipment_batch__product=product_obj)
+        
         if not show_global_data:
             shipments_product_qs = shipments_product_qs.filter(user=request.user)
             depletions_product_qs = depletions_product_qs.filter(trip__user=request.user)
         
-        total_shipped_before_month = shipments_product_qs.filter(import_date__lt=start_of_selected_month).aggregate(s=Sum('quantity_litres'))['s'] or Decimal('0.00')
-        total_depleted_before_month = depletions_product_qs.filter(created_at__date__lt=start_of_selected_month).aggregate(s=Sum('quantity_depleted'))['s'] or Decimal('0.00')
+        total_shipped_before_month = shipments_product_qs.filter(
+            import_date__lt=start_of_selected_month
+        ).aggregate(s=Sum('quantity_litres'))['s'] or Decimal('0.00')
+        
+        total_depleted_before_month = depletions_product_qs.filter(
+            created_at__date__lt=start_of_selected_month
+        ).aggregate(s=Sum('quantity_depleted'))['s'] or Decimal('0.00')
+        
         opening_stock = total_shipped_before_month - total_depleted_before_month
-        stock_in_month = shipments_product_qs.filter(import_date__gte=start_of_selected_month, import_date__lte=end_of_selected_month).aggregate(s=Sum('quantity_litres'))['s'] or Decimal('0.00')
-        stock_out_month = depletions_product_qs.filter(created_at__date__gte=start_of_selected_month, created_at__date__lte=end_of_selected_month).aggregate(s=Sum('quantity_depleted'))['s'] or Decimal('0.00')
+        
+        stock_in_month = shipments_product_qs.filter(
+            import_date__gte=start_of_selected_month, 
+            import_date__lte=end_of_selected_month
+        ).aggregate(s=Sum('quantity_litres'))['s'] or Decimal('0.00')
+        
+        stock_out_month = depletions_product_qs.filter(
+            created_at__date__gte=start_of_selected_month, 
+            created_at__date__lte=end_of_selected_month
+        ).aggregate(s=Sum('quantity_depleted'))['s'] or Decimal('0.00')
+        
         closing_stock = opening_stock + stock_in_month - stock_out_month
-        if opening_stock !=0 or stock_in_month !=0 or stock_out_month !=0 or closing_stock !=0: # Only show products with activity or stock
-            summary_data.append({'product_name': product_obj.name, 'opening_stock': opening_stock, 'stock_in_month': stock_in_month, 'stock_out_month': stock_out_month, 'closing_stock': closing_stock})
+        
+        if opening_stock != 0 or stock_in_month != 0 or stock_out_month != 0 or closing_stock != 0:
+            summary_data.append({
+                'product_name': product_obj.name, 
+                'opening_stock': opening_stock, 
+                'stock_in_month': stock_in_month, 
+                'stock_out_month': stock_out_month, 
+                'closing_stock': closing_stock
+            })
+    
     context = {
-        'summary_data': summary_data, 'selected_year': selected_year, 'selected_month': selected_month, 
+        'summary_data': summary_data, 
+        'selected_year': selected_year, 
+        'selected_month': selected_month, 
         'month_name_display': datetime.date(1900, selected_month, 1).strftime('%B'), 
-        'available_years': all_years, 'months_for_dropdown': months_for_dropdown, 
+        'available_years': all_years, 
+        'months_for_dropdown': months_for_dropdown, 
         'page_title': f'Monthly Stock Summary - {datetime.date(1900, selected_month, 1).strftime("%B")} {selected_year}'
     }
     return render(request, 'shipments/monthly_stock_summary.html', context)
@@ -837,11 +999,14 @@ def signup_view(request):
             user = form.save()
             auth_login(request, user)
             messages.success(request, 'Account created successfully! You are now logged in.')
-            try: # Assign to 'Viewer' group by default
+            try:
                 viewer_group, created = Group.objects.get_or_create(name='Viewer')
                 user.groups.add(viewer_group)
-            except Exception as e: messages.warning(request, f"Could not assign default group: {e}")
+            except Exception as e: 
+                messages.warning(request, f"Could not assign default group: {e}")
             return redirect(reverse('shipments:home'))
-    else: form = UserCreationForm()
-    context = { 'form': form, 'page_title': 'Sign Up'}
+    else: 
+        form = UserCreationForm()
+    
+    context = {'form': form, 'page_title': 'Sign Up'}
     return render(request, 'registration/signup.html', context)

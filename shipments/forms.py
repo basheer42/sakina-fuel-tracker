@@ -43,6 +43,25 @@ class ShipmentForm(forms.ModelForm):
             self.fields['product'].queryset = Product.objects.all().order_by('name')
         # Queryset for destination is set in its explicit field definition
 
+    # ADDED: Custom validation methods
+    def clean_quantity_litres(self):
+        quantity = self.cleaned_data.get('quantity_litres')
+        if quantity and quantity <= 0:
+            raise forms.ValidationError("Quantity must be greater than zero.")
+        return quantity
+
+    def clean_vessel_id_tag(self):
+        vessel_id = self.cleaned_data.get('vessel_id_tag')
+        if vessel_id and len(vessel_id.strip()) < 3:
+            raise forms.ValidationError("Vessel ID must be at least 3 characters long.")
+        return vessel_id.strip().upper() if vessel_id else vessel_id
+
+    def clean_price_per_litre(self):
+        price = self.cleaned_data.get('price_per_litre')
+        if price and price <= 0:
+            raise forms.ValidationError("Price per litre must be greater than zero.")
+        return price
+
 
 # --- Forms and Formset for Trips (Stock Out) ---
 class TripForm(forms.ModelForm):
@@ -93,6 +112,13 @@ class TripForm(forms.ModelForm):
         if 'product' in self.fields:
             self.fields['product'].queryset = Product.objects.all().order_by('name')
 
+    # ADDED: Custom validation methods
+    def clean_kpc_order_number(self):
+        kpc_order = self.cleaned_data.get('kpc_order_number')
+        if kpc_order and not kpc_order.startswith('S'):
+            raise forms.ValidationError("KPC Order Number should start with 'S'.")
+        return kpc_order.upper() if kpc_order else kpc_order
+
 
 class LoadingCompartmentForm(forms.ModelForm):
     class Meta:
@@ -127,10 +153,3 @@ class PdfLoadingAuthorityUploadForm(forms.Form):
             'accept': '.pdf'
             })
     )
-    # Example of adding an initial status if needed, can be set in the view too
-    # initial_status = forms.ChoiceField(
-    #     choices=Trip.STATUS_CHOICES, # Make sure Trip model is accessible or choices are defined here
-    #     initial='PENDING', 
-    #     required=False,
-    #     widget=forms.HiddenInput() # Or a Select if user should choose
-    # )

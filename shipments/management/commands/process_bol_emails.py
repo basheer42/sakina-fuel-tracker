@@ -68,7 +68,7 @@ class Command(BaseCommand):
                 for page_num, page in enumerate(pdf.pages):
                     self.stdout.write(f"    Extracting text from page {page_num + 1}...")
                     page_text = page.extract_text_simple(x_tolerance=1, y_tolerance=1) 
-                    # CORRECTED INDENTATION for the 'if' block below
+                    # FIXED INDENTATION - This was the critical syntax error
                     if page_text: 
                         full_text += page_text + "\n"
             
