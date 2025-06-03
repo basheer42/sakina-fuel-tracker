@@ -134,7 +134,7 @@ def home_view(request):
     """Main dashboard view with stock summary and notifications."""
     try:
         context = {
-            'message': 'Welcome to Sakina Gas Fuel Tracker!',
+            'message': 'Welcome to Sakina Gas Company',
             'description': 'Manage your fuel inventory efficiently.',
             'is_authenticated_user': request.user.is_authenticated
         }
@@ -183,6 +183,23 @@ def home_view(request):
                     trip__in=delivered_trips_qs
                 ).aggregate(total=Sum('quantity_depleted'))
                 total_quantity_loaded_val = depletion_total.get('total') or Decimal('0.00')
+                
+            # Direct calculation using trip totals
+            turnover_rate = 0
+            if can_view_trip and total_quantity_shipments_val > 0:
+                # Get all delivered trips and sum their actual loaded quantities
+                delivered_trips = trips_qs_base.filter(status='DELIVERED')
+                total_delivered = Decimal('0.00')
+    
+                for trip in delivered_trips:
+                    total_delivered += trip.total_loaded
+    
+                print(f"DEBUG: Direct total delivered: {total_delivered}")
+    
+                if total_delivered > 0:
+                    turnover_rate = float((total_delivered / total_quantity_shipments_val) * 100)
+                    turnover_rate = round(turnover_rate, 1)
+                    print(f"DEBUG: Direct turnover rate: {turnover_rate}%")
 
             context.update({
                 'total_shipments': total_shipments_val,
@@ -190,6 +207,7 @@ def home_view(request):
                 'total_value_shipments': total_value_shipments_val,
                 'total_trips': total_trips_delivered, 
                 'total_quantity_loaded': total_quantity_loaded_val,
+                'turnover_rate': turnover_rate,
             })
 
         except Exception as e:
@@ -198,7 +216,7 @@ def home_view(request):
             context.update({
                 'total_shipments': 0, 'total_quantity_shipments': Decimal('0.00'),
                 'total_value_shipments': Decimal('0.00'), 'total_trips': 0, 
-                'total_quantity_loaded': Decimal('0.00'),
+                'total_quantity_loaded': Decimal('0.00'), 'turnover_rate': 0,
             })
 
         # Product stock summary with caching
@@ -264,26 +282,51 @@ def home_view(request):
         logger.exception(f"Unexpected error in home_view: {e}")
         messages.error(request, "An error occurred while loading the dashboard. Please try again.")
         return render(request, 'shipments/home.html', {
-            'message': 'Welcome to Sakina Gas Fuel Tracker!',
+            'message': 'Welcome to Sakina Gas Company',
             'description': 'An error occurred while loading dashboard data.',
         })
 
 def calculate_product_stock_summary(shipments_qs, trips_qs, user):
-    """Calculate detailed stock summary by product."""
-    stock_by_product = {}
+    """Calculate detailed stock summary by product and destination."""
+    stock_by_product_destination = {}
     committed_statuses = ['PENDING', 'KPC_APPROVED', 'LOADING', 'LOADED', 'GATEPASSED', 'TRANSIT']
     show_global_data = is_viewer_or_admin_or_superuser(user)
     
-    for product_obj in Product.objects.all().order_by('name'):
+    # Truck capacity mapping
+    TRUCK_CAPACITIES = {
+        'PMS': Decimal('40000'),  # 40,000L for PMS
+        'AGO': Decimal('36000'),  # 36,000L for AGO
+    }
+    
+    # Get all product-destination combinations that have activity
+    product_dest_combinations = set()
+    
+    # From shipments
+    for shipment in shipments_qs.select_related('product', 'destination'):
+        if shipment.destination:
+            product_dest_combinations.add((shipment.product, shipment.destination))
+    
+    # From trips
+    trip_filter = trips_qs
+    if not show_global_data:
+        trip_filter = trip_filter.filter(user=user)
+    
+    for trip in trip_filter.select_related('product', 'destination'):
+        if trip.destination:
+            product_dest_combinations.add((trip.product, trip.destination))
+    
+    for product_obj, destination_obj in product_dest_combinations:
         try:
-            # Calculate received stock
-            total_received = shipments_qs.filter(product=product_obj).aggregate(
-                total=Sum('quantity_litres')
-            )['total'] or Decimal('0.00')
+            # Calculate received stock for this product-destination combination
+            total_received = shipments_qs.filter(
+                product=product_obj, 
+                destination=destination_obj
+            ).aggregate(total=Sum('quantity_litres'))['total'] or Decimal('0.00')
             
             # Calculate delivered stock
             delivered_depletions = ShipmentDepletion.objects.filter(
                 shipment_batch__product=product_obj,
+                shipment_batch__destination=destination_obj,
                 trip__status='DELIVERED'
             )
             if not show_global_data:
@@ -296,7 +339,11 @@ def calculate_product_stock_summary(shipments_qs, trips_qs, user):
             physical_stock = total_received - total_delivered
             
             # Calculate committed stock
-            committed_trips = trips_qs.filter(product=product_obj, status__in=committed_statuses)
+            committed_trips = trips_qs.filter(
+                product=product_obj, 
+                destination=destination_obj,
+                status__in=committed_statuses
+            )
             total_committed = Decimal('0.00')
             
             for trip in committed_trips:
@@ -314,27 +361,45 @@ def calculate_product_stock_summary(shipments_qs, trips_qs, user):
             net_available = physical_stock - total_committed
             
             # Calculate average cost
-            total_cost = shipments_qs.filter(product=product_obj).aggregate(
+            total_cost = shipments_qs.filter(
+                product=product_obj, 
+                destination=destination_obj
+            ).aggregate(
                 total=Sum(F('quantity_litres') * F('price_per_litre'))
             )['total'] or Decimal('0.00')
             avg_price = total_cost / total_received if total_received > 0 else Decimal('0.000')
             
-            # Only include products with activity
+            # Calculate number of trucks
+            truck_capacity = TRUCK_CAPACITIES.get(product_obj.name.upper(), Decimal('40000'))  # Default to PMS capacity
+            trucks_available = net_available / truck_capacity if net_available > 0 else Decimal('0.00')
+            
+            # Only include combinations with activity
             if any([total_received > 0, total_delivered > 0, physical_stock != 0, total_committed != 0]):
-                stock_by_product[product_obj.name] = {
+                key = f"{product_obj.name} - {destination_obj.name}"
+                stock_by_product_destination[key] = {
+                    'product_name': product_obj.name,
+                    'destination_name': destination_obj.name,
                     'shipped': total_received,
                     'dispatched': total_delivered,
                     'physical_stock': physical_stock,
                     'booked_stock': total_committed,
                     'net_available': net_available,
-                    'avg_price': avg_price
+                    'avg_price': avg_price,
+                    'truck_capacity': truck_capacity,
+                    'trucks_available': trucks_available,
+                    'trucks_full': int(trucks_available),  # Full trucks
+                    'trucks_partial': trucks_available - int(trucks_available),  # Partial truck
                 }
                 
         except Exception as e:
-            logger.error(f"Error calculating stock for product {product_obj.name}: {e}")
+            logger.error(f"Error calculating stock for {product_obj.name} - {destination_obj.name}: {e}")
             continue
     
-    return stock_by_product
+    # Sort by product name, then destination name
+    sorted_stock = dict(sorted(stock_by_product_destination.items(), 
+                              key=lambda x: (x[1]['product_name'], x[1]['destination_name'])))
+    
+    return sorted_stock
 
 def calculate_chart_data(trips_qs):
     """Calculate chart data for the last 30 days."""
