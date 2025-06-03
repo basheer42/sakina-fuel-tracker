@@ -37,6 +37,8 @@ staticfiles/ # If you collect static files to a local directory for testing
 
 # Virtual Environments
 .env
+.env.local
+.env.production
 .venv
 env/
 venv/

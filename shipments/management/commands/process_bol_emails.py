@@ -4,8 +4,8 @@ import imaplib
 import email
 from email.header import decode_header
 from email.utils import parsedate_to_datetime
-import os 
-import tempfile 
+import os
+import tempfile
 import re
 from decimal import Decimal, InvalidOperation
 import datetime
@@ -67,9 +67,9 @@ class Command(BaseCommand):
                     return None
                 for page_num, page in enumerate(pdf.pages):
                     self.stdout.write(f"    Extracting text from page {page_num + 1}...")
-                    page_text = page.extract_text_simple(x_tolerance=1, y_tolerance=1) 
-                    # FIXED INDENTATION - This was the critical syntax error
-                    if page_text: 
+                    page_text = page.extract_text_simple(x_tolerance=1, y_tolerance=1)
+                    # Indentation for the following 'if' block is critical and confirmed correct:
+                    if page_text:
                         full_text += page_text + "\n"
             
             if not full_text.strip():
@@ -110,7 +110,7 @@ class Command(BaseCommand):
                 if not extracted_data['actual_compartments']: self.stdout.write(self.style.WARNING("    No compartment data lines matched pattern after table header."))
             else: self.stdout.write(self.style.ERROR("    BoL Table header NOT FOUND. Cannot parse compartment details."))
             if not extracted_data.get('kpc_loading_order_no'):
-                lon_general_match = re.search(r"LON NO\.\s*(S\d+)", full_text, re.IGNORECASE) 
+                lon_general_match = re.search(r"LON NO\.\s*(S\d+)", full_text, re.IGNORECASE)
                 if lon_general_match: extracted_data['kpc_loading_order_no'] = lon_general_match.group(1).strip().upper(); self.stdout.write(self.style.WARNING(f"    Found LON '{extracted_data['kpc_loading_order_no']}' via general search."))
                 else: self.stdout.write(self.style.ERROR("    KPC LON (Sxxxxx) not found anywhere in BoL.")); return None
         except Exception as e_parse: self.stdout.write(self.style.ERROR(f"    General error during PDF parsing for '{original_pdf_filename}': {e_parse}")); return None
@@ -148,12 +148,12 @@ class Command(BaseCommand):
                 email_id_str = email_id_bytes.decode()
                 self.stdout.write(f"\nProcessing BoL email ID: {email_id_str}...")
                 try:
-                    with transaction.atomic(): 
+                    with transaction.atomic():
                         status_fetch, msg_data = mail.fetch(email_id_bytes, "(RFC822)")
-                        if status_fetch != 'OK': self.stdout.write(self.style.ERROR(f"  Error fetching BoL email ID {email_id_str}")); continue 
-                        msg = None 
+                        if status_fetch != 'OK': self.stdout.write(self.style.ERROR(f"  Error fetching BoL email ID {email_id_str}")); continue
+                        msg = None
                         for response_part in msg_data:
-                            if isinstance(response_part, tuple): msg = email.message_from_bytes(response_part[1]); break 
+                            if isinstance(response_part, tuple): msg = email.message_from_bytes(response_part[1]); break
                         if not msg: self.stdout.write(self.style.ERROR(f"  Could not extract message object for email ID {email_id_str}")); continue
                         email_subject = self.decode_email_header(msg["subject"]); self.stdout.write(f"  Subject: '{email_subject}'")
                         pdf_filename, pdf_content = self.get_pdf_attachment_from_email(msg)
@@ -166,14 +166,14 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.SUCCESS(f"  Found Trip ID {trip_to_update.id} for LON {kpc_lon_from_bol}."))
                         if ShipmentDepletion.objects.filter(trip=trip_to_update).exists():
                             self.stdout.write(f"  Trip {trip_to_update.id} has existing depletions. Reversing them...")
-                            if not trip_to_update.reverse_stock_depletion(stdout_writer=self.stdout): 
+                            if not trip_to_update.reverse_stock_depletion(stdout_writer=self.stdout):
                                 self.stdout.write(self.style.ERROR(f"  CRITICAL: Failed to reverse prior stock for Trip {trip_to_update.id}. Aborting BoL."))
                                 raise CommandError(f"BoL processing failed for Trip {trip_to_update.id} due to reversal failure.")
                             self.stdout.write(self.style.SUCCESS(f"  Successfully reversed prior stock for Trip {trip_to_update.id}."))
                         trip_to_update.bol_number = parsed_bol_data.get('kpc_shipment_no', trip_to_update.bol_number)
                         if parsed_bol_data.get('delivery_date'): trip_to_update.loading_date = parsed_bol_data['delivery_date']
                         if parsed_bol_data.get('delivery_time'): trip_to_update.loading_time = parsed_bol_data['delivery_time']
-                        trip_to_update.status = 'LOADED' 
+                        trip_to_update.status = 'LOADED'
                         has_actual_l20_data = False
                         if parsed_bol_data.get('actual_compartments'):
                             for bol_comp_data in parsed_bol_data['actual_compartments']:
@@ -192,15 +192,15 @@ class Command(BaseCommand):
                                 except Exception as e_comp: self.stdout.write(self.style.ERROR(f"    Error updating/creating comp {comp_num} for Trip {trip_to_update.id}: {e_comp}"))
                         if not has_actual_l20_data and not parsed_bol_data.get('actual_compartments'): self.stdout.write(self.style.WARNING(f"  No actual compartment L20 data parsed from BoL for Trip {trip_to_update.id}."))
                         elif not has_actual_l20_data and parsed_bol_data.get('actual_compartments'): self.stdout.write(self.style.WARNING(f"  All parsed L20 quantities were zero or None for Trip {trip_to_update.id}."))
-                        trip_to_update.save(stdout=self.stdout) 
+                        trip_to_update.save(stdout=self.stdout)
                         self.stdout.write(self.style.SUCCESS(f"  Successfully processed BoL and updated Trip {trip_to_update.id}. Final status: {trip_to_update.status}"))
-                        # mail.store(email_id_bytes, '+FLAGS', '\\Seen') 
+                        # mail.store(email_id_bytes, '+FLAGS', '\\Seen') # This will be addressed in a later step
                 except Trip.DoesNotExist: self.stdout.write(self.style.ERROR(f"  Trip with KPC LON '{kpc_lon_from_bol}' from BoL PDF not found. Email ID: {email_id_str}"))
                 except ValidationError as e_val: self.stdout.write(self.style.ERROR(f"  VALIDATION ERROR for Trip LON '{kpc_lon_from_bol}': {e_val}. Email ID: {email_id_str}. Rolled back."))
                 except CommandError as e_cmd: self.stdout.write(self.style.ERROR(f"  COMMAND ERROR for Trip LON '{kpc_lon_from_bol}': {e_cmd}. Email ID: {email_id_str}. Rolled back."))
                 except IntegrityError as e_int: self.stdout.write(self.style.ERROR(f"  DATABASE INTEGRITY ERROR for Trip LON '{kpc_lon_from_bol}': {e_int}. Email ID: {email_id_str}. Rolled back."))
                 except Exception as e_main: self.stdout.write(self.style.ERROR(f"  UNEXPECTED ERROR for Trip LON '{kpc_lon_from_bol}': {e_main}. Email ID: {email_id_str}. Rolled back."))
-            
+
             mail.logout()
             self.stdout.write(self.style.SUCCESS("Finished processing KPC BoL PDF emails."))
         except imaplib.IMAP4.error as e_imap: self.stdout.write(self.style.ERROR(f"IMAP Connection/Operation Error: {e_imap}"))
