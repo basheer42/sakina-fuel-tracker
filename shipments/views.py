@@ -46,7 +46,7 @@ TRUCK_CAPACITIES = {
 MAX_PDF_SIZE_MB = 10
 ALLOWED_PDF_EXTENSIONS = ['.pdf']
 # Adjusted: PENDING removed as per requirement
-COMMITTED_TRIP_STATUSES = ['KPC_APPROVED', 'LOADING', 'LOADED', 'GATEPASSED', 'TRANSIT']
+COMMITTED_TRIP_STATUSES = ['KPC_APPROVED', 'LOADING']
 CHART_TRIP_STATUSES = ['LOADED', 'GATEPASSED', 'TRANSIT', 'DELIVERED']
 
 # Date ranges for validation
@@ -833,6 +833,8 @@ def _get_product_destination_combinations(shipments_qs, trips_qs, user, show_glo
 
 def _calculate_stock_for_product_destination(product_obj, destination_obj, shipments_qs, trips_qs, user, show_global_data):
     """Calculate stock data for a specific product-destination combination."""
+    # ... existing code for total_received and total_delivered ...
+    
     specific_shipments_qs = shipments_qs.filter(
         product=product_obj, 
         destination=destination_obj
@@ -853,15 +855,18 @@ def _calculate_stock_for_product_destination(product_obj, destination_obj, shipm
     
     physical_stock = total_received - total_delivered
     
+    # FIXED: Only include trips that are approved but not yet loaded
+    # Trips in LOADED+ status have already been depleted and shouldn't be "committed"
     committed_trips_qs = trips_qs.filter(
         product=product_obj, 
         destination=destination_obj,
-        status__in=COMMITTED_TRIP_STATUSES
+        status__in=['KPC_APPROVED', 'LOADING']  # Removed LOADED, GATEPASSED, TRANSIT
     )
     total_committed = _calculate_committed_stock(committed_trips_qs)
     
     net_available = physical_stock - total_committed
     
+    # ... rest of the calculation remains the same ...
     total_cost = specific_shipments_qs.aggregate(
         total=Sum(F('quantity_litres') * F('price_per_litre'))
     )['total'] or Decimal('0.00')
@@ -887,30 +892,41 @@ def _calculate_stock_for_product_destination(product_obj, destination_obj, shipm
 
 
 def _calculate_committed_stock(committed_trips_qs):
-    """Calculate total committed stock from a queryset of trips."""
+    """
+    Calculate total committed stock from a queryset of trips.
+    
+    Committed stock represents approved loadings that haven't been physically loaded yet.
+    Once a trip reaches LOADED status (after BoL processing), the stock is actually 
+    depleted via FIFO and should no longer be counted as "committed".
+    """
     total_committed = Decimal('0.00')
     
     for trip in committed_trips_qs:
         try:
             quantity_to_commit = Decimal('0.00')
-            if trip.status == 'LOADED':
-                actual_l20 = trip.total_actual_l20_from_compartments
-                if actual_l20 > Decimal('0.00'):
-                    quantity_to_commit = actual_l20
-                else:
-                    quantity_to_commit = trip.total_loaded or trip.total_requested_from_compartments
-            elif trip.status in ['GATEPASSED', 'TRANSIT']:
-                quantity_to_commit = trip.total_loaded or trip.total_requested_from_compartments
-            else: # Covers 'KPC_APPROVED', 'LOADING' (after COMMITTED_TRIP_STATUSES change)
+            
+            # Only count trips that are approved but not yet physically loaded
+            if trip.status == 'KPC_APPROVED':
+                # Use requested quantities from the loading authority
                 quantity_to_commit = trip.total_requested_from_compartments
+            elif trip.status == 'LOADING':
+                # Trip is actively being loaded, still count as committed until BoL received
+                quantity_to_commit = trip.total_requested_from_compartments
+            # Note: LOADED, GATEPASSED, TRANSIT, DELIVERED trips are not included
+            # because their stock has already been depleted via actual BoL processing
+            
             total_committed += quantity_to_commit
+            
         except Exception as e:
             logger.warning(f"Error calculating committed quantity for trip {trip.id} ({trip.kpc_order_number}): {e}")
             try:
-                total_committed += trip.total_requested_from_compartments
+                # Fallback: only for non-loaded trips
+                if trip.status in ['KPC_APPROVED', 'LOADING']:
+                    total_committed += trip.total_requested_from_compartments
             except Exception as fallback_e:
                 logger.error(f"Fallback calculation also failed for trip {trip.id}: {fallback_e}")
             continue
+            
     return total_committed
 
 
@@ -1216,14 +1232,29 @@ def _calculate_dashboard_stats(shipments_qs, trips_qs, user, permissions):
                 stats['total_value_shipments'] = aggregation.get('total_value') or Decimal('0.00')
 
         if permissions['can_view_trip']:
+            # Count all trips regardless of status for total trips
+            stats['total_trips'] = trips_qs.count()
+            
+            # Count only delivered trips for the delivered metric
             delivered_trips_qs = trips_qs.filter(status='DELIVERED')
             stats['total_trips_delivered'] = delivered_trips_qs.count()
             
-            if stats['total_trips_delivered'] > 0:
-                total_loaded_sum = Decimal('0.00')
-                for trip in delivered_trips_qs:
-                    total_loaded_sum += trip.total_loaded
-                stats['total_quantity_loaded_delivered'] = total_loaded_sum
+            # Calculate total quantity for ALL completed trips (not just delivered)
+            # Include LOADED, GATEPASSED, TRANSIT, DELIVERED statuses
+            completed_statuses = ['LOADED', 'GATEPASSED', 'TRANSIT', 'DELIVERED']
+            completed_trips_qs = trips_qs.filter(status__in=completed_statuses)
+            
+            if completed_trips_qs.exists():
+                # Use actual depletions for accurate calculation
+                total_depleted = ShipmentDepletion.objects.filter(
+                    trip__in=completed_trips_qs
+                ).aggregate(
+                    total=Sum('quantity_depleted')
+                )['total'] or Decimal('0.00')
+                
+                stats['total_quantity_loaded_delivered'] = total_depleted
+            else:
+                stats['total_quantity_loaded_delivered'] = Decimal('0.00')
             
             if stats['total_quantity_shipments'] > 0 and stats['total_quantity_loaded_delivered'] > 0:
                 turnover_rate_decimal = (stats['total_quantity_loaded_delivered'] / stats['total_quantity_shipments']) * 100

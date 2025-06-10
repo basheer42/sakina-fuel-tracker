@@ -156,12 +156,236 @@
         .sakina-footer {
             background: linear-gradient(90deg, #1f2937 0%, #374151 100%);
         }
+        /* Enhanced Card Styles */
+        .card-enhanced {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            overflow: hidden;
+        }
+
+        .card-enhanced:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.08);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        /* Enhanced Table Styles */
+        .table-enhanced {
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: none;
+        }
+
+        .table-enhanced thead {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            color: white;
+        }
+
+        .table-enhanced thead th {
+            color: white !important;
+            font-weight: 600;
+        }
+
+        .table-enhanced tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .table-enhanced tbody tr:hover {
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(255, 255, 255, 0.05) 100%);
+            transform: scale(1.001);
+        }
+
+        .table-enhanced tbody tr:nth-child(even) {
+            background-color: rgba(248, 250, 252, 0.5);
+        }
+
+        /* Enhanced Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .status-badge:hover {
+            transform: scale(1.05);
+        }
+
+        .status-delivered { 
+            color: #059669; 
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 1px solid #34d399;
+        }
+        
+        .status-gatepassed { 
+            color: #0891b2; 
+            background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+            border: 1px solid #22d3ee;
+        }
+        
+        .status-loaded { 
+            color: #7c3aed; 
+            background: linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 100%);
+            border: 1px solid #a855f7;
+        }
+        
+        .status-approved { 
+            color: #2563eb; 
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            border: 1px solid #3b82f6;
+        }
+        
+        .status-pending { 
+            color: #d97706; 
+            background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+            border: 1px solid #f59e0b;
+        }
+        
+        .status-rejected { 
+            color: #dc2626; 
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 1px solid #ef4444;
+        }
+        
+        .status-cancelled { 
+            color: #6b7280; 
+            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+            border: 1px solid #9ca3af;
+        }
+
+        /* Enhanced Buttons */
+        .btn-enhanced {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-enhanced:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-enhanced:active {
+            transform: translateY(0);
+        }
+
+        /* Loading Animation */
+        .loading-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: .5;
+            }
+        }
+
+        /* Enhanced Glass Header */
+        .glass-header {
+            background: rgba(30, 64, 175, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Enhanced Notifications */
+        .notification-enhanced {
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-left-width: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .notification-enhanced:hover {
+            transform: translateX(4px);
+        }
+
+        .notification-enhanced::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* Enhanced Input Fields */
+        main input[type="text"]:focus,
+        main input[type="password"]:focus,
+        main input[type="email"]:focus,
+        main input[type="number"]:focus,
+        main input[type="date"]:focus,
+        main input[type="time"]:focus,
+        main select:focus,
+        main textarea:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
+        }
+
+        /* Enhanced Progress Bars */
+        .progress-bar {
+            height: 8px;
+            background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 100%);
+            border-radius: 9999px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 9999px;
+            transition: width 0.5s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .progress-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            right: 0;
+            background: linear-gradient(
+                90deg,
+                transparent,
+                rgba(255, 255, 255, 0.3),
+                transparent
+            );
+            animation: progress-shimmer 1.5s infinite;
+        }
+
+        @keyframes progress-shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen fade-in">
     <!-- Navigation -->
-    <nav class="sakina-nav p-4 shadow-lg">
+    <nav class="glass-header p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-3">
                 <!-- Sakina Gas Logo -->
