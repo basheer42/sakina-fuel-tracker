@@ -81,7 +81,7 @@
 </form>
 
 {# Filtered Summary - Your existing responsive grid is good #}
-<div class="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg shadow">
+<div class="notification-enhanced mb-6 p-4 bg-blue-50 border border-blue-200">
     <h3 class="text-lg font-semibold text-blue-700 mb-2">Filtered Summary:</h3>
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
         <div>
@@ -96,8 +96,8 @@
 </div>
 
 {% if trips %}
-    <div class="bg-white shadow-md rounded-lg overflow-x-auto">
-        <table class="min-w-full w-full leading-normal">
+    <div class="card-enhanced">
+        <table class="table-enhanced min-w-full w-full leading-normal">
             <thead>
                 <tr class="bg-gray-100 text-gray-600 uppercase text-xs sm:text-sm leading-normal"> {# Adjusted text size #}
                     <th class="py-3 px-4 sm:px-6 text-left">BOL Date/Time</th> {# Changed label slightly #}
@@ -124,7 +124,40 @@
                     <td class="py-3 px-4 sm:px-6 text-left">{{ trip.product.name }}</td>
                     <td class="py-3 px-4 sm:px-6 text-left hidden sm:table-cell">{{ trip.customer.name }}</td> {# Hidden on very small #}
                     <td class="py-3 px-4 sm:px-6 text-right">{{ trip.total_loaded|floatformat:2 }}</td>
-                    <td class="py-3 px-4 sm:px-6 text-left hidden md:table-cell">{{ trip.get_status_display }}</td> {# Hidden on small #}
+                    <td class="py-3 px-4 sm:px-6 text-left hidden md:table-cell">
+                        <span class="status-badge {% if trip.status == 'DELIVERED' %}status-delivered{% elif trip.status == 'GATEPASSED' %}status-gatepassed{% elif trip.status == 'LOADED' %}status-loaded{% elif trip.status == 'KPC_APPROVED' %}status-approved{% elif trip.status == 'PENDING' or trip.status == 'LOADING' %}status-pending{% elif trip.status == 'KPC_REJECTED' %}status-rejected{% elif trip.status == 'CANCELLED' %}status-cancelled{% else %}status-pending{% endif %}">
+                            {% if trip.status == 'DELIVERED' %}
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                                </svg>
+                            {% elif trip.status == 'GATEPASSED' %}
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            {% elif trip.status == 'LOADED' %}
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                                </svg>
+                            {% elif trip.status == 'KPC_APPROVED' %}
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                            {% elif trip.status == 'PENDING' or trip.status == 'LOADING' %}
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
+                                </svg>
+                            {% elif trip.status == 'KPC_REJECTED' %}
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                </svg>
+                            {% elif trip.status == 'CANCELLED' %}
+                                <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                            {% endif %}
+                            {{ trip.get_status_display }}
+                        </span>
+                    </td>
                     <td class="py-3 px-4 sm:px-6 text-left hidden lg:table-cell"> {# Hidden on smaller than lg #}
                          <div class="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title="{{ trip.notes|default_if_none:'' }}">
                             {{ trip.notes|default_if_none:"-"|truncatechars:20 }}
