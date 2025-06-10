@@ -16,13 +16,32 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings # For static files in development
+from django.conf.urls.static import static # For static files in development
+
+# Import views from your shipments app to reference the handlers
+from shipments import views as shipment_views
 
 urlpatterns = [
     path('admin/', admin.site.urls), # Django admin URLs
 
     # Include Django's built-in authentication URLs under the /accounts/ path
-    path('accounts/', include('django.contrib.auth.urls')), 
+    # This provides login, logout, password_change, password_reset, etc.
+    path('accounts/', include('django.contrib.auth.urls')),
 
-    # Include URLs from your shipments app
-    path('', include('shipments.urls')), 
+    # Include URLs from your shipments app (this should be the main entry point)
+    path('', include('shipments.urls')), # Assuming 'shipments.urls' defines the root path ''
 ]
+
+# Serve static files during development if DEBUG is True
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # Optionally, serve media files during development as well
+    # urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Custom error handlers
+# These tell Django which views to use when specific HTTP errors occur
+# Ensure these views are defined in shipments/views.py or adjust import path
+handler403 = shipment_views.handler403
+handler404 = shipment_views.handler404
+handler500 = shipment_views.handler500
