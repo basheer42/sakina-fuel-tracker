@@ -1,1 +1,0 @@
-"use strict";{function n(n){"loading"!==document.readyState?n():document.addEventListener("DOMContentLoaded",n)}n((function(){function n(n){n.preventDefault();new URLSearchParams(window.location.search).has("_popup")?window.close():window.history.back()}document.querySelectorAll(".cancel-link").forEach((function(e){e.addEventListener("click",n)}))}))}
