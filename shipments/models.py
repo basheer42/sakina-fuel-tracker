@@ -5,7 +5,8 @@ from django.contrib.auth import get_user_model
 from django.db.models import Sum, F, Value, DecimalField as DjangoDecimalField 
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
-from decimal import Decimal 
+from decimal import Decimal
+from simple_history.models import HistoricalRecords
 import logging
 import datetime 
 
@@ -209,6 +210,7 @@ class Trip(models.Model):
     kpc_comments = models.TextField(blank=True, null=True, help_text="Comments from KPC emails")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    history = HistoricalRecords()
     
     def _get_original_status(self):
         if self.pk:

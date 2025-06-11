@@ -3,37 +3,139 @@
 {% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
 
 {% block content %}
-<div class="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-lg mt-10">
-    <h2 class="text-2xl font-semibold text-red-700 mb-6">{{ page_title }}</h2>
+<style>
+    /* Custom Sakina Gas Brand Colors */
+    :root {
+        --sakina-blue-deep: #0f172a;
+        --sakina-blue-primary: #1e3a8a;
+        --sakina-blue-bright: #3b82f6;
+        --sakina-orange-warm: #ea580c;
+        --sakina-orange-bright: #f97316;
+        --sakina-red-accent: #dc2626;
+    }
 
-    <p class="text-gray-700 mb-4">
-        Are you sure you want to delete the shipment:
-        <strong class="font-medium">"{{ shipment.product.name }} from {{ shipment.supplier_name }} on {{ shipment.import_date|date:"Y-m-d" }}"</strong>?
-    </p>
-    <p class="text-gray-600 mb-6">This action cannot be undone.</p>
+    .sakina-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 1rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
 
-    {# Show delete button ONLY if user has permission (redundant with decorator but good practice) #}
-    {# The 'can_delete_shipment' variable is passed from the view context #}
-    {% if can_delete_shipment %} 
-        <form method="post">
-            {% csrf_token %} {# Important for security! #}
-            <div class="flex justify-end space-x-3">
-                <a href="{% url 'shipments:shipment-list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium">
-                    Cancel
-                </a>
-                {# This is the DELETE button #}
-                <button type="submit" class="bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                    Yes, Delete
-                </button>
+    .danger-btn {
+        background: linear-gradient(135deg, var(--sakina-red-accent) 0%, #ef4444 100%);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .danger-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 35px rgba(220, 38, 38, 0.4);
+        background: linear-gradient(135deg, #b91c1c 0%, var(--sakina-red-accent) 100%);
+    }
+
+    .cancel-btn {
+        background: linear-gradient(135deg, #6b7280 0%, #9ca3af 100%);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .cancel-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(107, 114, 128, 0.3);
+        background: linear-gradient(135deg, #4b5563 0%, #6b7280 100%);
+    }
+</style>
+
+<div class="max-w-2xl mx-auto mt-16">
+    <div class="sakina-card p-8">
+        <!-- Header -->
+        <div class="flex items-center gap-4 mb-6">
+            <div class="w-16 h-16 bg-gradient-to-br from-red-100 to-red-200 rounded-2xl flex items-center justify-center">
+                <svg class="w-8 h-8 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
             </div>
-        </form>
-    {% else %}
-         {# Show only Cancel if delete permission is missing #}
-         <div class="flex justify-end">
-              <a href="{% url 'shipments:shipment-list' %}" class="bg-gray-200 hover:bg-gray-300 text-gray-700 py-2 px-4 rounded-md shadow-sm text-sm font-medium">
-                  Cancel
-              </a>
-         </div>
-    {% endif %}
+            <div>
+                <h2 class="text-3xl font-bold text-red-700">{{ page_title }}</h2>
+                <p class="text-gray-600 mt-1">This action cannot be undone</p>
+            </div>
+        </div>
+
+        <!-- Warning Content -->
+        <div class="bg-red-50 border-l-4 border-red-400 p-6 rounded-xl mb-6">
+            <div class="flex items-start gap-3">
+                <svg class="w-5 h-5 text-red-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
+                </svg>
+                <div>
+                    <p class="text-red-800 font-medium mb-2">
+                        Are you sure you want to delete this shipment?
+                    </p>
+                    <div class="bg-white p-4 rounded-lg border border-red-200">
+                        <p class="text-gray-700">
+                            <strong class="text-red-700">"{{ shipment.product.name }} from {{ shipment.supplier_name }} on {{ shipment.import_date|date:"Y-m-d" }}"</strong>
+                        </p>
+                    </div>
+                    <p class="text-red-700 text-sm mt-3">This action cannot be undone and will permanently remove this shipment record from the system.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Form -->
+        {% if can_delete_shipment %}
+            <form method="post">
+                {% csrf_token %}
+                <div class="flex flex-col sm:flex-row gap-4 justify-end">
+                    <a href="{% url 'shipments:shipment-list' %}" class="cancel-btn">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                            Cancel
+                        </span>
+                    </a>
+                    <button type="submit" class="danger-btn">
+                        <span class="flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            Yes, Delete
+                        </span>
+                    </button>
+                </div>
+            </form>
+        {% else %}
+            <div class="flex justify-end">
+                <a href="{% url 'shipments:shipment-list' %}" class="cancel-btn">
+                    <span class="flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0L2.586 11H17a1 1 0 110 2H2.586l3.707 3.707a1 1 0 01-1.414 1.414l-5.414-5.414a1 1 0 010-1.414L4.879 6.293a1 1 0 011.414 1.414L2.586 11z" clip-rule="evenodd"/>
+                        </svg>
+                        Back to List
+                    </span>
+                </a>
+            </div>
+        {% endif %}
+    </div>
 </div>
 {% endblock content %}

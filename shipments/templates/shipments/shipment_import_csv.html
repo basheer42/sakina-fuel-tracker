@@ -3,52 +3,206 @@
 {% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
 
 {% block content %}
-<div class="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-lg mt-10">
-    <h2 class="text-3xl font-semibold text-blue-700 mb-6 text-center">{{ page_title }}</h2>
+<style>
+    /* Custom Sakina Gas Brand Colors */
+    :root {
+        --sakina-blue-deep: #0f172a;
+        --sakina-blue-primary: #1e3a8a;
+        --sakina-blue-bright: #3b82f6;
+        --sakina-orange-warm: #ea580c;
+        --sakina-orange-bright: #f97316;
+        --sakina-red-accent: #dc2626;
+    }
 
-    {# Display messages (success/error from view) #}
-    {# Messages are handled in base.html, but you might want specific error display here later #}
+    .sakina-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 1rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
 
-    <form method="post" enctype="multipart/form-data"> {# IMPORTANT: enctype for file uploads #}
-        {% csrf_token %}
+    .sakina-btn {
+        background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-bright) 50%, var(--sakina-orange-warm) 100%);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+        width: 100%;
+    }
 
-        {# Form field #}
-        <div class="mb-6">
-             {{ form.csv_file.label_tag }} {# Renders the label #}
-             {{ form.csv_file }} {# Renders the file input with its widget #}
-             {% for error in form.csv_file.errors %} {# Display field errors #}
-                 <p class="mt-1 text-xs text-red-600">{{ error }}</p>
-             {% endfor %}
-             {% if form.csv_file.help_text %} {# Display help text #}
-                 <p class="mt-1 text-xs text-gray-500">{{ form.csv_file.help_text|safe }}</p>
-             {% endif %}
-        </div>
+    .sakina-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 35px rgba(30, 58, 138, 0.4);
+    }
 
-        {# Display non-field errors #}
-        {% if form.non_field_errors %}
-            <div class="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
-                {% for error in form.non_field_errors %}
-                    <p>{{ error }}</p>
-                {% endfor %}
+    .upload-area {
+        border: 2px dashed #d1d5db;
+        border-radius: 1rem;
+        padding: 2rem;
+        text-align: center;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(234, 88, 12, 0.02) 100%);
+        transition: all 0.3s ease;
+    }
+
+    .upload-area:hover {
+        border-color: var(--sakina-blue-bright);
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(234, 88, 12, 0.05) 100%);
+    }
+
+    .file-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        background-color: white;
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+    }
+
+    .file-input:focus {
+        outline: none;
+        border-color: var(--sakina-blue-bright);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .instructions-card {
+        background: linear-gradient(135deg, rgba(16, 185, 129, 0.05) 0%, rgba(34, 197, 94, 0.05) 100%);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        border-radius: 1rem;
+        padding: 1.5rem;
+    }
+</style>
+
+<div class="max-w-3xl mx-auto">
+    <!-- Header Section -->
+    <div class="sakina-card p-8 mb-8">
+        <div class="flex items-center gap-6">
+            <div class="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                </svg>
             </div>
-        {% endif %}
-
-        <div class="mt-8">
-            <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                Upload CSV
-            </button>
+            <div>
+                <h2 class="text-4xl font-bold text-gray-900">{{ page_title }}</h2>
+                <p class="text-gray-600 mt-2">Upload CSV file to import multiple shipment records</p>
+            </div>
         </div>
-    </form>
+    </div>
 
-    <p class="mt-6 text-center text-sm text-gray-600">
-        <a href="{% url 'shipments:shipment-list' %}" class="text-blue-600 hover:text-blue-800 font-medium">
-            ← Back to Shipment List
+    <!-- Upload Form -->
+    <div class="sakina-card p-8 mb-8">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="upload-area mb-6">
+                <div class="flex flex-col items-center">
+                    <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <h3 class="text-lg font-semibold text-gray-700 mb-2">Select CSV File</h3>
+                    
+                    <div class="w-full max-w-md">
+                        <label for="{{ form.csv_file.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.csv_file.label }}
+                        </label>
+                        {{ form.csv_file }}
+                        
+                        {% if form.csv_file.help_text %}
+                            <p class="mt-2 text-sm text-gray-500">{{ form.csv_file.help_text|safe }}</p>
+                        {% endif %}
+                        
+                        {% for error in form.csv_file.errors %}
+                            <p class="mt-2 text-sm text-red-600 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Display non-field errors -->
+            {% if form.non_field_errors %}
+                <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            {% for error in form.non_field_errors %}
+                                <p class="text-red-700 font-medium">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="flex flex-col sm:flex-row gap-4">
+                <button type="submit" class="sakina-btn flex-1">
+                    <span class="relative z-10 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                        Upload and Process CSV
+                    </span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions-card mb-8">
+        <h3 class="text-lg font-bold text-green-800 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            CSV Format Instructions
+        </h3>
+        
+        <div class="space-y-4 text-sm text-green-700">
+            <p><strong>Required CSV columns (in order):</strong></p>
+            <div class="bg-white p-4 rounded-lg border border-green-200 font-mono text-xs">
+                import_date, supplier_name, product_name, quantity_litres, price_per_litre, notes
+            </div>
+            
+            <p><strong>Example CSV data:</strong></p>
+            <div class="bg-white p-4 rounded-lg border border-green-200 font-mono text-xs">
+                2025-05-15,"Shell Kenya","Diesel",1000.50,1.234,"Shipment notes here"<br>
+                2025-05-16,"Total Kenya","Petrol",2500.00,1.456,"Another shipment"
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div>
+                    <p><strong>Date format:</strong> YYYY-MM-DD</p>
+                    <p><strong>Numbers:</strong> Use decimal point (not comma)</p>
+                </div>
+                <div>
+                    <p><strong>Text with commas:</strong> Use quotes</p>
+                    <p><strong>Empty notes:</strong> Leave blank or use "-"</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation -->
+    <div class="text-center">
+        <a href="{% url 'shipments:shipment-list' %}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0L2.586 11H17a1 1 0 110 2H2.586l3.707 3.707a1 1 0 01-1.414 1.414l-5.414-5.414a1 1 0 010-1.414L4.879 6.293a1 1 0 011.414 1.414L2.586 11z" clip-rule="evenodd"/>
+            </svg>
+            Back to Shipment List
         </a>
-    </p>
-
-    {# Add instructions/CSV format examples here later #}
-    {# Example CSV format: import_date,supplier_name,product_name,quantity_litres,price_per_litre,notes #}
-    {# e.g. 2025-05-15,"FuelCo","Diesel",1000.5,1.234,"Notes go here" #}
-
+    </div>
 </div>
 {% endblock content %}
