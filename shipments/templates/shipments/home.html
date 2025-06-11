@@ -1,101 +1,331 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Home - Fuel Tracker{% endblock title %}
+{% block title %}Home - Sakina Gas Fuel Tracker{% endblock title %}
 
 {% block content %}
+<style>
+    /* Custom Sakina Gas Brand Colors */
+    :root {
+        --sakina-blue-deep: #0f172a;
+        --sakina-blue-primary: #1e3a8a;
+        --sakina-blue-bright: #3b82f6;
+        --sakina-orange-warm: #ea580c;
+        --sakina-orange-bright: #f97316;
+        --sakina-red-accent: #dc2626;
+        --sakina-gradient-hero: linear-gradient(135deg, #0f172a 0%, #1e3a8a 25%, #3b82f6 75%, #ea580c 100%);
+        --sakina-gradient-card: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(234, 88, 12, 0.05) 100%);
+    }
+
+    /* Hero gradient background */
+    .sakina-hero-bg {
+        background: var(--sakina-gradient-hero);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .sakina-hero-bg::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+        z-index: 0; /* Ensure pattern is behind content */
+    }
+
+    /* Floating animation for hero elements */
+    @keyframes float {
+        0%, 100% { transform: translateY(0px) rotate(0deg); }
+        50% { transform: translateY(-10px) rotate(2deg); }
+    }
+
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(234, 88, 12, 0.4), 0 0 60px rgba(59, 130, 246, 0.2); }
+    }
+
+    .float-animation {
+        animation: float 6s ease-in-out infinite;
+    }
+
+    .pulse-glow {
+        animation: pulse-glow 3s ease-in-out infinite;
+    }
+
+    /* Enhanced card hover effects */
+    .sakina-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .sakina-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15), 0 0 30px rgba(59, 130, 246, 0.1);
+        border-color: rgba(234, 88, 12, 0.3);
+    }
+
+    /* Animated gradient backgrounds for stat cards */
+    .stat-card-1 { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 50%, #93c5fd 100%); } /* Blueish */
+    .stat-card-2 { background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 50%, #86efac 100%); } /* greenish */
+    .stat-card-3 { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fbbf24 100%); } /* yellowish */
+    .stat-card-4 { background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 50%, #c4b5fd 100%); } /* purplish */
+    .stat-card-5 { background: linear-gradient(135deg, #fed7d7 0%, #feb2b2 50%, #fc8181 100%); } /* reddish */
+
+
+    /* Interactive button effects */
+    .sakina-btn {
+        background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-bright) 50%, var(--sakina-orange-warm) 100%);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .sakina-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .sakina-btn:hover::before {
+        left: 100%;
+    }
+
+    .sakina-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 35px rgba(30, 58, 138, 0.4);
+    }
+
+    /* Stock table enhancements */
+    .stock-table {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px; /* Increased from 1rem */
+        overflow: hidden; /* Important for border-radius clipping */
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .stock-row {
+        transition: all 0.3s ease;
+    }
+
+    .stock-row:hover {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(234, 88, 12, 0.02) 100%);
+    }
+    .stock-table thead tr th { /* Ensure consistent header styling */
+        background-color: transparent; /* Override default if any */
+    }
+
+
+    /* Notification enhancements */
+    .notification-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.8) 100%);
+        backdrop-filter: blur(12px);
+        border-left-width: 4px; /* Ensure border-left is applied */
+        position: relative;
+        overflow: hidden;
+        border-radius: 0.75rem; /* Corresponds to rounded-lg */
+        padding: 1.5rem; /* Corresponds to p-6 */
+    }
+
+    .notification-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.6), transparent);
+        animation: shimmer 2s infinite;
+    }
+
+    @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    /* Chart container styling */
+    .chart-container {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 250, 252, 0.95) 100%);
+        backdrop-filter: blur(8px);
+        border-radius: 20px; /* Increased from rounded-2xl which is typically 1rem */
+        padding: 24px; /* Corresponds to p-6 */
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+    }
+
+    /* Animated counters */
+    .counter {
+        font-variant-numeric: tabular-nums;
+    }
+
+    /* Progress bars */
+    .progress-bar {
+        background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 100%);
+        height: 8px;
+        border-radius: 4px;
+        overflow: hidden;
+        position: relative;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--sakina-blue-bright) 0%, var(--sakina-orange-warm) 100%);
+        border-radius: 4px;
+        position: relative;
+        overflow: hidden;
+        transition: width 1.5s ease-out;
+    }
+
+    .progress-fill::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        right: 0;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        animation: progress-shimmer 1.5s infinite;
+    }
+
+    @keyframes progress-shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+    }
+
+    /* Logo styling specific for hero element */
+    .sakina-logo-hero-outer {
+        width: 5rem; /* w-20 */
+        height: 5rem; /* h-20 */
+        background-color: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(4px); /* backdrop-blur-sm */
+        border-radius: 1rem; /* rounded-2xl */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .sakina-logo-hero-inner {
+        width: 4rem; /* Based on new file's SG logo div */
+        height: 4rem;
+        background: linear-gradient(135deg, var(--sakina-orange-bright) 0%, var(--sakina-orange-warm) 100%);
+        border-radius: 1rem; /* rounded-xl or 16px from new file */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 1.5rem; /* text-2xl */
+        box-shadow: 0 8px 24px rgba(234, 88, 12, 0.3);
+    }
+    /* Fallback for image logo if needed, or adjust above */
+    .sakina-logo-img-wrapper { /* If using the image */
+        width: 5rem; height: 5rem; background-color: rgba(255,255,255,0.95);
+        border-radius: 1rem; display: flex; align-items: center; justify-content: center;
+        backdrop-filter: blur(4px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+    }
+</style>
+
 <!-- Hero Section -->
-<div class="relative bg-gradient-to-br from-blue-500 via-blue-600 to-blue-700 rounded-2xl p-8 mb-8 overflow-hidden">
-    <!-- Background Pattern -->
-    <div class="absolute inset-0 bg-black bg-opacity-5"></div>
-    <div class="absolute top-0 left-0 w-full h-full">
-        <div class="absolute top-4 left-4 w-32 h-32 bg-orange-400 bg-opacity-10 rounded-full blur-xl"></div>
-        <div class="absolute bottom-4 right-4 w-24 h-24 bg-orange-500 bg-opacity-10 rounded-full blur-lg"></div>
-        <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-40 h-40 bg-white bg-opacity-5 rounded-full blur-2xl"></div>
-    </div>
-    
-    <!-- Content -->
+<div class="sakina-hero-bg rounded-3xl p-8 mb-8 relative z-10">
     <div class="relative z-10">
-        <div class="flex items-center justify-between flex-wrap gap-4">
+        <div class="flex items-center justify-between flex-wrap gap-6">
             <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-6 mb-2">
-                    <!-- Sakina Gas Logo -->
-                    <div class="w-20 h-20 bg-white bg-opacity-95 rounded-2xl flex items-center justify-center backdrop-blur-sm shadow-lg">
-                        <img src="{% static 'images/sakina_logo.png' %}" alt="Sakina Gas Logo" class="w-16 h-16 object-contain">
+                <div class="flex items-center gap-8 mb-4">
+                    <div class="sakina-logo-hero-outer float-animation pulse-glow">
+                        <!-- Option 1: Text Logo from new design -->
+                        <div class="sakina-logo-hero-inner">SG</div>
+                        <!-- Option 2: Image Logo from old design, styled similarly. Uncomment to use.
+                        <img src="{% static 'images/sakina_logo.png' %}" alt="Sakina Gas Logo" class="w-16 h-16 object-contain rounded-lg">
+                        -->
                     </div>
                     <div>
-                        <h1 class="text-4xl font-bold text-white mb-2">{{ message }}</h1>
-                        <p class="text-blue-100 text-lg">{{ description }}</p>
+                        <h1 class="text-5xl font-bold text-white mb-2">{{ message|default:"Welcome to Sakina Gas" }}</h1>
+                        <p class="text-blue-100 text-xl">{{ description|default:"Powering East Africa with Quality Fuel" }}</p>
                     </div>
                 </div>
                 
                 <!-- Feature Tags -->
-                <div class="flex flex-wrap gap-3 mt-6">
-                    <div class="flex items-center gap-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-4 py-2">
-                        <div class="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
-                        <span class="text-white text-sm font-medium">🚛 Reliable Fuel Distribution</span>
+                <div class="flex flex-wrap gap-4 mt-8">
+                    <div class="flex items-center gap-3 bg-white bg-opacity-15 backdrop-blur-sm rounded-full px-6 py-3 float-animation">
+                        <div class="w-3 h-3 bg-orange-400 rounded-full animate-pulse"></div>
+                        <span class="text-white font-medium">🚛 Reliable Distribution</span>
                     </div>
-                    <div class="flex items-center gap-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-4 py-2">
-                        <div class="w-2 h-2 bg-blue-300 rounded-full animate-pulse"></div>
-                        <span class="text-white text-sm font-medium">📊 Smart Inventory Management</span>
+                    <div class="flex items-center gap-3 bg-white bg-opacity-15 backdrop-blur-sm rounded-full px-6 py-3 float-animation" style="animation-delay: 0.5s;">
+                        <div class="w-3 h-3 bg-blue-300 rounded-full animate-pulse"></div>
+                        <span class="text-white font-medium">📊 Smart Analytics</span>
                     </div>
-                    <div class="flex items-center gap-2 bg-white bg-opacity-20 backdrop-blur-sm rounded-full px-4 py-2">
-                        <div class="w-2 h-2 bg-orange-300 rounded-full animate-pulse"></div>
-                        <span class="text-white text-sm font-medium">🏆 East Africa's Trusted Partner</span>
+                    <div class="flex items-center gap-3 bg-white bg-opacity-15 backdrop-blur-sm rounded-full px-6 py-3 float-animation" style="animation-delay: 1s;">
+                        <div class="w-3 h-3 bg-orange-300 rounded-full animate-pulse"></div>
+                        <span class="text-white font-medium">🏆 Trusted Partner</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+    <!-- Floating elements from new design -->
+    <div class="absolute top-6 right-6 w-32 h-32 bg-orange-400 bg-opacity-10 rounded-full blur-xl animate-pulse"></div>
+    <div class="absolute bottom-6 left-6 w-24 h-24 bg-blue-400 bg-opacity-15 rounded-full blur-lg animate-pulse" style="animation-delay: 1s;"></div>
 </div>
+
 
 {% if user.is_authenticated %}
     <!-- Notifications Section -->
     {% if aging_stock_notifications or inactive_product_notifications or utilized_shipment_notifications %}
-        <div class="mb-8 space-y-4">
+        <div class="mb-8 space-y-6"> {# Increased spacing between notification types #}
             {% if aging_stock_notifications %}
-                <div class="notification-enhanced bg-gradient-to-r from-orange-50 to-red-50 border-orange-400 rounded-lg p-6">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-orange-100 to-orange-200 rounded-full flex items-center justify-center shadow-lg">
-                            <svg class="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                <div class="notification-card border-orange-400">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-orange-100 to-orange-200 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                             </svg>
                         </div>
-                        <h4 class="font-bold text-orange-800 text-lg">Aging Stock Alert!</h4>
+                        <div>
+                            <h4 class="font-bold text-orange-800 text-lg">Aging Stock Alert!</h4>
+                            <p class="text-orange-700 text-sm">{{ aging_stock_notifications|length }} shipment{{ aging_stock_notifications|length|pluralize }} require attention.</p>
+                        </div>
                     </div>
-                    <ul class="space-y-2 text-sm text-orange-700">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                         {% for notification_message in aging_stock_notifications %}
-                            <li class="flex items-start gap-2">
-                                <div class="w-1.5 h-1.5 bg-orange-400 rounded-full mt-2 flex-shrink-0"></div>
-                                <span>{{ notification_message }}</span>
-                            </li>
+                            <div class="bg-orange-50 rounded-xl p-4">
+                                <p class="text-sm text-orange-700">{{ notification_message }}</p>
+                            </div>
                         {% endfor %}
-                    </ul>
+                    </div>
                 </div>
             {% endif %}
             
             {% if inactive_product_notifications %}
-                <div class="notification-enhanced bg-gradient-to-r from-yellow-50 to-amber-50 border-yellow-400 rounded-lg p-6">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-full flex items-center justify-center shadow-lg">
-                            <svg class="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                <div class="notification-card border-yellow-400">
+                     <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-yellow-100 to-yellow-200 rounded-xl flex items-center justify-center">
+                           <svg class="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
                             </svg>
                         </div>
-                        <h4 class="font-bold text-yellow-800 text-lg">Product Inactivity Alert!</h4>
+                        <div>
+                            <h4 class="font-bold text-yellow-800 text-lg">Product Inactivity Alert!</h4>
+                        </div>
                     </div>
                     {% for notification_item in inactive_product_notifications %}
-                        <div class="mb-4 pb-4 border-b border-yellow-200 last:border-b-0 last:pb-0 last:mb-0">
-                            <p class="text-sm font-semibold text-yellow-800 mb-2">{{ notification_item.message }}</p>
+                        <div class="mb-4 pb-4 border-b border-yellow-200 last:border-b-0 last:pb-0 last:mb-0 bg-yellow-50 rounded-xl p-4">
+                            <p class="font-medium text-yellow-800 mb-1">{{ notification_item.message }}</p>
                             {% if notification_item.shipments %}
-                                <p class="text-xs text-yellow-700 mb-2">Contributing idle shipment batches:</p>
-                                <ul class="space-y-1 pl-4">
+                                <p class="text-xs text-yellow-700 mb-1">Contributing idle shipment batches:</p>
+                                <ul class="space-y-1 pl-2">
                                     {% for batch in notification_item.shipments %}
                                         <li class="text-xs text-yellow-600">
-                                            <span class="inline-block w-1 h-1 bg-yellow-400 rounded-full mr-2"></span>
-                                            Imported: {{ batch.import_date|date:"Y-m-d" }} from {{ batch.supplier_name }} - Remaining: {{ batch.quantity_remaining|floatformat:2 }}L
+                                            <span class="inline-block w-1.5 h-1.5 bg-yellow-500 rounded-full mr-1.5 align-middle"></span>
+                                            Imported: {{ batch.import_date|date:"Y-m-d" }} from {{ batch.supplier_name }} - Rem: {{ batch.quantity_remaining|floatformat:0 }}L
                                             {% if batch.vessel_id_tag %}(Tag: {{ batch.vessel_id_tag }}){% endif %}
-                                            (<a href="{% url 'shipments:shipment-detail' batch.id %}" class="text-yellow-700 hover:text-yellow-900 underline">View Batch</a>)
+                                            (<a href="{% url 'shipments:shipment-detail' batch.id %}" class="text-yellow-700 hover:text-yellow-900 underline">View</a>)
                                         </li>
                                     {% endfor %}
                                 </ul>
@@ -106,31 +336,34 @@
             {% endif %}
             
             {% if utilized_shipment_notifications %}
-                <div class="notification-enhanced bg-gradient-to-r from-gray-50 to-slate-50 border-gray-400 rounded-lg p-6">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-full flex items-center justify-center shadow-lg">
-                            <svg class="w-5 h-5 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+                <div class="notification-card border-gray-400">
+                    <div class="flex items-center gap-4 mb-4">
+                        <div class="w-12 h-12 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center">
+                            <svg class="w-6 h-6 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                             </svg>
                         </div>
-                        <h4 class="font-bold text-gray-800 text-lg">Utilized Shipments Ready for Review/Archival:</h4>
+                        <div>
+                            <h4 class="font-bold text-gray-800 text-lg">Utilized Shipments for Review</h4>
+                        </div>
                     </div>
-                    <ul class="space-y-2 text-sm text-gray-700">
+                    <ul class="space-y-3">
                         {% for item in utilized_shipment_notifications %}
-                            <li class="flex items-start gap-2">
-                                <div class="w-1.5 h-1.5 bg-gray-400 rounded-full mt-2 flex-shrink-0"></div>
-                                <span>
+                            <li class="bg-gray-50 rounded-xl p-4">
+                                <p class="text-sm text-gray-700">
                                     Shipment ID {% if item.vessel_id_tag and item.vessel_id_tag != '(No Tag)' %}{{ item.vessel_id_tag }}{% else %}{{ item.id }}{% endif %}:
-                                    Product: <strong>{{ item.product_name }}</strong> from {{ item.supplier_name }} (Imported: {{ item.import_date|date:"Y-m-d" }}).
-                                    Fully utilized on {{ item.utilized_date|date:"Y-m-d" }} ({{ item.days_since_utilized }} day{{ item.days_since_utilized|pluralize }} ago).
+                                    <strong>{{ item.product_name }}</strong> from {{ item.supplier_name }} (Imp: {{ item.import_date|date:"y-m-d" }}).
+                                    Utilized: {{ item.utilized_date|date:"y-m-d" }} ({{ item.days_since_utilized }} day{{ item.days_since_utilized|pluralize }} ago).
+                                </p>
+                                <p class="text-xs text-gray-500 mt-1">
                                     (<a href="{% url 'shipments:shipment-detail' item.id %}" class="text-gray-600 hover:text-gray-800 underline">View</a>
                                     {% if perms.shipments.delete_shipment %}
-                                    | <a href="{% url 'shipments:shipment-delete' item.id %}" class="text-red-600 hover:text-red-800 underline">Delete</a>
+                                    | <a href="{% url 'shipments:shipment-delete' item.id %}" class="text-red-500 hover:text-red-700 underline">Delete</a>
                                     {% endif %})
-                                </span>
+                                </p>
                             </li>
                         {% empty %}
-                             <li class="italic text-gray-500">No shipments are currently flagged as fully utilized for review.</li>
+                             <li class="italic text-gray-500 p-4">No shipments are currently flagged as fully utilized for review.</li>
                         {% endfor %}
                     </ul>
                 </div>
@@ -139,348 +372,310 @@
     {% endif %}
 
     {% if can_view_shipments or can_view_trip or can_view_product or can_view_customer or can_view_vehicle %}
-        <!-- Product Stock Summary Section -->
+        <!-- Overall Stats Cards (New "Quick Stats" styling) -->
+        <div class="mb-8">
+            <!-- Title for this section can be added if desired, like the old "Overall Company Summary" -->
+             <div class="flex items-center gap-3 mb-6">
+                <div class="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center">
+                    <svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-bold text-gray-800">Company Snapshot</h3>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
+                {% if can_view_shipments %}
+                    <div class="sakina-card stat-card-1 p-6 rounded-2xl">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-blue-700">Total Shipments</p>
+                                <p class="text-2xl font-bold text-blue-900 counter">{{ total_shipments|default:0 }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4z"/><path d="M3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z"/></svg>
+                            </div>
+                        </div>
+                        <div class="progress-bar mt-3"><div class="progress-fill" style="width: 70%;"></div></div>
+                    </div>
+                    <div class="sakina-card stat-card-2 p-6 rounded-2xl">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-green-700">Total Qty Received</p>
+                                <p class="text-2xl font-bold text-green-900 counter">{{ total_quantity_shipments|floatformat:0|default:0 }} L</p>
+                            </div>
+                            <div class="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"/><path d="M6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L10 5.414V13a1 1 0 11-2 0V5.414L6.707 6.707a1 1 0 01-1.414 0z"/></svg>
+                            </div>
+                        </div>
+                         <div class="progress-bar mt-3"><div class="progress-fill" style="width: 60%;"></div></div>
+                    </div>
+                    <div class="sakina-card stat-card-3 p-6 rounded-2xl">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-yellow-700">Total Value (Inv.)</p>
+                                <p class="text-2xl font-bold text-yellow-900 counter">${{ total_value_shipments|floatformat:0|default:0 }}</p>
+                            </div>
+                            <div class="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582z"/><path d="M11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/></svg>
+                            </div>
+                        </div>
+                        <div class="progress-bar mt-3"><div class="progress-fill" style="width: 80%;"></div></div>
+                    </div>
+                {% endif %}
+                {% if can_view_trip %}
+                     <div class="sakina-card stat-card-4 p-6 rounded-2xl">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-purple-700">Total Loadings</p>
+                                <p class="text-2xl font-bold text-purple-900 counter">{{ total_trips_delivered|default:0 }}</p>
+                            </div>
+                           <div class="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/><path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-1-1h-3z"/></svg>
+                            </div>
+                        </div>
+                        <div class="progress-bar mt-3"><div class="progress-fill" style="width: 85%;"></div></div>
+                    </div>
+                     <div class="sakina-card stat-card-5 p-6 rounded-2xl">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <p class="text-sm font-medium text-red-700">Total Qty Delivered</p>
+                                <p class="text-2xl font-bold text-red-900 counter">{{ total_quantity_loaded_delivered|floatformat:0|default:0 }} L</p>
+                            </div>
+                            <div class="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+                            </div>
+                        </div>
+                         <div class="progress-bar mt-3"><div class="progress-fill" style="width: 65%;"></div></div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Stock Summary Table -->
         {% if stock_by_product_detailed %}
-             <div class="mb-8">
-                 <div class="flex items-center gap-3 mb-6">
-                     <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
-                         <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                             <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
-                         </svg>
-                     </div>
-                     <h3 class="text-2xl font-bold text-gray-800">Stock Summary & Available Trucks</h3>
+             <div class="stock-table mb-8">
+                 <div class="p-6 border-b border-gray-100">
+                     <h3 class="text-xl font-bold text-gray-900">Stock Summary & Available Trucks</h3>
+                     <p class="text-gray-600 mt-1">Real-time inventory across all destinations</p>
                  </div>
-                 
-                 <!-- Compact Table View -->
-                 <div class="card-enhanced">
-                     <div class="overflow-x-auto">
-                         <table class="table-enhanced min-w-full">
-                             <thead class="bg-gradient-to-r from-blue-50 to-blue-100">
-                                 <tr class="text-left">
-                                     <th class="px-4 py-3 text-sm font-semibold text-blue-800">Product</th>
-                                     <th class="px-4 py-3 text-sm font-semibold text-blue-800">Destination</th>
-                                     <th class="px-4 py-3 text-sm font-semibold text-blue-800 text-center">Physical Stock</th>
-                                     <th class="px-4 py-3 text-sm font-semibold text-blue-800 text-center">Committed</th>
-                                     <th class="px-4 py-3 text-sm font-semibold text-blue-800 text-center">Available</th>
-                                     <th class="px-4 py-3 text-sm font-semibold text-blue-800 text-center">🚛 Trucks</th>
-                                     <th class="px-4 py-3 text-sm font-semibold text-blue-800 text-center">Avg. Price</th>
+                 <div class="overflow-x-auto">
+                     <table class="w-full">
+                         <thead class="bg-gradient-to-r from-blue-50 to-blue-100">
+                             <tr>
+                                 <th class="px-6 py-4 text-left text-sm font-semibold text-blue-800">Product</th>
+                                 <th class="px-6 py-4 text-left text-sm font-semibold text-blue-800">Destination</th>
+                                 <th class="px-6 py-4 text-center text-sm font-semibold text-blue-800">Physical Stock</th>
+                                 <th class="px-6 py-4 text-center text-sm font-semibold text-blue-800">Committed</th>
+                                 <th class="px-6 py-4 text-center text-sm font-semibold text-blue-800">Available</th>
+                                 <th class="px-6 py-4 text-center text-sm font-semibold text-blue-800">🚛 Trucks</th>
+                                 <th class="px-6 py-4 text-center text-sm font-semibold text-blue-800">Avg. Price</th>
+                             </tr>
+                         </thead>
+                         <tbody class="divide-y divide-gray-100">
+                             {% for key, data in stock_by_product_detailed.items %}
+                                 <tr class="stock-row">
+                                     <td class="px-6 py-4">
+                                         <div class="flex items-center gap-3">
+                                             <div class="w-3 h-3 rounded-full 
+                                                {% if data.net_available > data.truck_capacity %}bg-green-400
+                                                {% elif data.net_available > 0 %}bg-yellow-400
+                                                {% elif data.net_available < 0 %}bg-red-400
+                                                {% else %}bg-gray-400{% endif %}"></div>
+                                             <span class="font-medium text-gray-900">{{ data.product_name }}</span>
+                                         </div>
+                                     </td>
+                                     <td class="px-6 py-4 text-gray-600">{{ data.destination_name }}</td>
+                                     <td class="px-6 py-4 text-center text-gray-900 font-medium">{{ data.physical_stock|floatformat:0 }}L</td>
+                                     <td class="px-6 py-4 text-center {% if data.booked_stock > 0 %}text-orange-600 font-medium{% else %}text-gray-500{% endif %}">
+                                         {{ data.booked_stock|floatformat:0 }}L
+                                     </td>
+                                     <td class="px-6 py-4 text-center">
+                                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium 
+                                            {% if data.net_available > data.truck_capacity %}bg-green-100 text-green-700
+                                            {% elif data.net_available > 0 %}bg-yellow-100 text-yellow-700
+                                            {% elif data.net_available < 0 %}bg-red-100 text-red-700
+                                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                                             {{ data.net_available|floatformat:0 }}L
+                                         </span>
+                                     </td>
+                                     <td class="px-6 py-4 text-center">
+                                         {% if data.trucks_full > 0 or data.trucks_partial > 0.09 %}
+                                             <div class="text-lg font-bold text-blue-700">
+                                                 {{ data.trucks_full }}
+                                                 {% if data.trucks_partial > 0.09 %}
+                                                     <span class="text-xs text-blue-500">.{{ data.trucks_partial|floatformat:1|slice:"2:" }}</span>
+                                                 {% endif %}
+                                             </div>
+                                         {% else %}
+                                             <div class="text-lg font-bold text-gray-400">0</div>
+                                         {% endif %}
+                                         <div class="text-xs text-gray-500">({{ data.truck_capacity|floatformat:0 }}L)</div>
+                                     </td>
+                                     <td class="px-6 py-4 text-center">
+                                         <div class="text-sm font-medium text-gray-700">${{ data.avg_price|floatformat:3|default:"0.000" }}</div>
+                                         <div class="text-xs text-gray-500">/L</div>
+                                     </td>
                                  </tr>
-                             </thead>
-                             <tbody class="divide-y divide-gray-100">
-                                 {% for key, data in stock_by_product_detailed.items %}
-                                     <tr class="hover:bg-gray-50 transition-colors group">
-                                         <!-- Product Name -->
-                                         <td class="px-4 py-3">
-                                             <div class="flex items-center gap-2">
-                                                 <div class="w-3 h-3 rounded-full {% if data.net_available > 0 %}bg-green-400{% elif data.net_available < 0 %}bg-red-400{% else %}bg-gray-400{% endif %}"></div>
-                                                 <span class="font-medium text-gray-800 group-hover:text-blue-600 transition-colors">{{ data.product_name }}</span>
-                                             </div>
-                                         </td>
-                                         
-                                         <!-- Destination -->
-                                         <td class="px-4 py-3">
-                                             <span class="text-sm text-gray-600">{{ data.destination_name }}</span>
-                                         </td>
-                                         
-                                         <!-- Physical Stock -->
-                                         <td class="px-4 py-3 text-center">
-                                             <div class="text-sm font-medium text-gray-800">
-                                                 {{ data.physical_stock|floatformat:0 }}L
-                                             </div>
-                                         </td>
-                                         
-                                         <!-- Committed Stock -->
-                                         <td class="px-4 py-3 text-center">
-                                             <div class="text-sm {% if data.booked_stock > 0 %}text-orange-600 font-medium{% else %}text-gray-500{% endif %}">
-                                                 {{ data.booked_stock|floatformat:0 }}L
-                                             </div>
-                                         </td>
-                                         
-                                         <!-- Net Available -->
-                                         <td class="px-4 py-3 text-center">
-                                             <div class="inline-flex items-center justify-center px-3 py-1 rounded-full text-sm font-medium {% if data.net_available > 0 %}bg-green-100 text-green-700{% elif data.net_available < 0 %}bg-red-100 text-red-700{% else %}bg-gray-100 text-gray-600{% endif %}">
-                                                 {{ data.net_available|floatformat:0 }}L
-                                             </div>
-                                         </td>
-                                         
-                                         <!-- Trucks Available -->
-                                         <td class="px-4 py-3 text-center">
-                                             {% if data.trucks_full > 0 %}
-                                                 <div class="text-lg font-bold text-blue-700">
-                                                     {{ data.trucks_full }}
-                                                     {% if data.trucks_partial > 0.1 %}
-                                                         <span class="text-xs text-blue-500">.{{ data.trucks_partial|floatformat:1|slice:"2:" }}</span>
-                                                     {% endif %}
-                                                 </div>
-                                                 <div class="text-xs text-gray-500">
-                                                     ({{ data.truck_capacity|floatformat:0 }}L)
-                                                 </div>
-                                             {% elif data.trucks_available > 0.1 %}
-                                                 <div class="text-sm font-medium text-blue-600">
-                                                     0.{{ data.trucks_available|floatformat:1|slice:"2:" }}
-                                                 </div>
-                                                 <div class="text-xs text-gray-500">
-                                                     ({{ data.truck_capacity|floatformat:0 }}L)
-                                                 </div>
-                                             {% else %}
-                                                 <div class="text-sm text-gray-400">0</div>
-                                                 <div class="text-xs text-gray-400">
-                                                     ({{ data.truck_capacity|floatformat:0 }}L)
-                                                 </div>
-                                             {% endif %}
-                                         </td>
-                                         
-                                         <!-- Average Price -->
-                                         <td class="px-4 py-3 text-center">
-                                             <div class="text-sm font-medium text-gray-700">
-                                                 ${{ data.avg_price|floatformat:3|default:0 }}
-                                             </div>
-                                             <div class="text-xs text-gray-500">/L</div>
-                                         </td>
-                                     </tr>
-                                 {% empty %}
-                                     <tr>
-                                         <td colspan="7" class="px-4 py-12 text-center">
-                                             <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                 <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                                     <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm12 6L8 6v8l8-4z" clip-rule="evenodd"/>
-                                                 </svg>
-                                             </div>
-                                             <p class="text-gray-500 italic">No product stock data to display.</p>
-                                         </td>
-                                     </tr>
-                                 {% endfor %}
-                             </tbody>
-                         </table>
-                     </div>
-                     
-                     <!-- Summary Footer -->
-                     {% if stock_by_product_detailed %}
-                         <div class="bg-gray-50 px-4 py-3 border-t border-gray-100">
-                             <div class="flex flex-wrap items-center justify-between gap-4 text-sm">
-                                 <div class="flex items-center gap-6">
-                                     <div class="flex items-center gap-2">
-                                         <div class="w-3 h-3 bg-green-400 rounded-full"></div>
-                                         <span class="text-gray-600">Available Stock</span>
-                                     </div>
-                                     <div class="flex items-center gap-2">
-                                         <div class="w-3 h-3 bg-red-400 rounded-full"></div>
-                                         <span class="text-gray-600">Oversold</span>
-                                     </div>
-                                     <div class="flex items-center gap-2">
-                                         <div class="w-3 h-3 bg-gray-400 rounded-full"></div>
-                                         <span class="text-gray-600">No Stock</span>
-                                     </div>
-                                 </div>
-                                 <div class="text-gray-500">
-                                     🚛 Truck capacity: PMS (40,000L) | AGO (36,000L)
-                                 </div>
+                             {% empty %}
+                                 <tr class="stock-row">
+                                     <td colspan="7" class="px-6 py-12 text-center">
+                                         <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                             <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm12 6L8 6v8l8-4z" clip-rule="evenodd"/></svg>
+                                         </div>
+                                         <p class="text-gray-500 italic">No product stock data to display.</p>
+                                     </td>
+                                 </tr>
+                             {% endfor %}
+                         </tbody>
+                     </table>
+                 </div>
+                 {% if stock_by_product_detailed %}
+                     <div class="bg-gray-50 px-6 py-4 border-t border-gray-100">
+                         <div class="flex flex-wrap items-center justify-between gap-4 text-sm">
+                             <div class="flex items-center gap-6">
+                                 <div class="flex items-center gap-2"><div class="w-3 h-3 bg-green-400 rounded-full"></div><span class="text-gray-600">Healthy Stock</span></div>
+                                 <div class="flex items-center gap-2"><div class="w-3 h-3 bg-yellow-400 rounded-full"></div><span class="text-gray-600">Low Stock</span></div>
+                                 <div class="flex items-center gap-2"><div class="w-3 h-3 bg-red-400 rounded-full"></div><span class="text-gray-600">Oversold/Critical</span></div>
+                                 <div class="flex items-center gap-2"><div class="w-3 h-3 bg-gray-400 rounded-full"></div><span class="text-gray-600">No Stock</span></div>
+                             </div>
+                             <div class="text-gray-500">
+                                 🚛 Truck capacity reference: PMS (40,000L) | AGO (36,000L)
                              </div>
                          </div>
-                     {% endif %}
-                 </div>
+                     </div>
+                 {% endif %}
              </div>
         {% endif %}
 
         <!-- Charts Section -->
         {% if can_view_trip %} 
-        <div class="mb-8">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-8 h-8 bg-purple-100 rounded-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z"/>
-                    </svg>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            <div class="chart-container">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-8 h-8 bg-red-100 rounded-xl flex items-center justify-center">
+                        <div class="w-4 h-4 bg-red-500 rounded"></div>
+                    </div>
+                    <h4 class="text-xl font-bold text-gray-800">PMS Loadings (Last 30 Days)</h4>
                 </div>
-                <h3 class="text-2xl font-bold text-gray-800">Loading Activity (Last 30 Days)</h3>
+                <div class="relative" style="height: 300px;">
+                    <canvas id="pmsLoadingsChart"></canvas> {# Kept old ID #}
+                </div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div class="card-enhanced p-6"> 
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-6 h-6 bg-red-100 rounded-lg flex items-center justify-center">
-                            <div class="w-3 h-3 bg-red-500 rounded"></div>
-                        </div>
-                        <h4 class="text-xl font-bold text-gray-800">PMS Loadings</h4>
+            
+            <div class="chart-container">
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                        <div class="w-4 h-4 bg-blue-500 rounded"></div>
                     </div>
-                    <div class="relative" style="height: 300px;">
-                        <canvas id="pmsLoadingsChart"></canvas>
-                    </div>
+                    <h4 class="text-xl font-bold text-gray-800">AGO Loadings (Last 30 Days)</h4>
                 </div>
-                <div class="card-enhanced p-6"> 
-                    <div class="flex items-center gap-3 mb-4">
-                        <div class="w-6 h-6 bg-blue-100 rounded-lg flex items-center justify-center">
-                            <div class="w-3 h-3 bg-blue-500 rounded"></div>
-                        </div>
-                        <h4 class="text-xl font-bold text-gray-800">AGO Loadings</h4>
-                    </div>
-                    <div class="relative" style="height: 300px;">
-                        <canvas id="agoLoadingsChart"></canvas>
-                    </div>
+                <div class="relative" style="height: 300px;">
+                    <canvas id="agoLoadingsChart"></canvas> {# Kept old ID #}
                 </div>
             </div>
         </div>
         {% endif %}
 
-        <!-- Total Dispatched by Product -->
+        <!-- Total Dispatched by Product (Using new card styling) -->
         {% if can_view_trip and trip_quantity_by_product %}
-            <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8 hover:shadow-lg transition-shadow"> 
+            <div class="sakina-card rounded-2xl p-6 mb-8"> 
                 <div class="flex items-center gap-3 mb-6">
                     <div class="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
-                        <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
+                        <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
                     </div>
-                    <h3 class="text-xl font-bold text-gray-800">Total Dispatched to Customer by Product</h3>
+                    <h3 class="text-xl font-bold text-gray-800">Total Dispatched by Product</h3>
                 </div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {% for item in trip_quantity_by_product %}
                         <div class="bg-gray-50 rounded-xl p-4 hover:bg-gray-100 transition-colors">
                             <div class="flex items-center justify-between">
                                 <span class="font-medium text-gray-700">{{ item.shipment_batch__product__name }}</span>
-                                <span class="text-lg font-bold text-green-600">{{ item.total_litres|floatformat:2 }} L</span>
+                                <span class="text-lg font-bold text-green-600">{{ item.total_litres|floatformat:0 }} L</span>
                             </div>
                         </div>
                     {% empty %}
                         <div class="col-span-full text-center py-8">
-                            <div class="text-gray-500 italic">No "Delivered" loading data yet.</div>
+                            <div class="text-gray-500 italic">No "Delivered" loading data available.</div>
                         </div>
                     {% endfor %}
                 </div>
             </div>
         {% endif %}
-
-        <!-- Overall Stats Cards -->
-        <div class="mb-8">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-8 h-8 bg-indigo-100 rounded-xl flex items-center justify-center">
-                    <svg class="w-5 h-5 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    </svg>
-                </div>
-                <h3 class="text-2xl font-bold text-gray-800">Overall Company Summary</h3>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-                {% if can_view_shipments %}
-                    <div class="card-enhanced p-6 group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center group-hover:bg-blue-200 transition-colors">
-                                <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="text-2xl font-bold text-blue-600 group-hover:text-blue-700 transition-colors">{{ total_shipments|default:0 }}</div>
-                                <div class="text-sm text-gray-600 mt-1">Total Shipments</div>
-                                <div class="text-xs text-gray-500">Received</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-enhanced p-6 group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-cyan-100 rounded-2xl flex items-center justify-center group-hover:bg-cyan-200 transition-colors">
-                                <svg class="w-6 h-6 text-cyan-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="text-2xl font-bold text-cyan-600 group-hover:text-cyan-700 transition-colors">{{ total_quantity_shipments|floatformat:0|default:0 }} L</div>
-                                <div class="text-sm text-gray-600 mt-1">Total Quantity</div>
-                                <div class="text-xs text-gray-500">Received</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="card-enhanced p-6 group">
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-green-100 rounded-2xl flex items-center justify-center group-hover:bg-green-200 transition-colors">
-                                <svg class="w-6 h-6 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z"/>
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <div class="text-2xl font-bold text-green-600 group-hover:text-green-700 transition-colors">${{ total_value_shipments|floatformat:0|default:0 }}</div>
-                                <div class="text-sm text-gray-600 mt-1">Total Value</div>
-                                <div class="text-xs text-gray-500">Inventory Worth</div>
-                            </div>
-                        </div>
-                    </div>
-                {% endif %}
-                {% if can_view_trip %}
-                     <div class="card-enhanced p-6 group">
-                         <div class="flex items-center gap-4">
-                             <div class="w-12 h-12 bg-purple-100 rounded-2xl flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                                 <svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
-                                     <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-                                     <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-1-1h-3z"/>
-                                 </svg>
-                             </div>
-                             <div>
-                                 <div class="text-2xl font-bold text-purple-600 group-hover:text-purple-700 transition-colors">{{ total_trips_delivered|default:0 }}</div>
-                                 <div class="text-sm text-gray-600 mt-1">Total Loadings</div>
-                                 <div class="text-xs text-gray-500">Delivered</div>
-                             </div>
-                         </div>
-                     </div>
-                     <div class="card-enhanced p-6 group">
-                         <div class="flex items-center gap-4">
-                             <div class="w-12 h-12 bg-orange-100 rounded-2xl flex items-center justify-center group-hover:bg-orange-200 transition-colors">
-                                 <svg class="w-6 h-6 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
-                                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                                 </svg>
-                             </div>
-                             <div>
-                                 <div class="text-2xl font-bold text-orange-600 group-hover:text-orange-700 transition-colors">{{ total_quantity_loaded_delivered|floatformat:0|default:0 }} L</div>
-                                 <div class="text-sm text-gray-600 mt-1">Total Quantity</div>
-                                 <div class="text-xs text-gray-500">Delivered</div>
-                             </div>
-                         </div>
-                     </div>
-                {% endif %}
-            </div>
-        </div>
         
         <!-- Action Buttons -->
-        <div class="text-center space-y-4 sm:space-y-0 sm:space-x-6 sm:flex sm:justify-center">
+        <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
             {% if can_view_shipments %}
-                 <a href="{% url 'shipments:shipment-list' %}"
-                    class="btn-enhanced group inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1"> 
-                     <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                         <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
-                     </svg>
-                     View Shipments
+                 <a href="{% url 'shipments:shipment-list' %}" class="sakina-btn text-white font-bold py-4 px-8 rounded-2xl"> 
+                     <span class="relative z-10 flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/></svg>
+                        View Shipments
+                     </span>
                  </a>
             {% endif %}
             {% if can_view_trip %}
-                  <a href="{% url 'shipments:trip-list' %}"
-                     class="btn-enhanced group inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1"> 
-                      <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                          <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-                          <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-1-1h-3z"/>
-                      </svg>
-                      View Loadings
+                  <a href="{% url 'shipments:trip-list' %}" class="sakina-btn text-white font-bold py-4 px-8 rounded-2xl">
+                      <span class="relative z-10 flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/><path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-1-1h-3z"/></svg>
+                        View Loadings
+                      </span>
                   </a>
              {% endif %}
             {% if can_add_trip %}
-                  <a href="{% url 'shipments:trip-upload-authority' %}"
-                     class="btn-enhanced group inline-flex items-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1"> 
-                      <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                          <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-                      </svg>
-                      Upload Loading Authority
+                  <a href="{% url 'shipments:trip-upload-authority' %}" class="sakina-btn text-white font-bold py-4 px-8 rounded-2xl">
+                       <span class="relative z-10 flex items-center gap-3">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/></svg>
+                        Upload Authority
+                       </span>
                   </a>
             {% endif %}
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="sakina-card rounded-2xl p-6 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-900">Recent Activity</h3>
+                <a href="#" class="text-blue-600 hover:text-blue-700 font-medium text-sm">View All</a> {# Link to a future activity log page #}
+            </div>
+            <div class="space-y-4">
+                {% for activity in recent_activity %}
+                <div class="flex items-center gap-4 p-4 {{ activity.icon_bg_color|default:'bg-gray-50' }} rounded-xl">
+                    <div class="w-10 h-10 {{ activity.icon_bg_color|default:'bg-gray-100' }} rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 {{ activity.icon_text_color|default:'text-gray-600' }}" fill="currentColor" viewBox="0 0 20 20">
+                            {{ activity.icon_svg_path|safe }}
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <a href="{{ activity.link }}" class="block font-medium text-gray-900 hover:text-blue-600 transition-colors">
+                            {{ activity.title }}
+                        </a>
+                        <p class="text-sm text-gray-600">{{ activity.details }} • {{ activity.time_ago }}</p>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd" />
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-700">No recent activity</p>
+                        <p class="text-sm text-gray-500">Check back later for updates.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
 
     {% else %}
         {% if user.is_authenticated %}
-             <div class="bg-gradient-to-r from-yellow-50 to-amber-50 border-l-4 border-yellow-500 rounded-lg p-6 shadow-sm">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
-                        <svg class="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                        </svg>
+             <div class="sakina-card rounded-2xl p-6 border-l-4 border-yellow-500">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-yellow-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
                     </div>
                     <div>
-                        <p class="font-bold text-yellow-800">Permissions Notice</p>
+                        <p class="font-bold text-yellow-800 text-lg">Permissions Notice</p>
                         <p class="text-yellow-700">{{ description }}</p>
                     </div>
                 </div>
@@ -490,26 +685,24 @@
 {% else %}
     <!-- Not Authenticated Section -->
     <div class="text-center max-w-2xl mx-auto">
-        <div class="bg-white rounded-2xl p-8 shadow-lg border border-gray-100">
+        <div class="sakina-card rounded-2xl p-8">
             <div class="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg class="w-10 h-10 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/>
-                </svg>
+                <svg class="w-10 h-10 text-blue-600" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/></svg>
             </div>
-            <p class="text-lg text-gray-600 mb-2">{{ description }}</p>
+            <p class="text-lg text-gray-700 mb-2">{{ description|default:"Access Your Fuel Tracking Dashboard" }}</p>
             <p class="text-sm text-gray-500 mb-8">Please log in or sign up to view your fuel tracking data and statistics.</p>
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
-                 <a href="{% url 'login' %}" class="group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                     <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                         <path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                     </svg>
-                     Login
+                 <a href="{% url 'login' %}" class="sakina-btn text-white font-bold py-3 px-6 rounded-xl">
+                     <span class="relative z-10 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 3a1 1 0 011 1v12a1 1 0 11-2 0V4a1 1 0 011-1zm7.707 3.293a1 1 0 010 1.414L9.414 9H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 01-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                        Login
+                     </span>
                  </a>
-                 <a href="{% url 'shipments:signup' %}" class="group inline-flex items-center justify-center gap-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold py-4 px-8 rounded-2xl shadow-lg transition-all duration-300 hover:shadow-xl hover:-translate-y-1">
-                     <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 20 20">
-                         <path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/>
-                     </svg>
-                     Sign Up
+                 <a href="{% url 'shipments:signup' %}" class="sakina-btn text-white font-bold py-3 px-6 rounded-xl" style="background: linear-gradient(135deg, var(--sakina-orange-warm) 0%, var(--sakina-orange-bright) 100%);">
+                     <span class="relative z-10 flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/></svg>
+                        Sign Up
+                     </span>
                  </a>
             </div>
         </div>
@@ -520,24 +713,13 @@
 {% block extra_js %} 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const chartLabels = {{ loadings_chart_labels|safe|default_if_none:"[]" }};
-
-    // Enhanced chart configuration
-    const chartConfig = {
+    // Enhanced chart configuration from new design
+    const enhancedChartConfig = {
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
             legend: {
-                display: true,
-                position: 'top',
-                labels: {
-                    usePointStyle: true,
-                    padding: 20,
-                    font: {
-                        size: 12,
-                        weight: '500'
-                    }
-                }
+                display: false // New design hides legend by default for these bar charts
             },
             tooltip: {
                 backgroundColor: 'rgba(0, 0, 0, 0.8)',
@@ -546,6 +728,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 borderColor: 'rgba(255, 255, 255, 0.1)',
                 borderWidth: 1,
                 cornerRadius: 8,
+                padding: 12,
                 callbacks: {
                     label: function(context) {
                         let label = context.dataset.label || '';
@@ -561,43 +744,36 @@ document.addEventListener('DOMContentLoaded', function () {
         scales: {
             y: {
                 beginAtZero: true,
-                title: {
+                grid: { color: 'rgba(0, 0, 0, 0.05)' },
+                ticks: {
+                    font: { size: 11 },
+                    callback: function(value) { return value.toLocaleString() + 'L'; }
+                },
+                title: { // Added from old config for clarity
                     display: true,
                     text: 'Quantity (Litres)',
                     font: { size: 12, weight: '500' }
-                },
-                grid: {
-                    color: 'rgba(0, 0, 0, 0.05)'
-                },
-                ticks: {
-                    font: { size: 11 },
-                    callback: function(value) {
-                        return value.toLocaleString() + 'L';
-                    }
                 }
             },
             x: {
-                title: {
+                grid: { display: false },
+                ticks: { font: { size: 11 }, maxTicksLimit: 8 }, // Matched new design's maxTicksLimit
+                 title: { // Added from old config for clarity
                     display: true,
                     text: 'Date',
                     font: { size: 12, weight: '500' }
-                },
-                grid: {
-                    display: false
-                },
-                ticks: {
-                    font: { size: 11 },
-                    maxTicksLimit: 10
                 }
             }
         },
         elements: {
             bar: {
-                borderRadius: 4,
+                borderRadius: 6, // From new design
                 borderSkipped: false,
             }
         }
     };
+
+    const chartLabels = {{ loadings_chart_labels|safe|default_if_none:"[]" }};
 
     // PMS Chart
     const ctxPmsLoadings = document.getElementById('pmsLoadingsChart');
@@ -610,15 +786,13 @@ document.addEventListener('DOMContentLoaded', function () {
                 datasets: [{
                     label: 'PMS Loaded',
                     data: pmsChartDataValues,
-                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)', // PMS color (Reddish)
                     borderColor: 'rgba(239, 68, 68, 1)',
                     borderWidth: 0,
                     hoverBackgroundColor: 'rgba(220, 38, 38, 0.9)',
-                    hoverBorderColor: 'rgba(220, 38, 38, 1)',
-                    hoverBorderWidth: 2
                 }]
             },
-            options: chartConfig
+            options: enhancedChartConfig
         });
     } else if (ctxPmsLoadings) {
         ctxPmsLoadings.parentNode.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 italic py-8"><div class="text-center"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm12 6L8 6v8l8-4z" clip-rule="evenodd"/></svg></div><p>No PMS loading data available for the last 30 days.</p></div></div>';
@@ -635,19 +809,73 @@ document.addEventListener('DOMContentLoaded', function () {
                 datasets: [{
                     label: 'AGO Loaded',
                     data: agoChartDataValues,
-                    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+                    backgroundColor: 'rgba(59, 130, 246, 0.8)', // AGO color (Blueish)
                     borderColor: 'rgba(59, 130, 246, 1)',
                     borderWidth: 0,
                     hoverBackgroundColor: 'rgba(37, 99, 235, 0.9)',
-                    hoverBorderColor: 'rgba(37, 99, 235, 1)',
-                    hoverBorderWidth: 2
                 }]
             },
-            options: chartConfig
+            options: enhancedChartConfig
         });
     } else if (ctxAgoLoadings) {
         ctxAgoLoadings.parentNode.innerHTML = '<div class="flex items-center justify-center h-full text-gray-500 italic py-8"><div class="text-center"><div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm12 6L8 6v8l8-4z" clip-rule="evenodd"/></svg></div><p>No AGO loading data available for the last 30 days.</p></div></div>';
     }
+
+    // Animate counters on load (adapted from new design)
+    function animateCounters() {
+        const counters = document.querySelectorAll('.counter');
+        counters.forEach(counter => {
+            const originalText = counter.innerText;
+            let target;
+            let isCurrency = originalText.includes('$');
+            let isMillion = originalText.toUpperCase().includes('M');
+            let isLitre = originalText.toUpperCase().includes('L');
+
+            // Improved parsing for numbers like "1,234 L" or "$500" or "2.4M L"
+            let numericPart = originalText.replace(/[^\d.]/g, '');
+            if (isMillion) {
+                target = parseFloat(numericPart) * 1000000;
+            } else {
+                target = parseFloat(numericPart);
+            }
+            
+            if (isNaN(target)) {
+                // If parsing fails, keep original text and skip animation for this counter
+                console.warn("Could not parse target for counter:", counter, "Original text:", originalText);
+                return; 
+            }
+
+            const duration = 1500; //ms
+            const frameDuration = 1000 / 60; // 60fps
+            const totalFrames = Math.round(duration / frameDuration);
+            const increment = target / totalFrames;
+            let current = 0;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    counter.innerText = originalText; // Restore original format precisely
+                    clearInterval(timer);
+                } else {
+                    let displayValue;
+                    if (isMillion) {
+                        displayValue = (current / 1000000).toFixed(1);
+                         if (isCurrency) displayValue = '$' + displayValue + 'M';
+                         else if (isLitre) displayValue = displayValue + 'M L';
+                         else displayValue = displayValue + 'M';
+                    } else {
+                        displayValue = Math.floor(current).toLocaleString();
+                        if (isCurrency) displayValue = '$' + displayValue;
+                        if (isLitre && !originalText.toUpperCase().includes('M L')) displayValue = displayValue + ' L'; // Avoid double " L"
+                    }
+                    counter.innerText = displayValue;
+                }
+            }, frameDuration);
+        });
+    }
+
+    // Initialize animations
+    setTimeout(animateCounters, 300); // Delay slightly for elements to render
 });
 </script>
 {% endblock extra_js %}

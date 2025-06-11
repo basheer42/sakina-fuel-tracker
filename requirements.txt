@@ -1,4 +1,4 @@
-
+django-simple-history
 asgiref==3.8.1
 cffi==1.17.1
 chardet==5.2.0

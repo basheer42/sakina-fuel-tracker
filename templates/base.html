@@ -9,18 +9,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Custom Sakina Gas Styling -->
     <style>
-        /* Custom Sakina Gas Color Palette */
+        /* Custom Sakina Gas Color Palette - UPDATED */
         :root {
-            --sakina-blue-primary: #1e40af;
-            --sakina-blue-secondary: #3b82f6;
-            --sakina-blue-light: #60a5fa;
-            --sakina-orange-primary: #ea580c;
-            --sakina-orange-secondary: #f97316;
-            --sakina-red-accent: #dc2626;
-            --sakina-gradient: linear-gradient(135deg, #1e40af 0%, #3b82f6 50%, #ea580c 100%);
+            --sakina-blue-primary: #0B3954; /* Darker, more corporate blue */
+            --sakina-blue-secondary: #087E8B; /* Tealish blue for accents */
+            --sakina-blue-light: #BFD7EA; /* Light, airy blue */
+            --sakina-orange-primary: #FF5A00; /* Vibrant, modern orange */
+            --sakina-orange-secondary: #FF8C42; /* Softer, secondary orange */
+            --sakina-red-accent: #C81D25; /* Strong, confident red */
+            --sakina-gray-dark: #333333;
+            --sakina-gray-medium: #666666;
+            --sakina-gray-light: #F4F4F4;
+            --sakina-gradient: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 50%, var(--sakina-orange-primary) 100%);
         }
 
-        /* Sakina Gas branded gradients */
+        /* General Body Styling - Added from your new palette's implications */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--sakina-gray-light); /* UPDATED from Tailwind bg-gray-50 */
+            color: var(--sakina-gray-dark); /* UPDATED from Tailwind text-gray-800 */
+        }
+
+        /* Sakina Gas branded gradients - UPDATED */
         .sakina-gradient-bg {
             background: var(--sakina-gradient);
         }
@@ -32,48 +42,58 @@
             background-clip: text;
         }
 
-        /* Logo styling */
+        /* Logo styling - Kept as is, no direct color */
         .sakina-logo {
             height: 50px;
             width: auto;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
         }
 
-        /* Navigation styling */
-        .sakina-nav {
-            background: linear-gradient(90deg, #1e40af 0%, #3b82f6 50%, #1e40af 100%);
+        /* Navigation styling - UPDATED */
+        .sakina-nav { /* This class was in your original base.html, glass-header was from home.html styles you included */
+            background: linear-gradient(90deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 100%); /* UPDATED */
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
+        /* Style for text inside nav if it's not handled by Tailwind classes in HTML */
+        .sakina-nav a, .sakina-nav span, .sakina-nav button {
+             color: white; /* Ensuring contrast */
+        }
+        .sakina-nav a:hover, .sakina-nav button:hover {
+            color: var(--sakina-blue-light);
+        }
 
-        /* Button styling */
-        .sakina-btn-primary {
-            background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+
+        /* Button styling - UPDATED */
+        .sakina-btn-primary { /* This seems to be the one used for Login in your HTML */
+            background: linear-gradient(135deg, var(--sakina-blue-secondary) 0%, var(--sakina-blue-primary) 100%); /* UPDATED */
+            color: white; /* Ensuring text is visible */
             transition: all 0.3s ease;
         }
         
         .sakina-btn-primary:hover {
-            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, #062c40 100%); /* Darken on hover - UPDATED */
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+            box-shadow: 0 4px 12px rgba(8, 126, 139, 0.3); /* Shadow color from new palette - UPDATED */
         }
 
-        .sakina-btn-accent {
-            background: linear-gradient(135deg, #ea580c 0%, #dc2626 100%);
+        .sakina-btn-accent { /* This seems to be the one used for Sign Up in your HTML */
+            background: linear-gradient(135deg, var(--sakina-orange-primary) 0%, var(--sakina-orange-secondary) 100%); /* UPDATED */
+            color: white; /* Ensuring text is visible */
             transition: all 0.3s ease;
         }
         
         .sakina-btn-accent:hover {
-            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            background: linear-gradient(135deg, var(--sakina-orange-secondary) 0%, #E55000 100%); /* Darken orange on hover - UPDATED */
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+            box-shadow: 0 4px 12px rgba(255, 90, 0, 0.3); /* Shadow color from new palette - UPDATED */
         }
 
-        /* Card styling */
-        .sakina-card {
+        /* Card styling - UPDATED */
+        .sakina-card { /* Main content card */
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border-top: 4px solid #3b82f6;
+            border-top: 4px solid var(--sakina-blue-secondary); /* UPDATED */
             transition: all 0.3s ease;
         }
         
@@ -82,7 +102,7 @@
             box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
-        /* Form input styling */
+        /* Form input styling - UPDATED focus colors */
         main input[type="text"],
         main input[type="password"],
         main input[type="email"],
@@ -95,12 +115,13 @@
             width: 100%;
             padding: 0.75rem 1rem;
             margin-top: 0.25rem;
-            border: 2px solid #e5e7eb;
+            border: 2px solid #e5e7eb; /* Keeping this neutral or use var(--sakina-gray-medium) if preferred */
             border-radius: 8px;
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             font-size: 0.875rem;
             line-height: 1.25rem;
             transition: all 0.2s ease;
+            background-color: #FCFCFC; /* Light background for inputs */
         }
 
         main input[type="text"]:focus,
@@ -112,20 +133,37 @@
         main select:focus,
         main textarea:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            border-color: var(--sakina-blue-secondary); /* UPDATED */
+            box-shadow: 0 0 0 3px rgba(8, 126, 139, 0.2); /* Glow with new secondary blue - UPDATED */
+            background-color: white;
         }
 
-        /* Status indicator styling */
-        .status-delivered { color: #059669; background-color: #d1fae5; }
-        .status-gatepassed { color: #0891b2; background-color: #cffafe; }
-        .status-loaded { color: #7c3aed; background-color: #e9d5ff; }
-        .status-approved { color: #2563eb; background-color: #dbeafe; }
-        .status-pending { color: #d97706; background-color: #fed7aa; }
-        .status-rejected { color: #dc2626; background-color: #fee2e2; }
-        .status-cancelled { color: #6b7280; background-color: #f3f4f6; }
+        /* Status indicator styling - UPDATED (using refined versions you had in your 'enhanced' section) */
+        .status-badge { /* This was the .status-badge from your 'enhanced' section */
+            display: inline-flex;
+            align-items: center;
+            padding: 0.375rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-transform: capitalize; /* Added for consistency */
+            border: 1px solid transparent;
+        }
+        .status-badge:hover {
+            transform: scale(1.05);
+        }
 
-        /* Animation classes */
+        .status-delivered { color: #047857; background-color: #D1FAE5; border-color: #A7F3D0;} /* Greenish */
+        .status-gatepassed { color: #0E7490; background-color: #CFFAFE; border-color: #A5F3FC;} /* Cyanish */
+        .status-loaded { color: #6D28D9; background-color: #EDE9FE; border-color: #DDD6FE;}    /* Purplish */
+        .status-approved { color: #1D4ED8; background-color: #DBEAFE; border-color: #BFDBFE;} /* Bluish */
+        .status-pending { color: #CA8A04; background-color: #FEF9C3; border-color: #FEF08A;}  /* Yellowish */
+        .status-rejected { color: var(--sakina-red-accent); background-color: #FEE2E2; border-color: #FECACA;} /* Using red accent */
+        .status-cancelled { color: var(--sakina-gray-medium); background-color: #F3F4F6; border-color: #E5E7EB;} /* Using gray medium */
+
+
+        /* Animation classes - Kept as is */
         .fade-in {
             animation: fadeIn 0.5s ease-in;
         }
@@ -135,53 +173,84 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Notification styling */
-        .sakina-notification {
-            border-left: 4px solid #3b82f6;
-            background: linear-gradient(90deg, rgba(59, 130, 246, 0.1) 0%, rgba(255, 255, 255, 0.9) 100%);
+        /* Notification styling - UPDATED */
+        .sakina-notification { /* Base for notifications */
+            border-left-width: 4px;
+            background-color: white; /* Solid background for readability */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.07);
         }
+        /* Specific notification types based on Django message tags */
+        .sakina-notification.border-l-gray-400 { border-left-color: var(--sakina-gray-medium); }
+        .sakina-notification.border-l-blue-400 { border-left-color: var(--sakina-blue-secondary); }
+        .sakina-notification.border-l-green-400 { border-left-color: #10B981; } /* Specific green */
+        .sakina-notification.border-l-yellow-400 { border-left-color: var(--sakina-orange-secondary); }
+        .sakina-notification.border-l-red-400 { border-left-color: var(--sakina-red-accent); }
 
-        /* Table styling */
-        .sakina-table {
+
+        /* Table styling - UPDATED thead */
+        .sakina-table { /* Base table style */
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid #E5E7EB; /* Light border for definition */
         }
 
         .sakina-table thead {
-            background: linear-gradient(90deg, #1e40af 0%, #3b82f6 100%);
+            background: linear-gradient(90deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 100%); /* UPDATED */
+        }
+        .sakina-table thead th {
+            color: white !important; /* Ensure Tailwind doesn't override */
+            padding: 0.8rem 1rem;
+            font-weight: 600;
+            text-align: left;
+        }
+        .sakina-table tbody tr:nth-child(even) {
+            background-color: #F9FAFB; /* Very light alternate row color */
+        }
+        .sakina-table tbody tr:hover {
+            background-color: var(--sakina-blue-light) !important; /* Lighter blue for hover - UPDATED */
+            color: var(--sakina-gray-dark); /* Ensure text is readable on hover */
+        }
+        .sakina-table td {
+            padding: 0.8rem 1rem;
+            border-bottom: 1px solid #EFF1F3; /* Softer internal borders */
         }
 
-        /* Footer styling */
+        /* Footer styling - UPDATED */
         .sakina-footer {
-            background: linear-gradient(90deg, #1f2937 0%, #374151 100%);
+            background: linear-gradient(90deg, var(--sakina-gray-dark) 0%, #4A4A4A 100%); /* UPDATED to darker grays */
+            color: var(--sakina-gray-light); /* UPDATED for contrast */
         }
-        /* Enhanced Card Styles */
-        .card-enhanced {
+         .sakina-footer .text-gray-300 { color: var(--sakina-gray-light) !important; } /* Override Tailwind if needed */
+         .sakina-footer .text-gray-400 { color: #A0AEC0 !important; } /* Lighter gray for separators */
+
+
+        /* Enhanced Card Styles - from your provided CSS, colors checked */
+        .card-enhanced { /* Used in home.html */
             background: white;
             border-radius: 16px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             transition: all 0.3s ease;
-            border: 1px solid rgba(226, 232, 240, 0.8);
+            border: 1px solid rgba(226, 232, 240, 0.8); /* Neutral border */
             overflow: hidden;
         }
 
         .card-enhanced:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.08);
-            border-color: rgba(59, 130, 246, 0.3);
+            border-color: rgba(8, 126, 139, 0.3); /* Glow with new secondary blue - UPDATED */
         }
 
-        /* Enhanced Table Styles */
-        .table-enhanced {
+        /* Enhanced Table Styles - from your provided CSS, colors checked */
+        .table-enhanced { /* Used in home.html */
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: none;
+            border: none; /* As per your style */
         }
 
         .table-enhanced thead {
-            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
+            background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 100%); /* UPDATED */
             color: white;
         }
 
@@ -195,76 +264,24 @@
         }
 
         .table-enhanced tbody tr:hover {
-            background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(255, 255, 255, 0.05) 100%);
+            /* Lighter hover, using a very light tint of new blue secondary or light */
+            background: linear-gradient(90deg, rgba(8, 126, 139, 0.05) 0%, rgba(191, 215, 234, 0.05) 100%); /* UPDATED */
             transform: scale(1.001);
         }
 
         .table-enhanced tbody tr:nth-child(even) {
-            background-color: rgba(248, 250, 252, 0.5);
+            background-color: rgba(248, 250, 252, 0.5); /* Neutral light alternating row */
         }
 
-        /* Enhanced Status Badges */
-        .status-badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.375rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
 
-        .status-badge:hover {
-            transform: scale(1.05);
-        }
-
-        .status-delivered { 
-            color: #059669; 
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-            border: 1px solid #34d399;
-        }
-        
-        .status-gatepassed { 
-            color: #0891b2; 
-            background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
-            border: 1px solid #22d3ee;
-        }
-        
-        .status-loaded { 
-            color: #7c3aed; 
-            background: linear-gradient(135deg, #e9d5ff 0%, #ddd6fe 100%);
-            border: 1px solid #a855f7;
-        }
-        
-        .status-approved { 
-            color: #2563eb; 
-            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-            border: 1px solid #3b82f6;
-        }
-        
-        .status-pending { 
-            color: #d97706; 
-            background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
-            border: 1px solid #f59e0b;
-        }
-        
-        .status-rejected { 
-            color: #dc2626; 
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            border: 1px solid #ef4444;
-        }
-        
-        .status-cancelled { 
-            color: #6b7280; 
-            background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
-            border: 1px solid #9ca3af;
-        }
-
-        /* Enhanced Buttons */
-        .btn-enhanced {
+        /* Enhanced Buttons - from your provided CSS, colors checked */
+        .btn-enhanced { /* Used in home.html */
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            color: white; /* Assuming these are for primary actions */
+            /* Backgrounds are applied via Tailwind in home.html, e.g., bg-gradient-to-r from-blue-600 ... */
+            /* If specific btn-enhanced background is needed, define here using new vars */
         }
 
         .btn-enhanced:hover {
@@ -276,7 +293,7 @@
             transform: translateY(0);
         }
 
-        /* Loading Animation */
+        /* Loading Animation - Kept as is */
         .loading-pulse {
             animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
         }
@@ -290,22 +307,23 @@
             }
         }
 
-        /* Enhanced Glass Header */
-        .glass-header {
-            background: rgba(30, 64, 175, 0.95);
+        /* Enhanced Glass Header - from your provided CSS, colors checked */
+        .glass-header { /* This is the nav class in your HTML structure */
+            background: rgba(11, 57, 84, 0.95); /* Tint of sakina-blue-primary - UPDATED */
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            border-bottom: 1px solid rgba(191, 215, 234, 0.1); /* Tint of sakina-blue-light - UPDATED */
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        /* Enhanced Notifications */
-        .notification-enhanced {
+        /* Enhanced Notifications - from your provided CSS, colors checked */
+        .notification-enhanced { /* Used in home.html */
             border-radius: 12px;
             box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            border-left-width: 4px;
+            border-left-width: 4px; /* Border color applied by Tailwind in home.html, e.g., border-orange-400 */
             transition: all 0.3s ease;
             position: relative;
             overflow: hidden;
+            /* Background applied by Tailwind in home.html, e.g., bg-gradient-to-r from-orange-50... */
         }
 
         .notification-enhanced:hover {
@@ -319,7 +337,7 @@
             left: 0;
             right: 0;
             height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.8), transparent);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); /* Shimmer can be kept light */
             animation: shimmer 2s infinite;
         }
 
@@ -328,7 +346,8 @@
             100% { transform: translateX(100%); }
         }
 
-        /* Enhanced Input Fields */
+        /* Enhanced Input Fields (focus) - from your provided CSS, colors checked */
+        /* This selector was specific to main inputs, but the one above is more general. Merging focus style: */
         main input[type="text"]:focus,
         main input[type="password"]:focus,
         main input[type="email"]:focus,
@@ -338,15 +357,17 @@
         main select:focus,
         main textarea:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            transform: translateY(-1px);
+            border-color: var(--sakina-blue-secondary); /* UPDATED */
+            /* Combined shadow from both input focus definitions */
+            box-shadow: 0 0 0 3px rgba(8, 126, 139, 0.2), 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* UPDATED */
+            transform: translateY(-1px); /* This was from the enhanced version, keeping it */
         }
 
-        /* Enhanced Progress Bars */
+
+        /* Enhanced Progress Bars - from your provided CSS, colors checked */
         .progress-bar {
             height: 8px;
-            background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 100%);
+            background: linear-gradient(90deg, #E5E7EB 0%, #F3F4F6 100%); /* Neutral background */
             border-radius: 9999px;
             overflow: hidden;
             position: relative;
@@ -358,6 +379,8 @@
             transition: width 0.5s ease;
             position: relative;
             overflow: hidden;
+            /* Applying new gradient to progress fill */
+            background: linear-gradient(90deg, var(--sakina-blue-secondary) 0%, var(--sakina-blue-primary) 100%); /* UPDATED */
         }
 
         .progress-fill::after {
@@ -370,7 +393,7 @@
             background: linear-gradient(
                 90deg,
                 transparent,
-                rgba(255, 255, 255, 0.3),
+                rgba(255, 255, 255, 0.25), /* Shimmer, slightly more visible */
                 transparent
             );
             animation: progress-shimmer 1.5s infinite;
@@ -380,15 +403,39 @@
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
         }
+
+        /* Global link styling from your refined CSS */
+        main a {
+            color: var(--sakina-blue-primary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+        main a:hover {
+            color: var(--sakina-orange-primary);
+            text-decoration: underline;
+        }
+
+        /* Title styling from your refined CSS */
+        .content-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--sakina-blue-primary);
+            margin-bottom: 1.5rem;
+            border-bottom: 2px solid var(--sakina-blue-light);
+            padding-bottom: 0.5rem;
+        }
+
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen fade-in">
+<body class="flex flex-col min-h-screen fade-in"> <!-- Body background/text now from CSS var -->
     <!-- Navigation -->
+    <!-- The HTML structure here is from your *second* prompt. -->
+    <!-- The class 'glass-header' was in your CSS but 'sakina-nav' was in older CSS. -->
+    <!-- Your HTML used 'glass-header' for the nav. -->
     <nav class="glass-header p-4 shadow-lg">
         <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center space-x-3">
-                <!-- Sakina Gas Logo -->
                 <img src="{% static 'images/sakina_logo.png' %}" alt="Sakina Gas" class="sakina-logo">
                 <a href="{% url 'shipments:home' %}" class="text-white text-2xl font-bold hover:text-blue-200 transition-colors">
                     Sakina Gas Fuel Tracker
@@ -400,7 +447,6 @@
                         Welcome, <strong>{{ user.username }}</strong>
                     </span>
                     
-                    <!-- Navigation Links -->
                     {% if perms.shipments.view_shipment %}
                      <a href="{% url 'shipments:shipment-list' %}" class="hover:text-blue-200 transition-colors font-medium">Shipments</a>
                     {% endif %}
@@ -425,6 +471,7 @@
                     </form>
 
                 {% else %}
+                    <!-- Ensure these use the updated button classes/styles if not using Tailwind directly -->
                     <a href="{% url 'login' %}" class="sakina-btn-primary text-white px-4 py-2 rounded-lg font-medium">Login</a>
                     <a href="{% url 'shipments:signup' %}" class="sakina-btn-accent text-white px-4 py-2 rounded-lg font-medium">Sign Up</a>
                 {% endif %}
@@ -437,11 +484,11 @@
         {% if messages %}
             {% for message in messages %}
                 <div class="sakina-notification p-4 mb-4 text-sm rounded-lg fade-in
-                    {% if message.tags == 'debug' %} bg-gray-100 text-gray-700 border-l-gray-400
-                    {% elif message.tags == 'info' %} bg-blue-50 text-blue-700 border-l-blue-400
-                    {% elif message.tags == 'success' %} bg-green-50 text-green-700 border-l-green-400
-                    {% elif message.tags == 'warning' %} bg-yellow-50 text-yellow-700 border-l-yellow-400
-                    {% elif message.tags == 'error' %} bg-red-50 text-red-700 border-l-red-400
+                    {% if message.tags == 'debug' %} border-l-gray-400 text-gray-700
+                    {% elif message.tags == 'info' %} border-l-blue-400 text-blue-700
+                    {% elif message.tags == 'success' %} border-l-green-400 text-green-700
+                    {% elif message.tags == 'warning' %} border-l-yellow-400 text-yellow-700
+                    {% elif message.tags == 'error' %} border-l-red-400 text-red-700
                     {% endif %}"
                      role="alert">
                     {{ message }}
@@ -458,13 +505,13 @@
     </main>
 
     <!-- Footer -->
-    <footer class="sakina-footer text-center p-6 mt-6 text-gray-300">
+    <footer class="sakina-footer text-center p-6 mt-6"> <!-- Removed text-gray-300, handled by sakina-footer class -->
         <div class="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-6">
             <div class="flex items-center space-x-2">
                 <img src="{% static 'images/sakina_logo.png' %}" alt="Sakina Gas" class="sakina-logo">
                 <span class="font-bold text-lg">Sakina Gas Company</span>
             </div>
-            <span class="text-gray-400">|</span>
+            <span class="text-gray-400">|</span> <!-- This will become a lighter gray via sakina-footer sub-styles -->
             <span>© {% now "Y" %} Fuel Tracker System</span>
             <span class="text-gray-400">|</span>
             <span class="text-sm">Powering East Africa with Quality Fuel</span>

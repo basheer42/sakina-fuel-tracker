@@ -3,182 +3,357 @@
 {% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto card-enhanced p-6 sm:p-8 mt-8">
-    <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 pb-4 border-b border-gray-200 gap-2">
-        <h2 class="text-2xl sm:text-3xl font-semibold text-blue-700">{{ page_title }}</h2>
-        <div class="flex space-x-2 mt-2 sm:mt-0">
-            {% if can_change_trip %}
-            <a href="{% url 'shipments:trip-edit' trip.pk %}" class="bg-yellow-500 hover:bg-yellow-600 text-white font-semibold py-2 px-3 sm:px-4 rounded-md shadow-sm text-xs sm:text-sm text-center">
-                Edit Loading
-            </a>
-            {% endif %}
-            {% if can_delete_trip %}
-            <a href="{% url 'shipments:trip-delete' trip.pk %}" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-3 sm:px-4 rounded-md shadow-sm text-xs sm:text-sm text-center">
-                Delete Loading
-            </a>
-            {% endif %}
+<style>
+    /* Custom Sakina Gas Brand Colors */
+    :root {
+        --sakina-blue-deep: #0f172a;
+        --sakina-blue-primary: #1e3a8a;
+        --sakina-blue-bright: #3b82f6;
+        --sakina-orange-warm: #ea580c;
+        --sakina-orange-bright: #f97316;
+        --sakina-red-accent: #dc2626;
+    }
+
+    .sakina-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 1rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-btn {
+        transition: all 0.3s ease;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        padding: 0.75rem 1.5rem;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        text-align: center;
+    }
+
+    .edit-btn {
+        background: linear-gradient(135deg, var(--sakina-orange-warm) 0%, var(--sakina-orange-bright) 100%);
+        color: white;
+    }
+
+    .edit-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(234, 88, 12, 0.3);
+    }
+
+    .delete-btn {
+        background: linear-gradient(135deg, var(--sakina-red-accent) 0%, #ef4444 100%);
+        color: white;
+    }
+
+    .delete-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(220, 38, 38, 0.3);
+    }
+
+    .detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .detail-item {
+        background: rgba(248, 250, 252, 0.8);
+        padding: 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        transition: all 0.3s ease;
+    }
+
+    .detail-item:hover {
+        background: rgba(59, 130, 246, 0.05);
+        border-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.375rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .status-delivered { background-color: #d1fae5; color: #065f46; }
+    .status-gatepassed { background-color: #dbeafe; color: #1e40af; }
+    .status-loaded { background-color: #e0e7ff; color: #3730a3; }
+    .status-approved { background-color: #fef3c7; color: #92400e; }
+    .status-pending { background-color: #f3f4f6; color: #374151; }
+    .status-rejected { background-color: #fee2e2; color: #991b1b; }
+    .status-cancelled { background-color: #fecaca; color: #7f1d1d; }
+
+    .table-enhanced {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        overflow: hidden; /* Important for border-radius clipping */
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-row-hover {
+        transition: all 0.3s ease;
+    }
+
+    .table-row-hover:hover {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(234, 88, 12, 0.02) 100%);
+    }
+
+    /* Styles for Table Headers (consistent with other pages) */
+    .themed-table-header th {
+        background-color: #1e3a8a; /* Darker blue from Sakina theme */
+        color: white; 
+        padding-top: 1rem; 
+        padding-bottom: 1rem; 
+        padding-left: 1.5rem; 
+        padding-right: 1.5rem; 
+        text-align: left;
+        font-size: 0.875rem; 
+        font-weight: 600; 
+        text-transform: uppercase; 
+        letter-spacing: 0.05em; 
+    }
+
+    .table-enhanced thead .themed-table-header th:first-child {
+        border-top-left-radius: 16px; 
+    }
+    .table-enhanced thead .themed-table-header th:last-child {
+        border-top-right-radius: 16px;
+    }
+</style>
+
+<div class="max-w-6xl mx-auto">
+    <!-- Header Section -->
+    <div class="sakina-card p-8 mb-8">
+        <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6">
+            <div class="flex items-center gap-6">
+                <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center">
+                    <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                        <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z"/>
+                    </svg>
+                </div>
+                <div>
+                    <h2 class="text-4xl font-bold text-gray-900">{{ page_title }}</h2>
+                    <p class="text-gray-600 mt-2">Detailed loading information and tracking</p>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-3">
+                {% if can_change_trip %}
+                    <a href="{% url 'shipments:trip-edit' trip.pk %}" class="action-btn edit-btn">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793z"/>
+                            <path d="M11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                        </svg>
+                        Edit Loading
+                    </a>
+                {% endif %}
+                {% if can_delete_trip %}
+                    <a href="{% url 'shipments:trip-delete' trip.pk %}" class="action-btn delete-btn">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9z" clip-rule="evenodd"/>
+                        </svg>
+                        Delete Loading
+                    </a>
+                {% endif %}
+            </div>
         </div>
     </div>
 
-    {# --- Trip Details --- #}
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 sm:gap-x-8 gap-y-4 text-sm text-gray-700 mb-8">
-        <div>
-            <strong class="block font-medium text-gray-900">BOL Date:</strong>
-            <span>{{ trip.loading_date|date:"F j, Y" }}</span>
+    <!-- Trip Details -->
+    <div class="sakina-card p-8 mb-8">
+        <h3 class="text-2xl font-bold text-gray-800 mb-6">Loading Information</h3>
+        
+        <div class="detail-grid">
+            <div class="detail-item">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">BOL Date</label>
+                <p class="text-lg text-gray-900">{{ trip.loading_date|date:"F j, Y" }}</p>
+            </div>
+            
+            <div class="detail-item">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">BOL Time</label>
+                <p class="text-lg text-gray-900">{{ trip.loading_time|time:"H:i A" }}</p>
+            </div>
+            
+            <div class="detail-item">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">BOL Number</label>
+                <p class="text-lg text-gray-900">{{ trip.bol_number|default_if_none:"N/A" }}</p>
+            </div>
+            
+            <div class="detail-item">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Status</label>
+                <span class="status-badge {% if trip.status == 'DELIVERED' %}status-delivered{% elif trip.status == 'GATEPASSED' %}status-gatepassed{% elif trip.status == 'LOADED' %}status-loaded{% elif trip.status == 'KPC_APPROVED' %}status-approved{% elif trip.status == 'PENDING' or trip.status == 'LOADING' %}status-pending{% elif trip.status == 'KPC_REJECTED' %}status-rejected{% elif trip.status == 'CANCELLED' %}status-cancelled{% else %}status-pending{% endif %}">
+                    {% if trip.status == 'DELIVERED' %}
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    {% elif trip.status == 'GATEPASSED' %}
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    {% elif trip.status == 'LOADED' %}
+                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                            <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z"/>
+                        </svg>
+                    {% endif %}
+                    {{ trip.get_status_display }}
+                </span>
+            </div>
+            
+            <div class="detail-item">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Vehicle</label>
+                <p class="text-lg text-gray-900">
+                    {{ trip.vehicle.plate_number }}
+                    {% if trip.vehicle.trailer_number %}({{ trip.vehicle.trailer_number }}){% endif %}
+                </p>
+            </div>
+            
+            <div class="detail-item">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Product</label>
+                <p class="text-lg text-gray-900">{{ trip.product.name }}</p>
+            </div>
+            
+            <div class="detail-item">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Customer</label>
+                <p class="text-lg text-gray-900">{{ trip.customer.name }}</p>
+            </div>
+            
+            {% if trip.destination %}
+            <div class="detail-item">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Destination</label>
+                <p class="text-lg text-gray-900">{{ trip.destination.name }}</p>
+            </div>
+            {% endif %}
+            
+            <div class="detail-item">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Recorded By</label>
+                <p class="text-lg text-gray-900">{{ trip.user.username }}</p>
+            </div>
         </div>
-        <div>
-            <strong class="block font-medium text-gray-900">BOL Time:</strong>
-            <span>{{ trip.loading_time|time:"H:i A" }}</span>
-        </div>
-        <div>
-            <strong class="block font-medium text-gray-900">KPC Order / BOL Number:</strong>
-            <span>{{ trip.bol_number|default_if_none:"N/A" }}</span>
-        </div>
-         <div>
-             <strong class="block font-medium text-gray-900">Status:</strong>
-             <span class="status-badge {% if trip.status == 'DELIVERED' %}status-delivered{% elif trip.status == 'GATEPASSED' %}status-gatepassed{% elif trip.status == 'LOADED' %}status-loaded{% elif trip.status == 'KPC_APPROVED' %}status-approved{% elif trip.status == 'PENDING' or trip.status == 'LOADING' %}status-pending{% elif trip.status == 'KPC_REJECTED' %}status-rejected{% elif trip.status == 'CANCELLED' %}status-cancelled{% else %}status-pending{% endif %}">
-                 {% if trip.status == 'DELIVERED' %}
-                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                     </svg>
-                 {% elif trip.status == 'GATEPASSED' %}
-                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                         <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                     </svg>
-                 {% elif trip.status == 'LOADED' %}
-                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                         <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
-                         <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3zM14 7a1 1 0 00-1 1v6.05A2.5 2.5 0 0115.95 16H17a1 1 0 001-1V8a1 1 0 00-1-1h-3z"/>
-                     </svg>
-                 {% elif trip.status == 'KPC_APPROVED' %}
-                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                         <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                     </svg>
-                 {% elif trip.status == 'PENDING' or trip.status == 'LOADING' %}
-                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"/>
-                     </svg>
-                 {% elif trip.status == 'KPC_REJECTED' %}
-                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                     </svg>
-                 {% elif trip.status == 'CANCELLED' %}
-                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                         <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                     </svg>
-                 {% else %}
-                     <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                         <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                     </svg>
-                 {% endif %}
-                 {{ trip.get_status_display }}
-             </span>
-         </div>
-        <div>
-            <strong class="block font-medium text-gray-900">Vehicle:</strong>
-            <span>{{ trip.vehicle.plate_number }} {% if trip.vehicle.trailer_number %}({{trip.vehicle.trailer_number}}){% endif %}</span>
-        </div>
-         <div>
-            <strong class="block font-medium text-gray-900">Product:</strong>
-            <span>{{ trip.product.name }}</span>
-        </div>
-        <div>
-            <strong class="block font-medium text-gray-900">Customer:</strong>
-            <span>{{ trip.customer.name }}</span>
-        </div>
-        {% if trip.destination %}
-        <div>
-            <strong class="block font-medium text-gray-900">Destination:</strong>
-            <span>{{ trip.destination.name }}</span>
+        
+        {% if trip.notes %}
+        <div class="mt-8 p-6 bg-gray-50 rounded-xl border border-gray-200">
+            <label class="block text-sm font-semibold text-gray-700 mb-2">Notes</label>
+            <p class="text-gray-800 whitespace-pre-wrap leading-relaxed">{{ trip.notes }}</p>
         </div>
         {% endif %}
-        <div>
-             <strong class="block font-medium text-gray-900">Recorded By:</strong>
-             <span>{{ trip.user.username }}</span>
-        </div>
-        <div class="lg:col-span-3 md:col-span-2">
-            <strong class="block font-medium text-gray-900">Notes:</strong>
-            <p class="mt-1 whitespace-pre-wrap">{{ trip.notes|default_if_none:"-" }}</p>
-        </div>
+        
         {% if trip.kpc_comments %}
-        <div class="lg:col-span-3 md:col-span-2">
-            <strong class="block font-medium text-gray-900">KPC Comments:</strong>
-            <p class="mt-1 whitespace-pre-wrap">{{ trip.kpc_comments }}</p>
+        <div class="mt-4 p-6 bg-yellow-50 rounded-xl border border-yellow-200">
+            <label class="block text-sm font-semibold text-yellow-800 mb-2">KPC Comments</label>
+            <p class="text-yellow-800 whitespace-pre-wrap leading-relaxed">{{ trip.kpc_comments }}</p>
         </div>
         {% endif %}
     </div>
 
-    {# --- Compartment Details (Requested Quantities) --- #}
-    <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4 pt-4 border-t border-gray-200">Compartments Requested</h3>
-    {# The 'compartments' variable is already trip.requested_compartments.all() from the view #}
-    {% if compartments %}
-        <div class="card-enhanced bg-gray-50 p-4 mb-6">
-            <table class="table-enhanced min-w-full text-xs sm:text-sm">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="py-2 px-3 text-left font-semibold text-gray-700">Compartment #</th>
-                        <th class="py-2 px-3 text-right font-semibold text-gray-700">Quantity Requested (L)</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-600">
-                    {% for compartment in compartments %}
-                    <tr class="border-b border-gray-100 last:border-b-0">
-                        <td class="py-2 px-3">{{ compartment.compartment_number }}</td>
-                        <td class="py-2 px-3 text-right">{{ compartment.quantity_requested_litres|floatformat:2 }}</td>
-                    </tr>
-                    {% endfor %}
-                     <tr class="bg-gray-100 font-semibold">
-                        <td class="py-2 px-3 text-right">Total Requested:</td>
-                        <td class="py-2 px-3 text-right">{{ trip.total_requested_from_compartments|floatformat:2 }} L</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p class="text-gray-600 italic mb-6">No compartment details were recorded for this loading request.</p>
-    {% endif %}
+    <!-- Compartment Details -->
+    <div class="sakina-card p-8 mb-8">
+        <h3 class="text-2xl font-bold text-gray-800 mb-6">Compartments Requested</h3>
+        
+        {% if compartments %}
+            <div class="table-enhanced">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="themed-table-header">  {# MODIFIED CLASS HERE #}
+                                <th>Compartment #</th> {# Removed inline styles #}
+                                <th class="text-right">Quantity Requested (L)</th> {# Removed inline styles, kept text-right #}
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for compartment in compartments %}
+                            <tr class="table-row-hover">
+                                <td class="py-4 px-6 font-medium text-gray-900">{{ compartment.compartment_number }}</td>
+                                <td class="py-4 px-6 text-right text-gray-700">{{ compartment.quantity_requested_litres|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="bg-blue-50">
+                                <td class="py-4 px-6 text-right font-bold text-blue-800">Total Requested:</td>
+                                <td class="py-4 px-6 text-right font-bold text-blue-800">{{ trip.total_requested_from_compartments|floatformat:2 }} L</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-8">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <p class="text-gray-500 italic">No compartment details were recorded for this loading request.</p>
+            </div>
+        {% endif %}
+    </div>
 
-    {# --- Actual Stock Depletions (FIFO) --- #}
-    <h3 class="text-lg sm:text-xl font-semibold text-gray-800 mb-4 pt-4 border-t border-gray-200">Actual Stock Depletions (FIFO)</h3>
-    {# The 'actual_depletions' variable is already trip.depletions_for_trip.select_related(...) from the view #}
-    {% if actual_depletions %}
-        <div class="card-enhanced bg-gray-50 p-4">
-            <table class="table-enhanced min-w-full text-xs sm:text-sm">
-                <thead class="bg-gray-200">
-                    <tr>
-                        <th class="py-2 px-3 text-left font-semibold text-gray-700">Shipment Batch (ID/Tag)</th>
-                        <th class="py-2 px-3 text-left font-semibold text-gray-700">Product</th>
-                        <th class="py-2 px-3 text-right font-semibold text-gray-700">Quantity Depleted (L)</th>
-                        <th class="py-2 px-3 text-left font-semibold text-gray-700">Depletion Date</th>
-                    </tr>
-                </thead>
-                <tbody class="text-gray-600">
-                    {% for depletion in actual_depletions %}
-                    <tr class="border-b border-gray-100 last:border-b-0">
-                        <td class="py-2 px-3">
-                            <a href="{% url 'shipments:shipment-detail' depletion.shipment_batch.pk %}" class="text-blue-600 hover:underline">
-                            Shpmt {% if depletion.shipment_batch.vessel_id_tag %}{{ depletion.shipment_batch.vessel_id_tag }}{% else %}{{ depletion.shipment_batch.id }}{% endif %}
-                            </a>
-                        </td>
-                        <td class="py-2 px-3">{{ depletion.shipment_batch.product.name }}</td>
-                        <td class="py-2 px-3 text-right">{{ depletion.quantity_depleted|floatformat:2 }}</td>
-                        <td class="py-2 px-3 whitespace-nowrap">{{ depletion.created_at|date:"Y-m-d H:i" }}</td>
-                    </tr>
-                    {% endfor %}
-                    <tr class="bg-gray-100 font-semibold">
-                        <td class="py-2 px-3 text-right" colspan="3">Total Actually Depleted (FIFO):</td> {# Adjusted colspan #}
-                        <td class="py-2 px-3 text-right">{{ trip.total_loaded|floatformat:2 }} L</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-    {% else %}
-        <p class="text-gray-600 italic">No actual stock depletions recorded for this trip yet.</p>
-    {% endif %}
+    <!-- Actual Stock Depletions -->
+    <div class="sakina-card p-8 mb-8">
+        <h3 class="text-2xl font-bold text-gray-800 mb-6">Actual Stock Depletions (FIFO)</h3>
+        
+        {% if actual_depletions %}
+            <div class="table-enhanced">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="themed-table-header"> {# MODIFIED CLASS HERE #}
+                                <th>Shipment Batch</th> {# Removed inline styles #}
+                                <th>Product</th> {# Removed inline styles #}
+                                <th class="text-right">Quantity Depleted (L)</th> {# Removed inline styles, kept text-right #}
+                                <th>Depletion Date</th> {# Removed inline styles #}
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for depletion in actual_depletions %}
+                            <tr class="table-row-hover">
+                                <td class="py-4 px-6">
+                                    <a href="{% url 'shipments:shipment-detail' depletion.shipment_batch.pk %}" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
+                                        Shpmt {% if depletion.shipment_batch.vessel_id_tag %}{{ depletion.shipment_batch.vessel_id_tag }}{% else %}{{ depletion.shipment_batch.id }}{% endif %}
+                                    </a>
+                                </td>
+                                <td class="py-4 px-6 text-gray-700">{{ depletion.shipment_batch.product.name }}</td>
+                                <td class="py-4 px-6 text-right font-medium text-gray-900">{{ depletion.quantity_depleted|floatformat:2 }}</td>
+                                <td class="py-4 px-6 text-gray-700 whitespace-nowrap">{{ depletion.created_at|date:"Y-m-d H:i" }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="bg-green-50"> {# Kept this specific styling for the total row #}
+                                <td class="py-4 px-6 text-right font-bold text-green-800" colspan="2">Total Actually Depleted (FIFO):</td>
+                                <td class="py-4 px-6 text-right font-bold text-green-800">{{ trip.total_loaded|floatformat:2 }} L</td>
+                                <td class="py-4 px-6"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        {% else %}
+            <div class="text-center py-8">
+                <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <p class="text-gray-500 italic">No actual stock depletions recorded for this trip yet.</p>
+            </div>
+        {% endif %}
+    </div>
 
-    <div class="mt-8 text-center">
-        <a href="{% url 'shipments:trip-list' %}" class="text-blue-600 hover:text-blue-800 font-medium">
-            ← Back to Loadings List
+    <!-- Navigation -->
+    <div class="text-center">
+        <a href="{% url 'shipments:trip-list' %}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0L2.586 11H17a1 1 0 110 2H2.586l3.707 3.707a1 1 0 01-1.414 1.414l-5.414-5.414a1 1 0 010-1.414L4.879 6.293a1 1 0 011.414 1.414L2.586 11z" clip-rule="evenodd"/>
+            </svg>
+            Back to Loadings List
         </a>
     </div>
 </div>

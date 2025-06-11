@@ -3,133 +3,327 @@
 {% block title %}Shipment List - Fuel Tracker{% endblock title %}
 
 {% block content %}
-<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center mb-6 gap-4">
-    <h2 class="text-2xl sm:text-3xl font-semibold text-blue-700">Shipments (Received)</h2>
-    {% if can_add_shipment %} 
-    <a href="{% url 'shipments:shipment-add' %}" class="w-full sm:w-auto bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg shadow-md transition duration-150 ease-in-out text-center">
-        Add New Shipment
-    </a>
+<style>
+    /* Custom Sakina Gas Brand Colors */
+    :root {
+        --sakina-blue-deep: #0f172a;
+        --sakina-blue-primary: #1e3a8a;
+        --sakina-blue-bright: #3b82f6;
+        --sakina-orange-warm: #ea580c;
+        --sakina-orange-bright: #f97316;
+        --sakina-red-accent: #dc2626;
+    }
+
+    .sakina-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 1rem;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .sakina-btn {
+        background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-bright) 50%, var(--sakina-orange-warm) 100%);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .sakina-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 35px rgba(30, 58, 138, 0.4);
+    }
+
+    .add-btn {
+        background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    }
+
+    .add-btn:hover {
+        box-shadow: 0 15px 35px rgba(5, 150, 105, 0.4);
+    }
+
+    .table-enhanced {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        overflow: hidden; /* For border-radius clipping */
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-row-hover {
+        transition: all 0.3s ease;
+    }
+
+    .table-row-hover:hover {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(234, 88, 12, 0.02) 100%);
+    }
+
+    .filter-form {
+        background: linear-gradient(135deg, rgba(248, 250, 252, 0.9) 0%, rgba(241, 245, 249, 0.95) 100%);
+        backdrop-filter: blur(8px);
+        border-radius: 1rem;
+        border: 1px solid rgba(59, 130, 246, 0.1);
+    }
+
+    .form-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        background-color: white;
+        transition: all 0.3s ease;
+        font-size: 0.875rem;
+    }
+
+    .form-input:focus {
+        outline: none;
+        border-color: var(--sakina-blue-bright);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .action-link {
+        color: var(--sakina-blue-bright);
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .action-link:hover {
+        color: var(--sakina-blue-primary);
+        text-decoration: underline;
+    }
+
+    .edit-link {
+        color: var(--sakina-orange-warm);
+    }
+
+    .edit-link:hover {
+        color: #c2410c;
+    }
+
+    .delete-link {
+        color: var(--sakina-red-accent);
+    }
+
+    .delete-link:hover {
+        color: #b91c1c;
+    }
+
+    /* New Styles for Table Headers */
+    .themed-table-header th {
+        background-color: #1e3a8a; /* Darker blue from Sakina theme */
+        color: white; /* White text for good contrast */
+        padding-top: 1rem; /* py-4 */
+        padding-bottom: 1rem; /* py-4 */
+        padding-left: 1.5rem; /* px-6 */
+        padding-right: 1.5rem; /* px-6 */
+        text-align: left;
+        font-size: 0.875rem; /* text-sm */
+        font-weight: 600; /* font-semibold */
+        text-transform: uppercase; 
+        letter-spacing: 0.05em; 
+    }
+    .table-enhanced thead .themed-table-header th:first-child {
+        border-top-left-radius: 16px; 
+    }
+    .table-enhanced thead .themed-table-header th:last-child {
+        border-top-right-radius: 16px;
+    }
+</style>
+
+<div class="max-w-7xl mx-auto">
+    <!-- Header Section -->
+    <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 mb-8">
+        <div class="flex items-center gap-6">
+            <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4z"/>
+                    <path d="M3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-4xl font-bold text-gray-900">Shipments (Received)</h2>
+                <p class="text-gray-600 mt-2">Manage and track all fuel shipment records</p>
+            </div>
+        </div>
+        
+        {% if can_add_shipment %}
+        <a href="{% url 'shipments:shipment-add' %}" class="sakina-btn add-btn">
+            <span class="relative z-10 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                </svg>
+                Add New Shipment
+            </span>
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Filter Form -->
+    <div class="filter-form p-6 mb-8">
+        <h3 class="text-lg font-bold text-gray-800 mb-4">Filter Shipments</h3>
+        <form method="get" action="{% url 'shipments:shipment-list' %}">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                <div>
+                    <label for="product_filter" class="block text-sm font-medium text-gray-700 mb-2">Product:</label>
+                    <select name="product" id="product_filter" class="form-input">
+                        <option value="">All Products</option>
+                        {% for product in products %}
+                            <option value="{{ product.pk }}" {% if product.pk|stringformat:"s" == product_filter_value %} selected {% endif %}>
+                                {{ product.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="supplier_name_filter" class="block text-sm font-medium text-gray-700 mb-2">Supplier Name:</label>
+                    <input type="text" name="supplier_name" id="supplier_name_filter" value="{{ supplier_filter_value|default:'' }}" class="form-input" placeholder="Enter supplier name">
+                </div>
+                <div>
+                    <label for="start_date_filter" class="block text-sm font-medium text-gray-700 mb-2">Start Date:</label>
+                    <input type="date" name="start_date" id="start_date_filter" value="{{ start_date_filter_value|default:'' }}" class="form-input">
+                </div>
+                <div>
+                    <label for="end_date_filter" class="block text-sm font-medium text-gray-700 mb-2">End Date:</label>
+                    <input type="date" name="end_date" id="end_date_filter" value="{{ end_date_filter_value|default:'' }}" class="form-input">
+                </div>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-3 justify-end mt-6">
+                <button type="submit" class="sakina-btn">
+                    <span class="relative z-10 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
+                        </svg>
+                        Apply Filters
+                    </span>
+                </button>
+                <a href="{% url 'shipments:shipment-list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                    </svg>
+                    Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Shipments Table -->
+    {% if shipments %}
+        <div class="sakina-card p-6">
+            <div class="table-enhanced">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="themed-table-header">
+                                <th>Import Date</th>
+                                <th>Supplier</th>
+                                <th>Product</th>
+                                <th class="text-right">Qty (L)</th>
+                                <th class="text-right">Price/L</th>
+                                <th class="text-right">Total Cost</th>
+                                <th class="hidden lg:table-cell">Notes</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for shipment in shipments %}
+                            <tr class="table-row-hover">
+                                <td class="py-4 px-6 text-left whitespace-nowrap font-medium text-gray-900">
+                                    {{ shipment.import_date|date:"Y-m-d" }}
+                                </td>
+                                <td class="py-4 px-6 text-left text-gray-700">{{ shipment.supplier_name }}</td>
+                                <td class="py-4 px-6 text-left">
+                                    <a href="{% url 'shipments:shipment-detail' shipment.pk %}" class="action-link">
+                                        {{ shipment.product.name }}
+                                        {% if shipment.vessel_id_tag %}
+                                            <span class="block text-xs text-gray-500 mt-1">({{ shipment.vessel_id_tag }})</span>
+                                        {% endif %}
+                                    </a>
+                                </td>
+                                <td class="py-4 px-6 text-right font-medium text-gray-900">{{ shipment.quantity_litres|floatformat:2 }}</td>
+                                <td class="py-4 px-6 text-right text-gray-700">${{ shipment.price_per_litre|floatformat:3 }}</td>
+                                <td class="py-4 px-6 text-right font-semibold text-green-600">
+                                    {% if shipment.total_cost %}
+                                        ${{ shipment.total_cost|floatformat:2 }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td class="py-4 px-6 text-left hidden lg:table-cell">
+                                    <div class="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-600" title="{{ shipment.notes|default_if_none:'' }}">
+                                        {{ shipment.notes|default_if_none:"-"|truncatechars:30 }}
+                                    </div>
+                                </td>
+                                <td class="py-4 px-6 text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-3">
+                                        {% if can_change_shipment %}
+                                            <a href="{% url 'shipments:shipment-edit' shipment.pk %}" class="action-link edit-link">Edit</a>
+                                        {% endif %}
+                                        {% if can_delete_shipment %}
+                                            <a href="{% url 'shipments:shipment-delete' shipment.pk %}" class="action-link delete-link">Delete</a>
+                                        {% endif %}
+                                        {% if not can_change_shipment and not can_delete_shipment %}
+                                            <span class="text-gray-400 text-sm">No actions</span>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="sakina-card p-8">
+            <div class="text-center">
+                <div class="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-bold text-orange-800 mb-2">No Shipments Found</h3>
+                <p class="text-gray-600 mb-4">
+                    {% if product_filter_value or supplier_filter_value or start_date_filter_value or end_date_filter_value %}
+                        No shipments match your current filter criteria.
+                    {% else %}
+                        There are currently no shipments recorded in the system.
+                    {% endif %}
+                </p>
+                
+                <div class="flex flex-col sm:flex-row gap-3 justify-center">
+                    {% if product_filter_value or supplier_filter_value or start_date_filter_value or end_date_filter_value %}
+                        <a href="{% url 'shipments:shipment-list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-orange-100 hover:bg-orange-200 text-orange-700 rounded-lg font-medium transition-colors">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                            </svg>
+                            Clear Filters
+                        </a>
+                    {% endif %}
+                    
+                    {% if can_add_shipment and not product_filter_value and not supplier_filter_value and not start_date_filter_value and not end_date_filter_value %}
+                        <a href="{% url 'shipments:shipment-add' %}" class="sakina-btn add-btn">
+                            <span class="relative z-10 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
+                                </svg>
+                                Add the First Shipment
+                            </span>
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     {% endif %}
 </div>
-
-{# Filter Form - Your existing responsive grid is good #}
-<form method="get" action="{% url 'shipments:shipment-list' %}" class="mb-6 p-4 bg-gray-50 rounded-lg shadow">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-        <div>
-            <label for="product_filter" class="block text-sm font-medium text-gray-700">Product:</label>
-            <select name="product" id="product_filter" class="mt-1"> 
-                 <option value="">All Products</option>
-                 {% for product in products %}
-                     <option value="{{ product.pk }}" {% if product.pk|stringformat:"s" == product_filter_value %} selected {% endif %}>
-                         {{ product.name }}
-                     </option>
-                 {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label for="supplier_name_filter" class="block text-sm font-medium text-gray-700">Supplier Name:</label>
-            <input type="text" name="supplier_name" id="supplier_name_filter" value="{{ supplier_filter_value|default:'' }}" class="mt-1">
-        </div>
-        <div>
-            <label for="start_date_filter" class="block text-sm font-medium text-gray-700">Start Date:</label>
-            <input type="date" name="start_date" id="start_date_filter" value="{{ start_date_filter_value|default:'' }}" class="mt-1">
-        </div>
-        <div>
-            <label for="end_date_filter" class="block text-sm font-medium text-gray-700">End Date:</label>
-            <input type="date" name="end_date" id="end_date_filter" value="{{ end_date_filter_value|default:'' }}" class="mt-1">
-        </div>
-
-        <div class="md:col-span-full flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2 justify-end mt-2">
-            <button type="submit" class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-md shadow-sm">
-                Filter
-            </button>
-            <a href="{% url 'shipments:shipment-list' %}" class="w-full sm:w-auto bg-gray-300 hover:bg-gray-400 text-gray-800 font-semibold py-2 px-4 rounded-md shadow-sm text-center">
-                Clear
-            </a>
-        </div>
-    </div>
-</form>
-
-{% if shipments %}
-    {# Ensure this div handles the overflow for the table #}
-    <div class="card-enhanced">
-        <table class="table-enhanced min-w-full w-full leading-normal">
-            <thead>
-                <tr class="bg-gray-100 text-gray-600 uppercase text-xs sm:text-sm leading-normal"> {# Adjusted text size #}
-                    <th class="py-3 px-4 sm:px-6 text-left">Import Date</th>
-                    <th class="py-3 px-4 sm:px-6 text-left">Supplier</th>
-                    <th class="py-3 px-4 sm:px-6 text-left">Product</th>
-                    <th class="py-3 px-4 sm:px-6 text-right">Qty (L)</th> {# Abbreviated for space #}
-                    <th class="py-3 px-4 sm:px-6 text-right">Price/L</th>
-                    <th class="py-3 px-4 sm:px-6 text-right">Total Cost</th>
-                    <th class="py-3 px-4 sm:px-6 text-left hidden md:table-cell">Notes</th> {# Hidden on small, shown on md+ #}
-                    <th class="py-3 px-4 sm:px-6 text-center">Actions</th>
-                </tr>
-            </thead>
-            <tbody class="text-gray-700 text-xs sm:text-sm"> {# Adjusted text size #}
-                {% for shipment in shipments %}
-                <tr class="border-b border-gray-200 hover:bg-gray-50">
-                    <td class="py-3 px-4 sm:px-6 text-left whitespace-nowrap">{{ shipment.import_date|date:"Y-m-d" }}</td>
-                    <td class="py-3 px-4 sm:px-6 text-left">{{ shipment.supplier_name }}</td>
-                    <td class="py-3 px-4 sm:px-6 text-left">
-                        <a href="{% url 'shipments:shipment-detail' shipment.pk %}" class="text-blue-600 hover:text-blue-800 hover:underline font-medium">
-                            {{ shipment.product.name }}
-                            {% if shipment.vessel_id_tag %}<span class="block text-xs text-gray-500">({{ shipment.vessel_id_tag }})</span>{% endif %}
-                        </a>
-                    </td>
-                    <td class="py-3 px-4 sm:px-6 text-right">{{ shipment.quantity_litres|floatformat:2 }}</td>
-                    <td class="py-3 px-4 sm:px-6 text-right">{{ shipment.price_per_litre|floatformat:3 }}</td>
-                    <td class="py-3 px-4 sm:px-6 text-right">
-                        {% if shipment.total_cost %}
-                            {{ shipment.total_cost|floatformat:2 }}
-                        {% else %}
-                            N/A
-                        {% endif %}
-                    </td>
-                    <td class="py-3 px-4 sm:px-6 text-left hidden md:table-cell"> {# Hidden on small, shown on md+ #}
-                        <div class="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title="{{ shipment.notes|default_if_none:'' }}">
-                            {{ shipment.notes|default_if_none:"-"|truncatechars:30 }}
-                        </div>
-                    </td>
-                    <td class="py-3 px-4 sm:px-6 text-center whitespace-nowrap">
-                        {% if can_change_shipment %} 
-                        <a href="{% url 'shipments:shipment-edit' shipment.pk %}" class="text-indigo-600 hover:text-indigo-900 mr-2 sm:mr-3 font-medium">Edit</a>
-                        {% endif %}
-                        {% if can_delete_shipment %} 
-                        <a href="{% url 'shipments:shipment-delete' shipment.pk %}" class="text-red-600 hover:text-red-900 font-medium">Delete</a>
-                        {% endif %}
-                        {% if not can_change_shipment and not can_delete_shipment %}
-                        <span class="text-gray-500 text-xs sm:text-sm">No actions</span> 
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-{% else %}
-    <div class="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-6" role="alert">
-        <p class="font-bold">No Shipments Found</p>
-        <p>
-            {% if product_filter_value or supplier_filter_value or start_date_filter_value or end_date_filter_value %}
-                No shipments match your current filter criteria.
-                <a href="{% url 'shipments:shipment-list' %}" class="text-yellow-800 hover:text-yellow-900 font-semibold underline ml-2">Clear filters</a>
-            {% else %}
-                There are currently no shipments recorded in the system.
-            {% endif %}
-        </p>
-        {% if can_add_shipment %} 
-        {% if not product_filter_value and not supplier_filter_value and not start_date_filter_value and not end_date_filter_value %}
-        <p class="mt-2">
-            <a href="{% url 'shipments:shipment-add' %}" class="text-yellow-800 hover:text-yellow-900 font-semibold underline">
-                Add the first one!
-            </a>
-        </p>
-        {% endif %}
-        {% endif %}
-    </div>
-{% endif %}
-
-{# PAGINATION WILL GO HERE LATER - We are not adding it in this step #}
-
 {% endblock content %}
