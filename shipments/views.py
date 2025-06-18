@@ -740,202 +740,6 @@ TRIP_STATUS_STYLES = {
 }
 
 logger = logging.getLogger(__name__)
-
-def get_recent_activity(user, limit=3):
-    logger.info(f"--- get_recent_activity called for user: {user.username} ---") # <<<<<<< DEBUG LOG
-    all_activity = []
-    now = timezone.now()
-    fetch_limit = limit * 5 # Fetch more initially to ensure we get enough distinct activities
-
-    # 1. Fetch recent Shipment creations
-    if user.has_perm('shipments.view_shipment'):
-        # Assuming get_user_accessible_shipments is defined and works
-        recent_shipments_qs = get_user_accessible_shipments(user).select_related('product', 'user').order_by('-created_at')[:fetch_limit]
-        logger.info(f"Found {recent_shipments_qs.count()} recent shipments for user {user.username}.") # <<<<<<< DEBUG LOG
-        for shipment in recent_shipments_qs:
-            logger.info(f"Processing shipment ID: {shipment.id}, Created: {shipment.created_at}, Vessel: {shipment.vessel_id_tag}") # <<<<<<< DEBUG LOG
-            all_activity.append({
-                'type': 'new_shipment',
-                'timestamp': shipment.created_at,
-                'title': f"New shipment {shipment.vessel_id_tag or f'ID {shipment.id}'} received",
-                'details': f"{shipment.quantity_litres:,.0f}L {shipment.product.name} from {shipment.supplier_name}",
-                'time_ago': timesince(shipment.created_at, now).split(',')[0] + " ago",
-                'icon_bg_color': 'bg-blue-100',
-                'icon_text_color': 'text-blue-600',
-                'icon_svg_path': SVG_PATHS['shipment_received'],
-                'link': reverse('shipments:shipment-detail', args=[shipment.pk])
-            })
-
-    # 2. Fetch recent Trip history (creations and status changes)
-    if user.has_perm('shipments.view_trip'):
-        HistoricalTrip = Trip.history.model 
-        logger.info("Attempting to fetch historical trips.") # <<<<<<< DEBUG LOG
-        
-        historical_trips_base_qs = HistoricalTrip.objects
-        if not is_viewer_or_admin_or_superuser(user):
-            user_trip_ids = Trip.objects.filter(user=user).values_list('id', flat=True)
-            logger.info(f"Non-admin user {user.username}, filtering trip history for trip_ids: {list(user_trip_ids)}") # <<<<<<< DEBUG LOG
-            historical_trips_base_qs = historical_trips_base_qs.filter(instance_id__in=user_trip_ids)
-
-
-        recent_trip_history_qs = historical_trips_base_qs.select_related(
-            'instance__vehicle', 
-            'instance__customer', 
-            'instance__product',
-            'instance__user' 
-        ).order_by('-history_date')[:fetch_limit * 2] 
-        
-        logger.info(f"Found {recent_trip_history_qs.count()} historical trip records after initial fetch for user {user.username}.") # <<<<<<< DEBUG LOG
-
-        processed_trip_creations = set() 
-
-        for history_record in recent_trip_history_qs:
-            logger.info(f"Processing history_record ID: {history_record.history_id}, Type: {history_record.history_type}, Date: {history_record.history_date}, Instance PK: {history_record.instance_id}") # <<<<<<< DEBUG LOG
-            trip_instance = history_record.instance
-            if not trip_instance: 
-                logger.warning(f"Skipping history_record {history_record.history_id} because instance is None.") # <<<<<<< DEBUG LOG
-                continue
-
-            if not (is_viewer_or_admin_or_superuser(user) or trip_instance.user == user):
-                logger.info(f"Skipping history for trip {trip_instance.pk} (owner: {trip_instance.user.username if trip_instance.user else 'N/A'}) due to permission for user {user.username}") # <<<<<<< DEBUG LOG
-                continue
-
-            activity_item = None
-            style_info = TRIP_STATUS_STYLES.get(history_record.status, TRIP_STATUS_STYLES['DEFAULT'])
-
-            if history_record.history_type == '+': 
-                if trip_instance.pk not in processed_trip_creations:
-                    title = f"Loading {history_record.status.lower()} initiated" 
-                    if history_record.status == 'PENDING' or history_record.status == 'KPC_APPROVED' or history_record.status == 'LOADING':
-                        title = f"Loading approval {history_record.get_status_display().lower()}"                    
-                    details = f"Trip {trip_instance.kpc_order_number or f'ID {trip_instance.pk}'} ({trip_instance.product.name})"
-                    if history_record.status == 'PENDING' or history_record.status == 'KPC_APPROVED':
-                         details += " waiting for KPC authorization"
-                    activity_item = {
-                        'type': 'trip_created',
-                        'title': title,
-                        'details': details,
-                        'icon_svg_path': SVG_PATHS[style_info['svg_key']],
-                    }
-                    processed_trip_creations.add(trip_instance.pk)
-            elif history_record.history_type == '~': 
-                prev_history_record = history_record.prev_record
-                if prev_history_record and history_record.status != prev_history_record.status:
-                    title = f"Trip {trip_instance.kpc_order_number or f'ID {trip_instance.pk}'} status changed"
-                    details = f"From '{prev_history_record.get_status_display()}' to '{history_record.get_status_display()}'"
-                    if history_record.status == 'DELIVERED':
-                        title = f"Shipment {trip_instance.bol_number or trip_instance.kpc_order_number or f'ID {trip_instance.pk}'} delivered"
-                        details = f"{trip_instance.total_loaded:,.0f}L to {trip_instance.customer.name}"
-                    activity_item = {
-                        'type': 'trip_status_change',
-                        'title': title,
-                        'details': details,
-                        'icon_svg_path': SVG_PATHS[style_info['svg_key']],
-                    }
-            
-            if activity_item:
-                activity_item.update({
-                    'timestamp': history_record.history_date,
-                    'time_ago': timesince(history_record.history_date, now).split(',')[0] + " ago",
-                    'icon_bg_color': style_info['icon_bg'],
-                    'icon_text_color': style_info['icon_text'],
-                    'link': reverse('shipments:trip-detail', args=[trip_instance.pk])
-                })
-                all_activity.append(activity_item)
-                logger.info(f"Added activity: {activity_item['title']}") # <<<<<<< DEBUG LOG
-            else:
-                logger.info(f"No qualifying activity_item created for history_record {history_record.history_id} (type {history_record.history_type})")
-
-
-    logger.info(f"Total activities collected before sort: {len(all_activity)}") # <<<<<<< DEBUG LOG
-    all_activity.sort(key=lambda x: x['timestamp'], reverse=True)
-    
-    final_activities = []
-    seen_activities_keys = set()
-    for act in all_activity:
-        activity_key = (act['title'], act.get('link', 'no_link')) # Ensure link is handled if missing
-        if activity_key not in seen_activities_keys:
-            final_activities.append(act)
-            seen_activities_keys.add(activity_key)
-            if len(final_activities) >= limit:
-                break
-                
-    logger.info(f"Final activities to be returned (limit {limit}): {len(final_activities)}") # <<<<<<< DEBUG LOG
-    if final_activities:
-        for fa_idx, fa_item in enumerate(final_activities):
-            logger.info(f"Final item {fa_idx + 1}: {fa_item['title']}")
-
-    return final_activities[:limit]
-
-# ... (other view functions like home_view)
-
-@login_required
-def home_view(request):
-    """Main dashboard view with stock summary and notifications."""
-    try:
-        context = {
-            'message': 'Welcome to Sakina Gas Fuel Tracker', # Changed message to match screenshot
-            'description': 'Manage your fuel inventory efficiently.',
-            'is_authenticated_user': request.user.is_authenticated
-        }
-
-        permissions = {
-            'can_view_shipments': request.user.has_perm('shipments.view_shipment'),
-            'can_add_shipment': request.user.has_perm('shipments.add_shipment'),
-            'can_view_trip': request.user.has_perm('shipments.view_trip'),
-            'can_view_product': request.user.has_perm('shipments.view_product'), 
-            'can_view_customer': request.user.has_perm('shipments.view_customer'), 
-            'can_view_vehicle': request.user.has_perm('shipments.view_vehicle'),
-            'can_add_trip': request.user.has_perm('shipments.add_trip')
-        }
-        context.update(permissions)
-
-        shipments_qs = get_user_accessible_shipments(request.user)
-        trips_qs = get_user_accessible_trips(request.user)
-
-        context.update(_calculate_dashboard_stats(shipments_qs, trips_qs, request.user, permissions))
-
-        cache_key = f"dashboard_stock_summary_{request.user.id}"
-        stock_summary = cache.get(cache_key)
-        
-        if stock_summary is None:
-            try:
-                stock_summary = calculate_product_stock_summary(shipments_qs, trips_qs, request.user)
-                cache.set(cache_key, stock_summary, 300)
-            except Exception as e:
-                logger.error(f"Error calculating stock summary: {e}", exc_info=True)
-                stock_summary = {}
-        
-        context['stock_by_product_detailed'] = stock_summary
-
-        if permissions['can_view_trip']:
-            context.update(calculate_chart_data(trips_qs))
-
-        if permissions['can_view_shipments'] or permissions['can_view_trip']: # Ensure notifications are calculated if either perm exists
-            context.update(calculate_notifications(shipments_qs, request.user)) # Aging stock depends on shipments
-            context['recent_activity'] = get_recent_activity(request.user) # Add recent activity
-
-        if permissions['can_view_trip']:
-            context.update(_calculate_trip_quantities_by_product(trips_qs))
-
-        if not (permissions['can_view_shipments'] or permissions['can_view_trip']):
-            context['description'] = 'You do not have permission to view fuel data. Contact admin for access.'
-
-        return render(request, 'shipments/home.html', context)
-        
-    except Exception as e:
-        logger.exception(f"Unexpected error in home_view: {e}")
-        messages.error(request, "An error occurred while loading the dashboard. Please try again.")
-        return render(request, 'shipments/home.html', {
-            'message': 'Welcome to Sakina Gas Fuel Tracker',
-            'description': 'An error occurred while loading dashboard data.',
-            'is_authenticated_user': request.user.is_authenticated,
-            'stock_by_product_detailed': {}, 
-            'loadings_chart_labels': [], 'pms_loadings_data': [], 'ago_loadings_data': [],
-            'aging_stock_notifications': [], 'inactive_product_notifications': [], 'utilized_shipment_notifications': [],
-            'recent_activity': [], # Add empty list on error
-            'trip_quantity_by_product': []
-        })
     
 def apply_shipment_filters(queryset, get_params):
     """Apply filters to shipment queryset with enhanced validation."""
@@ -1402,13 +1206,60 @@ def _calculate_utilized_shipment_notifications(shipments_qs, notifications, toda
         
     except Exception as e:
         logger.error(f"Error calculating utilized shipment notifications: {e}", exc_info=True)
-# --- Main Views ---
+
+def get_latest_loadings(user, limit=5):
+    """Get the latest loaded trips (trucks that have completed loading)."""
+    logger.info(f"Getting latest {limit} loadings for user: {user.username}")
+    
+    try:
+        # Get user accessible trips that are in LOADED status or beyond
+        # These are trips that have completed the loading process
+        loaded_statuses = ['LOADED', 'GATEPASSED', 'TRANSIT', 'DELIVERED']
+        
+        trips_qs = get_user_accessible_trips(user).filter(
+            status__in=loaded_statuses
+        ).select_related(
+            'vehicle', 'product', 'customer', 'destination'
+        ).order_by('-loading_date', '-loading_time', '-created_at')[:limit]
+        
+        latest_loadings = []
+        for trip in trips_qs:
+            # Get truck number - prefer plate number, fallback to truck number if available
+            truck_number = trip.vehicle.plate_number
+            if hasattr(trip.vehicle, 'trailer_number') and trip.vehicle.trailer_number:
+                truck_number = f"{truck_number} ({trip.vehicle.trailer_number})"
+            
+            # Get destination name
+            destination = trip.destination.name if trip.destination else "Unknown"
+            
+            latest_loadings.append({
+                'truck_number': truck_number,
+                'product': trip.product.name,
+                'customer': trip.customer.name,
+                'destination': destination,
+                'loading_date': trip.loading_date,
+                'loading_time': trip.loading_time,
+                'status': trip.get_status_display(),
+                'total_loaded': trip.total_loaded,
+                'link': reverse('shipments:trip-detail', args=[trip.pk]),
+                'kpc_order': trip.kpc_order_number or trip.bol_number or f"Trip {trip.id}"
+            })
+        
+        logger.info(f"Retrieved {len(latest_loadings)} latest loadings")
+        return latest_loadings
+        
+    except Exception as e:
+        logger.error(f"Error getting latest loadings: {e}", exc_info=True)
+        return []
+
+
+# Update the home_view function to include latest loadings
 @login_required
 def home_view(request):
     """Main dashboard view with stock summary and notifications."""
     try:
         context = {
-            'message': 'Welcome to Sakina Gas Company',
+            'message': 'Welcome to Sakina Gas Fuel Tracker',
             'description': 'Manage your fuel inventory efficiently.',
             'is_authenticated_user': request.user.is_authenticated
         }
@@ -1445,8 +1296,38 @@ def home_view(request):
         if permissions['can_view_trip']:
             context.update(calculate_chart_data(trips_qs))
 
-        if permissions['can_view_shipments']:
-            context.update(calculate_notifications(shipments_qs, request.user))
+        # Calculate notifications and latest loadings
+        if permissions['can_view_shipments'] or permissions['can_view_trip']:
+            # Add notifications
+            try:
+                context.update(calculate_notifications(shipments_qs, request.user))
+            except Exception as e:
+                logger.error(f"Error calculating notifications: {e}", exc_info=True)
+                context.update({
+                    'aging_stock_notifications': [],
+                    'inactive_product_notifications': [],
+                    'utilized_shipment_notifications': []
+                })
+            
+            # Add latest loadings
+            if permissions['can_view_trip']:
+                try:
+                    latest_loadings = get_latest_loadings(request.user, limit=5)
+                    context['latest_loadings'] = latest_loadings
+                    logger.info(f"Added {len(latest_loadings)} latest loadings to context")
+                except Exception as e:
+                    logger.error(f"Error getting latest loadings: {e}", exc_info=True)
+                    context['latest_loadings'] = []
+            else:
+                context['latest_loadings'] = []
+            
+        else:
+            context.update({
+                'aging_stock_notifications': [],
+                'inactive_product_notifications': [],
+                'utilized_shipment_notifications': [],
+                'latest_loadings': []
+            })
 
         if permissions['can_view_trip']:
             context.update(_calculate_trip_quantities_by_product(trips_qs))
@@ -1454,22 +1335,22 @@ def home_view(request):
         if not (permissions['can_view_shipments'] or permissions['can_view_trip']):
             context['description'] = 'You do not have permission to view fuel data. Contact admin for access.'
 
+        logger.info(f"Home view context keys: {list(context.keys())}")
+
         return render(request, 'shipments/home.html', context)
         
     except Exception as e:
         logger.exception(f"Unexpected error in home_view: {e}")
         messages.error(request, "An error occurred while loading the dashboard. Please try again.")
         return render(request, 'shipments/home.html', {
-            'message': 'Welcome to Sakina Gas Company',
+            'message': 'Welcome to Sakina Gas Fuel Tracker',
             'description': 'An error occurred while loading dashboard data.',
-            'is_authenticated_user': request.user.is_authenticated,
-            'stock_by_product_detailed': {}, 
-            'loadings_chart_labels': [], 'pms_loadings_data': [], 'ago_loadings_data': [],
-            'aging_stock_notifications': [], 'inactive_product_notifications': [], 'utilized_shipment_notifications': [],
-            'trip_quantity_by_product': []
+            'aging_stock_notifications': [],
+            'inactive_product_notifications': [],
+            'utilized_shipment_notifications': [],
+            'latest_loadings': []
         })
-
-
+    
 def _calculate_dashboard_stats(shipments_qs, trips_qs, user, permissions):
     """Calculate overall dashboard statistics, respecting user permissions."""
     stats = {

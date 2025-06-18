@@ -19,6 +19,9 @@ urlpatterns = [
     path('trips/edit/<int:pk>/', views.trip_edit_view, name='trip-edit'),
     path('trips/delete/<int:pk>/', views.trip_delete_view, name='trip-delete'),
     path('trips/upload-authority/', views.upload_loading_authority_view, name='trip-upload-authority'),
+    
+    # REMOVED: Debug recent activity route
+    # path('debug/recent-activity/', views.debug_recent_activity, name='debug-recent-activity'),
 
     path('signup/', views.signup_view, name='signup'),
     
