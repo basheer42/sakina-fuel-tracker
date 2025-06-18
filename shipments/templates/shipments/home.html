@@ -576,6 +576,87 @@
         </div>
         {% endif %}
 
+<!-- Add this section right after the Product Summary section in your home.html template -->
+
+        <!-- Latest Loadings Section -->
+        {% if can_view_trip and latest_loadings %}
+        <div class="sakina-card rounded-2xl p-6 mb-8">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-900">Latest Loadings</h3>
+                <a href="{% url 'shipments:trip-list' %}" class="text-blue-600 hover:text-blue-700 font-medium text-sm">View All Loadings</a>
+            </div>
+            
+            <div class="space-y-4">
+                {% for loading in latest_loadings %}
+                <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                            <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z"/>
+                        </svg>
+                    </div>
+                    
+                    <div class="flex-1">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Truck</p>
+                                <p class="font-bold text-gray-900">{{ loading.truck_number }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Product</p>
+                                <p class="font-semibold text-blue-600">{{ loading.product }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Customer</p>
+                                <p class="font-semibold text-orange-600">{{ loading.customer }}</p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Destination</p>
+                                <p class="font-semibold text-green-600">{{ loading.destination }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between mt-3">
+                            <div class="flex items-center gap-4 text-sm text-gray-600">
+                                <span>{{ loading.loading_date|date:"M d, Y" }}</span>
+                                {% if loading.loading_time %}
+                                <span>{{ loading.loading_time|time:"H:i" }}</span>
+                                {% endif %}
+                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium
+                                    {% if loading.status == 'Delivered to Customer' %}bg-green-100 text-green-800
+                                    {% elif loading.status == 'Gatepassed from Depot' %}bg-blue-100 text-blue-800
+                                    {% elif loading.status == 'Loaded from Depot (BoL Received)' %}bg-purple-100 text-purple-800
+                                    {% elif loading.status == 'In Transit to Customer' %}bg-yellow-100 text-yellow-800
+                                    {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                    {{ loading.status }}
+                                </span>
+                            </div>
+                            
+                            <div class="flex items-center gap-3">
+                                <span class="text-sm font-medium text-gray-700">{{ loading.total_loaded|floatformat:0 }}L</span>
+                                <a href="{{ loading.link }}" class="text-blue-600 hover:text-blue-700 font-medium text-sm">View Details</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
+                    <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                        <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
+                            <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z"/>
+                        </svg>
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-medium text-gray-700">No recent loadings</p>
+                        <p class="text-sm text-gray-500">Recent truck loadings will appear here.</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        
         <!-- Total Dispatched by Product (Using new card styling) -->
         {% if can_view_trip and trip_quantity_by_product %}
             <div class="sakina-card rounded-2xl p-6 mb-8"> 
@@ -628,43 +709,6 @@
                        </span>
                   </a>
             {% endif %}
-        </div>
-
-        <!-- Recent Activity -->
-        <div class="sakina-card rounded-2xl p-6 mb-8">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-gray-900">Recent Activity</h3>
-                <a href="#" class="text-blue-600 hover:text-blue-700 font-medium text-sm">View All</a> {# Link to a future activity log page #}
-            </div>
-            <div class="space-y-4">
-                {% for activity in recent_activity %}
-                <div class="flex items-center gap-4 p-4 {{ activity.icon_bg_color|default:'bg-gray-50' }} rounded-xl">
-                    <div class="w-10 h-10 {{ activity.icon_bg_color|default:'bg-gray-100' }} rounded-full flex items-center justify-center">
-                        <svg class="w-5 h-5 {{ activity.icon_text_color|default:'text-gray-600' }}" fill="currentColor" viewBox="0 0 20 20">
-                            {{ activity.icon_svg_path|safe }}
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <a href="{{ activity.link }}" class="block font-medium text-gray-900 hover:text-blue-600 transition-colors">
-                            {{ activity.title }}
-                        </a>
-                        <p class="text-sm text-gray-600">{{ activity.details }} • {{ activity.time_ago }}</p>
-                    </div>
-                </div>
-                {% empty %}
-                <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-xl">
-                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                        <svg class="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clip-rule="evenodd" />
-                        </svg>
-                    </div>
-                    <div class="flex-1">
-                        <p class="font-medium text-gray-700">No recent activity</p>
-                        <p class="text-sm text-gray-500">Check back later for updates.</p>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
         </div>
 
     {% else %}
