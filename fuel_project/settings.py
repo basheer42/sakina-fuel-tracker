@@ -14,6 +14,16 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
+# Gemini AI Configuration
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+
+# WhatsApp Configuration
+WHATSAPP_CONFIG = {
+    'VERIFY_TOKEN': config('WHATSAPP_VERIFY_TOKEN', default=''),
+    'ACCESS_TOKEN': config('WHATSAPP_ACCESS_TOKEN', default=''),
+    'PHONE_NUMBER_ID': config('WHATSAPP_PHONE_NUMBER_ID', default=''),
+}
+
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
 INSTALLED_APPS = [

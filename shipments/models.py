@@ -607,3 +607,11 @@ class ShipmentDepletion(models.Model):
             models.Index(fields=['created_at']),
             models.Index(fields=['trip', 'created_at']),
         ]
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    phone_number = models.CharField(max_length=20, unique=True, null=True, blank=True)
+    whatsapp_enabled = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return f"{self.user.username} - {self.phone_number}"
