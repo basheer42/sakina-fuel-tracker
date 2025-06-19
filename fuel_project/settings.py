@@ -50,11 +50,13 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'fuel_project.urls'
 
+# Replace the TEMPLATES section in your settings.py with this:
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [os.path.join(BASE_DIR, 'templates')],
-        'APP_DIRS': True,
+        'APP_DIRS': True,  # Keep this as True for development and production
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -65,6 +67,18 @@ TEMPLATES = [
         },
     },
 ]
+
+# Remove or comment out the Performance Settings section that modifies TEMPLATES
+# Performance Settings
+if not DEBUG:
+    # Don't modify TEMPLATES for now - this was causing the conflict
+    pass
+    # TEMPLATES[0]['OPTIONS']['loaders'] = [
+    #     ('django.template.loaders.cached.Loader', [
+    #         'django.template.loaders.filesystem.Loader',
+    #         'django.template.loaders.app_directories.Loader',
+    #     ]),
+    # ]
 
 WSGI_APPLICATION = 'fuel_project.wsgi.application'
 
