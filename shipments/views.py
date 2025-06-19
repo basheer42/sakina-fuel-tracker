@@ -8,6 +8,10 @@ from calendar import monthrange
 from collections import defaultdict
 from decimal import Decimal, InvalidOperation
 from django.utils.timesince import timesince # Add this import
+from django.contrib.auth.models import User
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from .models import UserProfile
 
 import pdfplumber
 from django.conf import settings
@@ -2532,3 +2536,53 @@ def handler403(request, exception):
     """Custom 403 permission denied error handler."""
     logger.warning(f"403 Permission Denied: Path='{request.path}', User='{request.user}', Exception='{exception}'")
     return render(request, '403.html', {'exception': exception}, status=403)
+
+def setup_admin(request):
+    """One-time setup for admin user and phone number"""
+    if request.method == 'POST':
+        try:
+            # Create admin user if doesn't exist
+            admin_user, created = User.objects.get_or_create(
+                username='admin',
+                defaults={
+                    'email': 'admin@sakinagas.com',
+                    'is_staff': True,
+                    'is_superuser': True
+                }
+            )
+            
+            if created:
+                admin_user.set_password('SakinaAdmin2025!')  # Change this password
+                admin_user.save()
+            
+            # Add phone number from POST data
+            phone_number = request.POST.get('phone_number')
+            if phone_number:
+                profile, created = UserProfile.objects.get_or_create(
+                    user=admin_user,
+                    defaults={'phone_number': phone_number, 'whatsapp_enabled': True}
+                )
+                if not created:
+                    profile.phone_number = phone_number
+                    profile.whatsapp_enabled = True
+                    profile.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Admin user created/updated. Phone: {phone_number}',
+                'admin_url': '/admin/',
+                'username': 'admin',
+                'password': 'SakinaAdmin2025!'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'error': str(e)})
+    
+    # GET request - show form
+    return JsonResponse({
+        'message': 'Send POST request with phone_number to setup admin',
+        'example': 'POST with phone_number=+254712345678'
+    })
+
+# Add this to your shipments/urls.py urlpatterns list:
+# path('setup-admin/', views.setup_admin, name='setup-admin'),
