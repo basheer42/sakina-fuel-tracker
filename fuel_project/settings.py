@@ -26,6 +26,10 @@ WHATSAPP_CONFIG = {
 
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
+# Railway/Render deployment configuration
+if 'RAILWAY_ENVIRONMENT' in os.environ or 'RENDER' in os.environ:
+    ALLOWED_HOSTS = ['*']  # Platform handles this securely
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -39,6 +43,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Added for static files in production
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -50,13 +55,12 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'fuel_project.urls'
 
-# Replace the TEMPLATES section in your settings.py with this:
-
+# FIXED TEMPLATES CONFIGURATION - No loaders conflict
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [os.path.join(BASE_DIR, 'templates')],
-        'APP_DIRS': True,  # Keep this as True for development and production
+        'APP_DIRS': True,  # This stays True - no loaders defined
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -68,24 +72,20 @@ TEMPLATES = [
     },
 ]
 
-# Remove or comment out the Performance Settings section that modifies TEMPLATES
-# Performance Settings
-if not DEBUG:
-    # Don't modify TEMPLATES for now - this was causing the conflict
-    pass
-    # TEMPLATES[0]['OPTIONS']['loaders'] = [
-    #     ('django.template.loaders.cached.Loader', [
-    #         'django.template.loaders.filesystem.Loader',
-    #         'django.template.loaders.app_directories.Loader',
-    #     ]),
-    # ]
-
 WSGI_APPLICATION = 'fuel_project.wsgi.application'
 
 # Database Configuration
 DATABASE_ENGINE = config('DATABASE_ENGINE', default='sqlite')
 
-if DATABASE_ENGINE == 'postgresql':
+# Production database configuration (Railway/Render)
+if 'DATABASE_URL' in os.environ:
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=config('DATABASE_URL')
+        )
+    }
+elif DATABASE_ENGINE == 'postgresql':
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -121,12 +121,15 @@ TIME_ZONE = 'Africa/Nairobi'
 USE_I18N = True
 USE_TZ = True
 
-# Static files (CSS, JavaScript, Images)
+# Static files (CSS, JavaScript, Images) - Updated for production
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ] if (BASE_DIR / 'static').exists() else []
+
+# WhiteNoise configuration for serving static files in production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
 MEDIA_URL = '/media/'
@@ -174,7 +177,18 @@ CSRF_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_HTTPONLY = True
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='', cast=lambda v: [s.strip() for s in v.split(',')] if v else [])
 
-# Security Settings
+# Update CSRF_TRUSTED_ORIGINS for production
+if 'RAILWAY_ENVIRONMENT' in os.environ:
+    railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN', '')
+    if railway_domain:
+        CSRF_TRUSTED_ORIGINS.append(f'https://{railway_domain}')
+
+if 'RENDER' in os.environ:
+    render_domain = os.environ.get('RENDER_EXTERNAL_HOSTNAME', '')
+    if render_domain:
+        CSRF_TRUSTED_ORIGINS.append(f'https://{render_domain}')
+
+# Security Settings - Enhanced for production
 if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
@@ -182,7 +196,8 @@ if not DEBUG:
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
-    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Custom Settings for Application
 FUEL_TRACKER_SETTINGS = {
@@ -201,9 +216,10 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = max_size_bytes
 DATA_UPLOAD_MAX_MEMORY_SIZE = max_size_bytes
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
-# Logging Configuration
+# Logging Configuration - Simplified for production
 LOGS_DIR = BASE_DIR / 'logs'
-LOGS_DIR.mkdir(exist_ok=True)
+if not ('RAILWAY_ENVIRONMENT' in os.environ or 'RENDER' in os.environ):
+    LOGS_DIR.mkdir(exist_ok=True)
 
 LOGGING = {
     'version': 1,
@@ -218,77 +234,26 @@ LOGGING = {
             'style': '{',
         },
     },
-    'filters': {
-        'require_debug_false': {
-            '()': 'django.utils.log.RequireDebugFalse',
-        },
-        'require_debug_true': {
-            '()': 'django.utils.log.RequireDebugTrue',
-        },
-    },
     'handlers': {
         'console': {
-            'level': 'DEBUG',
-            'filters': ['require_debug_true'],
+            'level': 'INFO',
             'class': 'logging.StreamHandler',
             'formatter': 'simple'
         },
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOGS_DIR / 'django.log',
-            'maxBytes': 1024*1024*5,  # 5MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-        'error_file': {
-            'level': 'ERROR',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': LOGS_DIR / 'error.log',
-            'maxBytes': 1024*1024*5,  # 5MB
-            'backupCount': 5,
-            'formatter': 'verbose',
-        },
-        'mail_admins': {
-            'level': 'ERROR',
-            'filters': ['require_debug_false'],
-            'class': 'django.utils.log.AdminEmailHandler',
-            'formatter': 'verbose',
-        },
     },
     'root': {
-        'handlers': ['console', 'file'],
+        'handlers': ['console'],
         'level': 'INFO',
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file', 'mail_admins'],
+            'handlers': ['console'],
             'level': 'INFO',
-            'propagate': False,
-        },
-        'django.request': {
-            'handlers': ['error_file', 'mail_admins'],
-            'level': 'ERROR',
-            'propagate': False,
-        },
-        'django.security': {
-            'handlers': ['error_file', 'mail_admins'],
-            'level': 'ERROR',
             'propagate': False,
         },
         'shipments': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'DEBUG' if DEBUG else 'INFO',
-            'propagate': False,
-        },
-        'shipments.models': {
-            'handlers': ['file', 'error_file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'shipments.views': {
-            'handlers': ['file'],
-            'level': 'INFO',
             'propagate': False,
         },
     },
@@ -316,7 +281,7 @@ if EMAIL_PROCESSING_ENABLED and not (is_testing or is_migrating):
         except Exception:
             missing_email_settings.append(setting_name)
     
-    if missing_email_settings:
+    if missing_email_settings and not ('RAILWAY_ENVIRONMENT' in os.environ or 'RENDER' in os.environ):
         print(f"Warning: Missing required email processing settings: {', '.join(missing_email_settings)}")
         print("Email processing will be disabled. Set EMAIL_PROCESSING_ENABLED=False to suppress this warning.")
         EMAIL_PROCESSING_ENABLED = False
@@ -348,18 +313,8 @@ ADMINS = [
 ]
 MANAGERS = ADMINS
 
-# Performance Settings
-if not DEBUG:
-    # Use cached template loader in production
-    TEMPLATES[0]['OPTIONS']['loaders'] = [
-        ('django.template.loaders.cached.Loader', [
-            'django.template.loaders.filesystem.Loader',
-            'django.template.loaders.app_directories.Loader',
-        ]),
-    ]
-
 # Database Connection Pooling (if using PostgreSQL)
-if DATABASE_ENGINE == 'postgresql':
+if DATABASE_ENGINE == 'postgresql' or 'DATABASE_URL' in os.environ:
     DATABASES['default']['CONN_MAX_AGE'] = 60
 
 # Internationalization and Localization
@@ -428,4 +383,8 @@ if DEBUG and not (is_testing or is_migrating):
     print(f"  - CACHE: {CACHES['default']['BACKEND']}")
     print(f"  - TIME_ZONE: {TIME_ZONE}")
     print(f"  - STATIC_ROOT: {STATIC_ROOT}")
-    print(f"  - LOGS_DIR: {LOGS_DIR}")
+    print(f"  - GEMINI_API_KEY: {'✓ Set' if GEMINI_API_KEY else '✗ Missing'}")
+    print(f"  - WHATSAPP_CONFIG: {'✓ Configured' if WHATSAPP_CONFIG['VERIFY_TOKEN'] else '✗ Missing'}")
+
+# REMOVED PROBLEMATIC TEMPLATE LOADERS - This was causing the error
+# No template loader customization in production - keeping it simple
