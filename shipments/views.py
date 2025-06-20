@@ -2537,9 +2537,13 @@ def handler403(request, exception):
     logger.warning(f"403 Permission Denied: Path='{request.path}', User='{request.user}', Exception='{exception}'")
     return render(request, '403.html', {'exception': exception}, status=403)
 
+@csrf_exempt
 def setup_admin(request):
     """One-time setup for admin user and phone number"""
-    if request.method == 'POST':
+    if request.method == 'GET':
+        # Allow GET request with phone number as parameter
+        phone_number = request.GET.get('phone', '+254703616091')
+        
         try:
             # Create admin user if doesn't exist
             admin_user, created = User.objects.get_or_create(
@@ -2552,36 +2556,35 @@ def setup_admin(request):
             )
             
             if created:
-                admin_user.set_password('SakinaAdmin2025!')  # Change this password
+                admin_user.set_password('SakinaAdmin2025!')
                 admin_user.save()
             
-            # Add phone number from POST data
-            phone_number = request.POST.get('phone_number')
-            if phone_number:
-                profile, created = UserProfile.objects.get_or_create(
-                    user=admin_user,
-                    defaults={'phone_number': phone_number, 'whatsapp_enabled': True}
-                )
-                if not created:
-                    profile.phone_number = phone_number
-                    profile.whatsapp_enabled = True
-                    profile.save()
+            # Add phone number
+            from .models import UserProfile
+            profile, profile_created = UserProfile.objects.get_or_create(
+                user=admin_user,
+                defaults={'phone_number': phone_number, 'whatsapp_enabled': True}
+            )
+            if not profile_created:
+                profile.phone_number = phone_number
+                profile.whatsapp_enabled = True
+                profile.save()
             
             return JsonResponse({
                 'success': True,
-                'message': f'Admin user created/updated. Phone: {phone_number}',
-                'admin_url': '/admin/',
+                'message': f'Admin user {"created" if created else "updated"}. Phone: {phone_number}',
                 'username': 'admin',
-                'password': 'SakinaAdmin2025!'
+                'password': 'SakinaAdmin2025!',
+                'admin_url': '/admin/',
+                'phone_linked': phone_number
             })
             
         except Exception as e:
             return JsonResponse({'error': str(e)})
     
-    # GET request - show form
     return JsonResponse({
-        'message': 'Send POST request with phone_number to setup admin',
-        'example': 'POST with phone_number=+254712345678'
+        'message': 'Use GET with ?phone=+254703616091 to setup admin',
+        'example_url': '/setup-admin/?phone=+254703616091'
     })
 
 # Add this to your shipments/urls.py urlpatterns list:
