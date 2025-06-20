@@ -4,7 +4,7 @@ from django.db.models import Sum, DecimalField as DjangoDecimalField
 from decimal import Decimal
 from .models import (
     Shipment, Customer, Vehicle, Product, Destination,
-    Trip, LoadingCompartment, ShipmentDepletion
+    Trip, LoadingCompartment, ShipmentDepletion, UserProfile
 )
 
 @admin.register(Destination)
@@ -119,3 +119,10 @@ class ShipmentDepletionAdmin(admin.ModelAdmin):
     readonly_fields = ('trip', 'shipment_batch', 'quantity_depleted', 'created_at')
     def has_add_permission(self, request): return False
     def has_change_permission(self, request, obj=None): return False
+
+@admin.register(UserProfile)
+class UserProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'phone_number', 'whatsapp_enabled', 'created_at')
+    search_fields = ('user__username', 'phone_number')
+    list_filter = ('whatsapp_enabled', 'created_at')
+    readonly_fields = ('created_at',)
