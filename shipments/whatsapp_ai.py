@@ -159,8 +159,22 @@ class WhatsAppGeminiAssistant:
     def get_user_context(self, phone_number):
         """Get user information based on phone number"""
         try:
-            # You'll need to link phone numbers to users in your system
-            user = User.objects.filter(userprofile__phone_number=phone_number).first()
+            logger.info(f"🔥 Looking for user with phone: '{phone_number}'")
+        
+            # Try multiple phone number formats
+            phone_formats = [
+                phone_number,  # Original format from WhatsApp
+                f"+{phone_number}",  # Add + prefix
+                phone_number.replace('+', ''),  # Remove + if present
+            ]
+        
+            user = None
+            for phone_format in phone_formats:
+                user = User.objects.filter(userprofile__phone_number=phone_format).first()
+                if user:
+                    logger.info(f"🔥 Found user with phone format: '{phone_format}'")
+                    break
+        
             if user:
                 return {
                     'username': user.username,
@@ -168,7 +182,10 @@ class WhatsAppGeminiAssistant:
                     'permissions': list(user.get_all_permissions()),
                     'is_admin': user.is_staff
                 }
+        
+            logger.warning(f"🔥 No user found for phone: {phone_number} (tried formats: {phone_formats})")
             return {'username': 'Guest', 'permissions': [], 'user_id': None}
+        
         except Exception as e:
             logger.error(f"Error getting user context: {e}")
             return {'username': 'Guest', 'permissions': [], 'user_id': None}
