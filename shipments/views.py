@@ -2543,6 +2543,10 @@ def setup_admin(request):
     if request.method == 'GET':
         # Allow GET request with phone number as parameter
         phone_number = request.GET.get('phone', '+254703616091')
+
+        # Ensure phone number starts with +
+        if phone_number and not phone_number.startswith('+'):
+            phone_number = '+' + phone_number
         
         try:
             # Create admin user if doesn't exist
