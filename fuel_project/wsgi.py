@@ -1,16 +1,16 @@
-"""
-WSGI config for fuel_project project.
-
-It exposes the WSGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/5.2/howto/deployment/wsgi/
-"""
+# WSGI config for Sakinagas-Basheer42.pythonanywhere.com
 
 import os
+import sys
 
+# Add your project directory to the sys.path
+path = '/home/sakinagas-Basheer42/sakina-fuel-tracker'
+if path not in sys.path:
+    sys.path.insert(0, path)
+
+# Set the Django settings module
+os.environ['DJANGO_SETTINGS_MODULE'] = 'fuel_project.settings'
+
+# Import Django's WSGI handler
 from django.core.wsgi import get_wsgi_application
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'fuel_project.settings')
-
 application = get_wsgi_application()
