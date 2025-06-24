@@ -160,8 +160,11 @@ class Command(BaseCommand):
                             self.stdout.write(self.style.WARNING(f"  Could not determine status update for order {kpc_order_no}. Skipping."))
                             logger.warning(f"Status Email Processing: Could not determine status for KPC Order No {kpc_order_no}, Email ID {email_id_str}.")
                             continue
-                        self.stdout.write(f"  Parsed Status: {parsed_status}, Comment: '{parsed_comment[:50].replace('\n', ' ')}...'")
+                        # Fix the f-string issue by creating a variable for the comment preview
+                        comment_preview = parsed_comment[:50].replace('\n', ' ')
+                        self.stdout.write(f"  Parsed Status: {parsed_status}, Comment: '{comment_preview}...'")
                         
+                        # Fixed: Use kpc_order_number instead of kpc_order_no
                         trip_to_update = Trip.objects.select_for_update().get(kpc_order_number__iexact=kpc_order_no)
                         if trip_to_update.status == parsed_status:
                             self.stdout.write(self.style.NOTICE(f"  Trip {trip_to_update.id} (Order: {kpc_order_no}) already in status '{parsed_status}'. No update."))
@@ -181,8 +184,8 @@ class Command(BaseCommand):
                         processed_successfully_ids.append(email_id_bytes)
                 
                 except Trip.DoesNotExist: 
-                    self.stdout.write(self.style.ERROR(f"  Trip with KPC Order No '{kpc_order_no}' not found. Email Subject: '{email_subject}'"))
-                    logger.error(f"Status Email Processing: Trip for KPC Order No {kpc_order_no} not found. Email ID {email_id_str}.")
+                    self.stdout.write(self.style.ERROR(f"  Trip with KPC Order Number '{kpc_order_no}' not found. Email Subject: '{email_subject}'"))
+                    logger.error(f"Status Email Processing: Trip for KPC Order Number {kpc_order_no} not found. Email ID {email_id_str}.")
                 except ValidationError as e: 
                     self.stdout.write(self.style.ERROR(f"  VALIDATION ERROR updating Trip {kpc_order_no}: {e}"))
                     logger.error(f"Status Email Processing: ValidationError for Trip {kpc_order_no} (Email ID {email_id_str}): {e}", exc_info=True)

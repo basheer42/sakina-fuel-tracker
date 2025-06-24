@@ -91,11 +91,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'fuel_project.wsgi.application'
 
-# DATABASE CONFIGURATION
-DATABASE_ENGINE = config('DATABASE_ENGINE', default='sqlite')
-
-# Force MySQL for production (PythonAnywhere)
-if DATABASE_ENGINE == 'mysql' or not DEBUG:
+# Force MySQL on PythonAnywhere
+if not DEBUG or 'pythonanywhere.com' in os.environ.get('HTTP_HOST', ''):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -103,6 +100,30 @@ if DATABASE_ENGINE == 'mysql' or not DEBUG:
             'USER': 'Basheer42',
             'PASSWORD': config('MYSQL_PASSWORD'),
             'HOST': 'Basheer42.mysql.pythonanywhere-services.com',
+            'PORT': '3306',
+            'OPTIONS': {
+                'sql_mode': 'STRICT_TRANS_TABLES',
+                'charset': 'utf8mb4',
+                'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+            }
+        }
+    }
+
+# DATABASE CONFIGURATION
+DATABASE_ENGINE = config('DATABASE_ENGINE', default='sqlite')
+
+# PythonAnywhere MySQL Configuration
+if IS_PYTHONANYWHERE:
+    # Extract username from HTTP_HOST (e.g., basheer42.pythonanywhere.com -> basheer42)
+    username = get_host().split('.')[0] if get_host() else 'username'
+    
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.mysql',
+            'NAME': f'{username}$sakinafueldb',
+            'USER': username,
+            'PASSWORD': config('MYSQL_PASSWORD'),
+            'HOST': f'{username}.mysql.pythonanywhere-services.com',
             'PORT': '3306',
             'OPTIONS': {
                 'sql_mode': 'STRICT_TRANS_TABLES',

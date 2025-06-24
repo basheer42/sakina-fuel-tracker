@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} - Fuel Tracker{% endblock title %}
+
+{% block content %}
+<style>
+    /* Custom Sakina Gas Brand Colors */
+    :root {
+        --sakina-blue-deep: #0f172a;
+        --sakina-blue-primary: #1e3a8a;
+        --sakina-blue-bright: #3b82f6;
+        --sakina-orange-warm: #ea580c;
+        --sakina-orange-bright: #f97316;
+        --sakina-red-accent: #dc2626;
+    }
+
+    .sakina-card {
+        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(59, 130, 246, 0.1);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-radius: 1rem;
+    }
+
+    .sakina-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        border-color: rgba(234, 88, 12, 0.2);
+    }
+
+    .sakina-btn {
+        background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-bright) 50%, var(--sakina-orange-warm) 100%);
+        position: relative;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        color: white;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+
+    .sakina-btn::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+        transition: left 0.5s;
+    }
+
+    .sakina-btn:hover::before {
+        left: 100%;
+    }
+
+    .sakina-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 15px 35px rgba(30, 58, 138, 0.4);
+    }
+
+    .table-enhanced {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: 16px;
+        overflow: hidden; /* Important for border-radius clipping */
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    .table-row-hover {
+        transition: all 0.3s ease;
+    }
+
+    .table-row-hover:hover {
+        background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(234, 88, 12, 0.02) 100%);
+    }
+</style>
+
+<div class="max-w-6xl mx-auto">
+    <!-- Header Section -->
+    <div class="sakina-card p-8 mb-8">
+        <div class="flex items-center gap-6">
+            <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-4xl font-bold text-gray-900">{{ page_title }}</h2>
+                <p class="text-gray-600 mt-2">Monthly inventory movement and stock analysis</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Month/Year Selection Form -->
+    <div class="sakina-card p-6 mb-8">
+        <h3 class="text-xl font-bold text-gray-800 mb-4">Select Report Period</h3>
+        <form method="get" action="{% url 'shipments:monthly-stock-summary' %}">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 items-end">
+                <div>
+                    <label for="month_select" class="block text-sm font-medium text-gray-700 mb-2">Select Month:</label>
+                    <select name="month" id="month_select" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                        {% for month_val, month_display_name in months_for_dropdown %}
+                            <option value="{{ month_val }}" {% if month_val == selected_month %}selected{% endif %}>
+                                {{ month_display_name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="year_select" class="block text-sm font-medium text-gray-700 mb-2">Select Year:</label>
+                    <select name="year" id="year_select" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors">
+                        {% for year_val in available_years %}
+                            <option value="{{ year_val }}" {% if year_val == selected_year %}selected{% endif %}>
+                                {{ year_val }}
+                            </option>
+                        {% endfor %}
+                        {% if not available_years %}
+                            <option value="{{ selected_year }}">{{ selected_year }}</option>
+                        {% endif %}
+                    </select>
+                </div>
+                <div>
+                    <button type="submit" class="sakina-btn w-full">
+                        <span class="relative z-10">View Report</span>
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Summary Table -->
+    {% if summary_data %}
+        <div class="sakina-card p-6 mb-8">
+            <h3 class="text-xl font-bold text-gray-800 mb-6">Stock Movement Summary</h3>
+            <div class="table-enhanced">
+                <div class="overflow-x-auto">
+                    <table class="min-w-full">
+                        <thead>
+                            <tr class="bg-gradient-to-r from-gray-50 to-gray-100">
+                                <th class="py-4 px-6 text-left text-sm font-semibold text-gray-700">Product</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold text-gray-700">Opening Stock (L)</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold text-gray-700">Received This Month (L)</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold text-gray-700">Dispatched This Month (L)</th>
+                                <th class="py-4 px-6 text-right text-sm font-semibold text-gray-700">Closing Stock (L)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            {% for item in summary_data %}
+                            <tr class="table-row-hover">
+                                <td class="py-4 px-6 text-left font-medium text-gray-900">{{ item.product_name }}</td>
+                                <td class="py-4 px-6 text-right text-gray-700">{{ item.opening_stock|floatformat:2 }}</td>
+                                <td class="py-4 px-6 text-right text-green-600 font-medium">{{ item.stock_in_month|floatformat:2 }}</td>
+                                <td class="py-4 px-6 text-right text-red-600 font-medium">{{ item.stock_out_month|floatformat:2 }}</td>
+                                <td class="py-4 px-6 text-right font-bold
+                                    {% if item.closing_stock > 0 %}text-green-700
+                                    {% elif item.closing_stock < 0 %}text-red-700
+                                    {% else %}text-gray-700{% endif %}">
+                                    {{ item.closing_stock|floatformat:2 }}
+                                </td>
+                            </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-8">
+                                        <div class="text-gray-500 italic">No product data to summarize for this period.</div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="sakina-card p-6 mb-8">
+            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-6 rounded-xl">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <svg class="w-4 h-4 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-yellow-800">No Data to Summarize</p>
+                        <p class="text-yellow-700 mt-1">Please select a month and year to view the summary, or there might be no shipment or loading data entered yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Navigation -->
+    <div class="text-center">
+        <a href="{% url 'shipments:home' %}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0L2.586 11H17a1 1 0 110 2H2.586l3.707 3.707a1 1 0 01-1.414 1.414l-5.414-5.414a1 1 0 010-1.414L4.879 6.293a1 1 0 011.414 1.414L2.586 11z" clip-rule="evenodd"/>
+            </svg>
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock content %}
