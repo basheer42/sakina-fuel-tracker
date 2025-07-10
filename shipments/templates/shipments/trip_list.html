@@ -55,7 +55,7 @@
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border-radius: 16px;
-        overflow: hidden; /* Important for border-radius clipping */
+        overflow: hidden;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     }
 
@@ -142,48 +142,171 @@
         padding: 1.5rem;
     }
 
-    /* New Styles for Table Headers */
+    /* Table Headers */
     .themed-table-header th {
-        background-color: #1e3a8a; /* Darker blue from Sakina theme */
-        color: white; /* White text for good contrast */
-        padding-top: 1rem; /* py-4 */
-        padding-bottom: 1rem; /* py-4 */
-        padding-left: 1.5rem; /* px-6 */
-        padding-right: 1.5rem; /* px-6 */
+        background-color: #1e3a8a;
+        color: white;
+        padding-top: 1rem;
+        padding-bottom: 1rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
         text-align: left;
-        font-size: 0.875rem; /* text-sm */
-        font-weight: 600; /* font-semibold */
+        font-size: 0.875rem;
+        font-weight: 600;
         text-transform: uppercase; 
         letter-spacing: 0.05em; 
     }
 
     .table-enhanced thead .themed-table-header th:first-child {
-        border-top-left-radius: 16px; /* Match .table-enhanced border-radius */
+        border-top-left-radius: 16px;
     }
     .table-enhanced thead .themed-table-header th:last-child {
-        border-top-right-radius: 16px; /* Match .table-enhanced border-radius */
+        border-top-right-radius: 16px;
+    }
+
+    /* Mobile Card Layout */
+    .mobile-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .mobile-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
+    }
+
+    .mobile-card-header {
+        background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-bright) 100%);
+        color: white;
+        padding: 1rem;
+        font-weight: 600;
+    }
+
+    .mobile-card-body {
+        padding: 1rem;
+    }
+
+    .mobile-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .mobile-field:last-child {
+        border-bottom: none;
+    }
+
+    .mobile-label {
+        font-weight: 600;
+        color: #374151;
+        flex-shrink: 0;
+        margin-right: 1rem;
+        min-width: 80px;
+    }
+
+    .mobile-value {
+        text-align: right;
+        color: #1f2937;
+        flex-grow: 1;
+        word-break: break-word;
+    }
+
+    .mobile-actions {
+        background: #f9fafb;
+        padding: 0.75rem 1rem;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .mobile-status {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    /* Responsive utilities */
+    @media (max-width: 768px) {
+        .responsive-padding {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        
+        .mobile-hidden {
+            display: none;
+        }
+        
+        .mobile-only {
+            display: block;
+        }
+        
+        .mobile-stack {
+            flex-direction: column;
+            align-items: stretch;
+        }
+        
+        .mobile-full-width {
+            width: 100%;
+        }
+        
+        .mobile-text-sm {
+            font-size: 0.875rem;
+        }
+    }
+
+    @media (min-width: 769px) {
+        .mobile-only {
+            display: none;
+        }
+        
+        .desktop-table {
+            display: table;
+        }
+    }
+
+    /* Summary responsive adjustments */
+    @media (max-width: 640px) {
+        .summary-card {
+            padding: 1rem;
+        }
+        
+        .summary-card .grid {
+            grid-template-columns: 1fr;
+            gap: 1rem;
+        }
     }
 </style>
 
-<div class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto responsive-padding">
     <!-- Header Section -->
-    <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-6 mb-8">
-        <div class="flex items-center gap-6">
-            <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center">
-                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+    <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-6">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 lg:w-8 lg:h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                     <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z"/>
                 </svg>
             </div>
             <div>
-                <h2 class="text-4xl font-bold text-gray-900">Loadings (Dispatched Trips)</h2>
-                <p class="text-gray-600 mt-2">Manage and track all fuel loading and dispatch records</p>
+                <h2 class="text-2xl lg:text-4xl font-bold text-gray-900">Loadings (Dispatched Trips)</h2>
+                <p class="text-sm lg:text-base text-gray-600 mt-1">Manage and track all fuel loading and dispatch records</p>
             </div>
         </div>
         
         {% if can_add_trip %}
-        <a href="{% url 'shipments:trip-add' %}" class="sakina-btn add-btn">
-            <span class="relative z-10 flex items-center gap-2">
+        <a href="{% url 'shipments:trip-add' %}" class="sakina-btn add-btn mobile-full-width lg:w-auto text-center">
+            <span class="relative z-10 flex items-center justify-center gap-2">
                 <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
                 </svg>
@@ -194,10 +317,10 @@
     </div>
 
     <!-- Filter Form -->
-    <div class="filter-form p-6 mb-8">
+    <div class="filter-form p-4 lg:p-6 mb-6">
         <h3 class="text-lg font-bold text-gray-800 mb-4">Filter Loadings</h3>
         <form method="get" action="{% url 'shipments:trip-list' %}">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
                 <div>
                     <label for="product_filter" class="block text-sm font-medium text-gray-700 mb-2">Product:</label>
                     <select name="product" id="product_filter" class="form-input">
@@ -210,7 +333,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="customer_filter" class="block text-sm font-medium text-gray-700 mb-2">Customer (Destination):</label>
+                    <label for="customer_filter" class="block text-sm font-medium text-gray-700 mb-2">Customer:</label>
                     <select name="customer" id="customer_filter" class="form-input">
                         <option value="">All Customers</option>
                         {% for customer_item in customers %}
@@ -221,7 +344,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="vehicle_filter" class="block text-sm font-medium text-gray-700 mb-2">Vehicle (Truck):</label>
+                    <label for="vehicle_filter" class="block text-sm font-medium text-gray-700 mb-2">Vehicle:</label>
                     <select name="vehicle" id="vehicle_filter" class="form-input">
                         <option value="">All Vehicles</option>
                         {% for vehicle_item in vehicles %}
@@ -253,15 +376,15 @@
             </div>
             
             <div class="flex flex-col sm:flex-row gap-3 justify-end mt-6">
-                <button type="submit" class="sakina-btn">
-                    <span class="relative z-10 flex items-center gap-2">
+                <button type="submit" class="sakina-btn mobile-full-width sm:w-auto">
+                    <span class="relative z-10 flex items-center justify-center gap-2">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
                         </svg>
                         Apply Filters
                     </span>
                 </button>
-                <a href="{% url 'shipments:trip-list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors">
+                <a href="{% url 'shipments:trip-list' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors mobile-full-width sm:w-auto">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                     </svg>
@@ -272,16 +395,16 @@
     </div>
 
     <!-- Filtered Summary -->
-    <div class="summary-card mb-8">
+    <div class="summary-card mb-6">
         <h3 class="text-lg font-bold text-blue-800 mb-4 flex items-center gap-2">
             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
             Filtered Summary
         </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                         <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z"/>
@@ -289,57 +412,66 @@
                 </div>
                 <div>
                     <p class="text-sm text-gray-600">Number of Loadings</p>
-                    <p class="text-xl font-bold text-blue-800">{{ filtered_trip_count|default:0 }}</p>
+                    <p class="text-lg lg:text-xl font-bold text-blue-800">{{ filtered_trip_count|default:0 }}</p>
                 </div>
             </div>
             <div class="flex items-center gap-3">
-                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
                     <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
                     </svg>
                 </div>
                 <div>
                     <p class="text-sm text-gray-600">Total Quantity Loaded</p>
-                    <p class="text-xl font-bold text-green-800">{{ filtered_total_loaded|floatformat:2|default:0 }} L</p>
+                    <p class="text-lg lg:text-xl font-bold text-green-800">{{ filtered_total_loaded|floatformat:0|default:0 }} L</p>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Trips Table -->
+    <!-- Trips Display -->
     {% if trips %}
-        <div class="sakina-card p-6">
+        <!-- Desktop Table View -->
+        <div class="sakina-card p-4 lg:p-6 mobile-hidden">
             <div class="table-enhanced">
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead>
                             <tr class="themed-table-header">
-                                <th>BOL Date/Time</th>
-                                <th>BOL Number</th>
-                                <th>Vehicle</th>
-                                <th>Product</th>
-                                <th class="hidden sm:table-cell">Customer</th>
-                                <th class="text-right">Total Loaded (L)</th>
-                                <th class="hidden md:table-cell">Status</th>
-                                <th class="hidden lg:table-cell">Notes</th>
-                                <th class="text-center">Actions</th>
+                                <th class="px-2 lg:px-4">BOL Date/Time</th>
+                                <th class="px-2 lg:px-4">BOL Number</th>
+                                <th class="px-2 lg:px-4">Vehicle</th>
+                                <th class="px-2 lg:px-4">Product</th>
+                                <th class="px-2 lg:px-4 hidden md:table-cell">Customer</th>
+                                <th class="px-2 lg:px-4 text-right">Loaded (L)</th>
+                                <th class="px-2 lg:px-4 hidden lg:table-cell">Status</th>
+                                <th class="px-2 lg:px-4 hidden xl:table-cell">Notes</th>
+                                <th class="px-2 lg:px-4 text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             {% for trip in trips %}
                             <tr class="table-row-hover">
-                                <td class="py-4 px-6 text-left whitespace-nowrap">
+                                <td class="py-3 px-2 lg:py-4 lg:px-4 text-left whitespace-nowrap">
                                     <a href="{% url 'shipments:trip-detail' trip.pk %}" class="action-link">
-                                        <div class="font-medium">{{ trip.loading_date|date:"Y-m-d" }}</div>
+                                        <div class="font-medium text-sm lg:text-base">{{ trip.loading_date|date:"M d" }}</div>
                                         <div class="text-xs text-gray-500">{{ trip.loading_time|time:"H:i" }}</div>
                                     </a>
                                 </td>
-                                <td class="py-4 px-6 text-left font-medium text-gray-900">{{ trip.bol_number|default_if_none:"N/A" }}</td>
-                                <td class="py-4 px-6 text-left text-gray-700">{{ trip.vehicle.plate_number }}</td>
-                                <td class="py-4 px-6 text-left text-gray-700">{{ trip.product.name }}</td>
-                                <td class="py-4 px-6 text-left text-gray-700 hidden sm:table-cell">{{ trip.customer.name }}</td>
-                                <td class="py-4 px-6 text-right font-semibold text-blue-600">{{ trip.total_loaded|floatformat:2 }}</td>
-                                <td class="py-4 px-6 text-left hidden md:table-cell">
+                                <td class="py-3 px-2 lg:py-4 lg:px-4 text-left font-medium text-gray-900 text-sm lg:text-base">
+                                    <div class="max-w-20 lg:max-w-none truncate">{{ trip.bol_number|default_if_none:"N/A" }}</div>
+                                </td>
+                                <td class="py-3 px-2 lg:py-4 lg:px-4 text-left text-gray-700 text-sm lg:text-base">
+                                    <div class="max-w-16 lg:max-w-none truncate">{{ trip.vehicle.plate_number }}</div>
+                                </td>
+                                <td class="py-3 px-2 lg:py-4 lg:px-4 text-left text-gray-700 text-sm lg:text-base">
+                                    <div class="max-w-20 lg:max-w-none truncate">{{ trip.product.name }}</div>
+                                </td>
+                                <td class="py-3 px-2 lg:py-4 lg:px-4 text-left text-gray-700 hidden md:table-cell text-sm lg:text-base">
+                                    <div class="max-w-24 lg:max-w-none truncate">{{ trip.customer.name }}</div>
+                                </td>
+                                <td class="py-3 px-2 lg:py-4 lg:px-4 text-right font-semibold text-blue-600 text-sm lg:text-base">{{ trip.total_loaded|floatformat:0 }}</td>
+                                <td class="py-3 px-2 lg:py-4 lg:px-4 text-left hidden lg:table-cell">
                                     <span class="status-badge {% if trip.status == 'DELIVERED' %}status-delivered{% elif trip.status == 'GATEPASSED' %}status-gatepassed{% elif trip.status == 'LOADED' %}status-loaded{% elif trip.status == 'KPC_APPROVED' %}status-approved{% elif trip.status == 'PENDING' or trip.status == 'LOADING' %}status-pending{% elif trip.status == 'KPC_REJECTED' %}status-rejected{% elif trip.status == 'CANCELLED' %}status-cancelled{% else %}status-pending{% endif %}">
                                         {% if trip.status == 'DELIVERED' %}
                                             <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -354,24 +486,25 @@
                                                 <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                                             </svg>
                                         {% endif %}
-                                        {{ trip.get_status_display }}
+                                        <span class="hidden lg:inline">{{ trip.get_status_display }}</span>
+                                        <span class="lg:hidden">{{ trip.get_status_display|truncatechars:8 }}</span>
                                     </span>
                                 </td>
-                                <td class="py-4 px-6 text-left hidden lg:table-cell">
+                                <td class="py-3 px-2 lg:py-4 lg:px-4 text-left hidden xl:table-cell">
                                     <div class="max-w-xs overflow-hidden text-ellipsis whitespace-nowrap text-gray-600" title="{{ trip.notes|default_if_none:'' }}">
                                         {{ trip.notes|default_if_none:"-"|truncatechars:20 }}
                                     </div>
                                 </td>
-                                <td class="py-4 px-6 text-center whitespace-nowrap">
-                                    <div class="flex items-center justify-center gap-3">
+                                <td class="py-3 px-2 lg:py-4 lg:px-4 text-center whitespace-nowrap">
+                                    <div class="flex items-center justify-center gap-1 lg:gap-3">
                                         {% if can_change_trip %}
-                                            <a href="{% url 'shipments:trip-edit' trip.pk %}" class="action-link edit-link">Edit</a>
+                                            <a href="{% url 'shipments:trip-edit' trip.pk %}" class="action-link edit-link text-xs lg:text-sm">Edit</a>
                                         {% endif %}
                                         {% if can_delete_trip %}
-                                            <a href="{% url 'shipments:trip-delete' trip.pk %}" class="action-link delete-link">Delete</a>
+                                            <a href="{% url 'shipments:trip-delete' trip.pk %}" class="action-link delete-link text-xs lg:text-sm">Del</a>
                                         {% endif %}
                                         {% if not can_change_trip and not can_delete_trip %}
-                                            <span class="text-gray-400 text-sm">No actions</span>
+                                            <span class="text-gray-400 text-xs">None</span>
                                         {% endif %}
                                     </div>
                                 </td>
@@ -382,8 +515,64 @@
                 </div>
             </div>
         </div>
+
+        <!-- Mobile Card View -->
+        <div class="mobile-only">
+            {% for trip in trips %}
+            <div class="mobile-card">
+                <div class="mobile-card-header">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="font-bold">{{ trip.loading_date|date:"M d, Y" }}</span>
+                            <span class="block text-sm opacity-90">{{ trip.loading_time|time:"H:i" }}</span>
+                        </div>
+                        <span class="mobile-status {% if trip.status == 'DELIVERED' %}status-delivered{% elif trip.status == 'GATEPASSED' %}status-gatepassed{% elif trip.status == 'LOADED' %}status-loaded{% elif trip.status == 'KPC_APPROVED' %}status-approved{% elif trip.status == 'PENDING' or trip.status == 'LOADING' %}status-pending{% elif trip.status == 'KPC_REJECTED' %}status-rejected{% elif trip.status == 'CANCELLED' %}status-cancelled{% else %}status-pending{% endif %}">
+                            {{ trip.get_status_display }}
+                        </span>
+                    </div>
+                </div>
+                <div class="mobile-card-body">
+                    <div class="mobile-field">
+                        <span class="mobile-label">BOL:</span>
+                        <span class="mobile-value font-medium">{{ trip.bol_number|default_if_none:"N/A" }}</span>
+                    </div>
+                    <div class="mobile-field">
+                        <span class="mobile-label">Vehicle:</span>
+                        <span class="mobile-value">{{ trip.vehicle.plate_number }}</span>
+                    </div>
+                    <div class="mobile-field">
+                        <span class="mobile-label">Product:</span>
+                        <span class="mobile-value">{{ trip.product.name }}</span>
+                    </div>
+                    <div class="mobile-field">
+                        <span class="mobile-label">Customer:</span>
+                        <span class="mobile-value">{{ trip.customer.name }}</span>
+                    </div>
+                    <div class="mobile-field">
+                        <span class="mobile-label">Loaded:</span>
+                        <span class="mobile-value font-bold text-blue-600">{{ trip.total_loaded|floatformat:0 }} L</span>
+                    </div>
+                    {% if trip.notes %}
+                    <div class="mobile-field">
+                        <span class="mobile-label">Notes:</span>
+                        <span class="mobile-value text-sm">{{ trip.notes|truncatechars:50 }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="mobile-actions">
+                    <a href="{% url 'shipments:trip-detail' trip.pk %}" class="action-link">View</a>
+                    {% if can_change_trip %}
+                        <a href="{% url 'shipments:trip-edit' trip.pk %}" class="action-link edit-link">Edit</a>
+                    {% endif %}
+                    {% if can_delete_trip %}
+                        <a href="{% url 'shipments:trip-delete' trip.pk %}" class="action-link delete-link">Delete</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     {% else %}
-        <div class="sakina-card p-8">
+        <div class="sakina-card p-6 lg:p-8">
             <div class="text-center">
                 <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg class="w-8 h-8 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
@@ -391,7 +580,7 @@
                     </svg>
                 </div>
                 <h3 class="text-xl font-bold text-yellow-800 mb-2">No Loadings Found</h3>
-                <p class="text-gray-600 mb-4">
+                <p class="text-gray-600 mb-4 text-sm lg:text-base">
                     {% if product_filter_value or customer_filter_value or vehicle_filter_value or status_filter_value or start_date_filter_value or end_date_filter_value %}
                         No loadings match your current filter criteria.
                     {% else %}
@@ -401,7 +590,7 @@
                 
                 <div class="flex flex-col sm:flex-row gap-3 justify-center">
                     {% if product_filter_value or customer_filter_value or vehicle_filter_value or status_filter_value or start_date_filter_value or end_date_filter_value %}
-                        <a href="{% url 'shipments:trip-list' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-lg font-medium transition-colors">
+                        <a href="{% url 'shipments:trip-list' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-lg font-medium transition-colors mobile-full-width sm:w-auto">
                             <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                             </svg>
@@ -410,8 +599,8 @@
                     {% endif %}
                     
                     {% if can_add_trip and not product_filter_value and not customer_filter_value and not vehicle_filter_value and not status_filter_value and not start_date_filter_value and not end_date_filter_value %}
-                        <a href="{% url 'shipments:trip-add' %}" class="sakina-btn add-btn">
-                            <span class="relative z-10 flex items-center gap-2">
+                        <a href="{% url 'shipments:trip-add' %}" class="sakina-btn add-btn mobile-full-width sm:w-auto">
+                            <span class="relative z-10 flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
                                 </svg>

@@ -9,28 +9,28 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Custom Sakina Gas Styling -->
     <style>
-        /* Custom Sakina Gas Color Palette - UPDATED */
+        /* Custom Sakina Gas Color Palette */
         :root {
-            --sakina-blue-primary: #0B3954; /* Darker, more corporate blue */
-            --sakina-blue-secondary: #087E8B; /* Tealish blue for accents */
-            --sakina-blue-light: #BFD7EA; /* Light, airy blue */
-            --sakina-orange-primary: #FF5A00; /* Vibrant, modern orange */
-            --sakina-orange-secondary: #FF8C42; /* Softer, secondary orange */
-            --sakina-red-accent: #C81D25; /* Strong, confident red */
+            --sakina-blue-primary: #0B3954;
+            --sakina-blue-secondary: #087E8B;
+            --sakina-blue-light: #BFD7EA;
+            --sakina-orange-primary: #FF5A00;
+            --sakina-orange-secondary: #FF8C42;
+            --sakina-red-accent: #C81D25;
             --sakina-gray-dark: #333333;
             --sakina-gray-medium: #666666;
             --sakina-gray-light: #F4F4F4;
             --sakina-gradient: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 50%, var(--sakina-orange-primary) 100%);
         }
 
-        /* General Body Styling - Added from your new palette's implications */
+        /* General Body Styling */
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--sakina-gray-light); /* UPDATED from Tailwind bg-gray-50 */
-            color: var(--sakina-gray-dark); /* UPDATED from Tailwind text-gray-800 */
+            background-color: var(--sakina-gray-light);
+            color: var(--sakina-gray-dark);
         }
 
-        /* Sakina Gas branded gradients - UPDATED */
+        /* Sakina Gas branded gradients */
         .sakina-gradient-bg {
             background: var(--sakina-gradient);
         }
@@ -42,58 +42,63 @@
             background-clip: text;
         }
 
-        /* Logo styling - Kept as is, no direct color */
+        /* Logo styling */
         .sakina-logo {
-            height: 50px;
+            height: 40px;
             width: auto;
             filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
         }
 
-        /* Navigation styling - UPDATED */
-        .sakina-nav { /* This class was in your original base.html, glass-header was from home.html styles you included */
-            background: linear-gradient(90deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 100%); /* UPDATED */
+        @media (min-width: 1024px) {
+            .sakina-logo {
+                height: 50px;
+            }
+        }
+
+        /* Navigation styling */
+        .sakina-nav {
+            background: linear-gradient(90deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 100%);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
-        /* Style for text inside nav if it's not handled by Tailwind classes in HTML */
+
         .sakina-nav a, .sakina-nav span, .sakina-nav button {
-             color: white; /* Ensuring contrast */
+             color: white;
         }
         .sakina-nav a:hover, .sakina-nav button:hover {
             color: var(--sakina-blue-light);
         }
 
-
-        /* Button styling - UPDATED */
-        .sakina-btn-primary { /* This seems to be the one used for Login in your HTML */
-            background: linear-gradient(135deg, var(--sakina-blue-secondary) 0%, var(--sakina-blue-primary) 100%); /* UPDATED */
-            color: white; /* Ensuring text is visible */
+        /* Button styling */
+        .sakina-btn-primary {
+            background: linear-gradient(135deg, var(--sakina-blue-secondary) 0%, var(--sakina-blue-primary) 100%);
+            color: white;
             transition: all 0.3s ease;
         }
         
         .sakina-btn-primary:hover {
-            background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, #062c40 100%); /* Darken on hover - UPDATED */
+            background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, #062c40 100%);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(8, 126, 139, 0.3); /* Shadow color from new palette - UPDATED */
+            box-shadow: 0 4px 12px rgba(8, 126, 139, 0.3);
         }
 
-        .sakina-btn-accent { /* This seems to be the one used for Sign Up in your HTML */
-            background: linear-gradient(135deg, var(--sakina-orange-primary) 0%, var(--sakina-orange-secondary) 100%); /* UPDATED */
-            color: white; /* Ensuring text is visible */
+        .sakina-btn-accent {
+            background: linear-gradient(135deg, var(--sakina-orange-primary) 0%, var(--sakina-orange-secondary) 100%);
+            color: white;
             transition: all 0.3s ease;
         }
         
         .sakina-btn-accent:hover {
-            background: linear-gradient(135deg, var(--sakina-orange-secondary) 0%, #E55000 100%); /* Darken orange on hover - UPDATED */
+            background: linear-gradient(135deg, var(--sakina-orange-secondary) 0%, #E55000 100%);
             transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(255, 90, 0, 0.3); /* Shadow color from new palette - UPDATED */
+            box-shadow: 0 4px 12px rgba(255, 90, 0, 0.3);
         }
 
-        /* Card styling - UPDATED */
-        .sakina-card { /* Main content card */
+        /* Card styling */
+        .sakina-card {
             background: white;
             border-radius: 12px;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            border-top: 4px solid var(--sakina-blue-secondary); /* UPDATED */
+            border-top: 4px solid var(--sakina-blue-secondary);
             transition: all 0.3s ease;
         }
         
@@ -102,7 +107,7 @@
             box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
 
-        /* Form input styling - UPDATED focus colors */
+        /* Form input styling */
         main input[type="text"],
         main input[type="password"],
         main input[type="email"],
@@ -115,13 +120,13 @@
             width: 100%;
             padding: 0.75rem 1rem;
             margin-top: 0.25rem;
-            border: 2px solid #e5e7eb; /* Keeping this neutral or use var(--sakina-gray-medium) if preferred */
+            border: 2px solid #e5e7eb;
             border-radius: 8px;
             box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
             font-size: 0.875rem;
             line-height: 1.25rem;
             transition: all 0.2s ease;
-            background-color: #FCFCFC; /* Light background for inputs */
+            background-color: #FCFCFC;
         }
 
         main input[type="text"]:focus,
@@ -133,13 +138,14 @@
         main select:focus,
         main textarea:focus {
             outline: none;
-            border-color: var(--sakina-blue-secondary); /* UPDATED */
-            box-shadow: 0 0 0 3px rgba(8, 126, 139, 0.2); /* Glow with new secondary blue - UPDATED */
+            border-color: var(--sakina-blue-secondary);
+            box-shadow: 0 0 0 3px rgba(8, 126, 139, 0.2), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-1px);
             background-color: white;
         }
 
-        /* Status indicator styling - UPDATED (using refined versions you had in your 'enhanced' section) */
-        .status-badge { /* This was the .status-badge from your 'enhanced' section */
+        /* Status indicator styling */
+        .status-badge {
             display: inline-flex;
             align-items: center;
             padding: 0.375rem 0.75rem;
@@ -147,23 +153,22 @@
             font-size: 0.75rem;
             font-weight: 500;
             transition: all 0.2s ease;
-            text-transform: capitalize; /* Added for consistency */
+            text-transform: capitalize;
             border: 1px solid transparent;
         }
         .status-badge:hover {
             transform: scale(1.05);
         }
 
-        .status-delivered { color: #047857; background-color: #D1FAE5; border-color: #A7F3D0;} /* Greenish */
-        .status-gatepassed { color: #0E7490; background-color: #CFFAFE; border-color: #A5F3FC;} /* Cyanish */
-        .status-loaded { color: #6D28D9; background-color: #EDE9FE; border-color: #DDD6FE;}    /* Purplish */
-        .status-approved { color: #1D4ED8; background-color: #DBEAFE; border-color: #BFDBFE;} /* Bluish */
-        .status-pending { color: #CA8A04; background-color: #FEF9C3; border-color: #FEF08A;}  /* Yellowish */
-        .status-rejected { color: var(--sakina-red-accent); background-color: #FEE2E2; border-color: #FECACA;} /* Using red accent */
-        .status-cancelled { color: var(--sakina-gray-medium); background-color: #F3F4F6; border-color: #E5E7EB;} /* Using gray medium */
+        .status-delivered { color: #047857; background-color: #D1FAE5; border-color: #A7F3D0;}
+        .status-gatepassed { color: #0E7490; background-color: #CFFAFE; border-color: #A5F3FC;}
+        .status-loaded { color: #6D28D9; background-color: #EDE9FE; border-color: #DDD6FE;}
+        .status-approved { color: #1D4ED8; background-color: #DBEAFE; border-color: #BFDBFE;}
+        .status-pending { color: #CA8A04; background-color: #FEF9C3; border-color: #FEF08A;}
+        .status-rejected { color: var(--sakina-red-accent); background-color: #FEE2E2; border-color: #FECACA;}
+        .status-cancelled { color: var(--sakina-gray-medium); background-color: #F3F4F6; border-color: #E5E7EB;}
 
-
-        /* Animation classes - Kept as is */
+        /* Animation classes */
         .fade-in {
             animation: fadeIn 0.5s ease-in;
         }
@@ -173,238 +178,65 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Notification styling - UPDATED */
-        .sakina-notification { /* Base for notifications */
+        /* Notification styling */
+        .sakina-notification {
             border-left-width: 4px;
-            background-color: white; /* Solid background for readability */
+            background-color: white;
             box-shadow: 0 2px 5px rgba(0,0,0,0.07);
         }
-        /* Specific notification types based on Django message tags */
+
         .sakina-notification.border-l-gray-400 { border-left-color: var(--sakina-gray-medium); }
         .sakina-notification.border-l-blue-400 { border-left-color: var(--sakina-blue-secondary); }
-        .sakina-notification.border-l-green-400 { border-left-color: #10B981; } /* Specific green */
+        .sakina-notification.border-l-green-400 { border-left-color: #10B981; }
         .sakina-notification.border-l-yellow-400 { border-left-color: var(--sakina-orange-secondary); }
         .sakina-notification.border-l-red-400 { border-left-color: var(--sakina-red-accent); }
 
-
-        /* Table styling - UPDATED thead */
-        .sakina-table { /* Base table style */
+        /* Table styling */
+        .sakina-table {
             border-radius: 12px;
             overflow: hidden;
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: 1px solid #E5E7EB; /* Light border for definition */
+            border: 1px solid #E5E7EB;
         }
 
         .sakina-table thead {
-            background: linear-gradient(90deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 100%); /* UPDATED */
+            background: linear-gradient(90deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 100%);
         }
         .sakina-table thead th {
-            color: white !important; /* Ensure Tailwind doesn't override */
+            color: white !important;
             padding: 0.8rem 1rem;
             font-weight: 600;
             text-align: left;
         }
         .sakina-table tbody tr:nth-child(even) {
-            background-color: #F9FAFB; /* Very light alternate row color */
+            background-color: #F9FAFB;
         }
         .sakina-table tbody tr:hover {
-            background-color: var(--sakina-blue-light) !important; /* Lighter blue for hover - UPDATED */
-            color: var(--sakina-gray-dark); /* Ensure text is readable on hover */
+            background-color: var(--sakina-blue-light) !important;
+            color: var(--sakina-gray-dark);
         }
         .sakina-table td {
             padding: 0.8rem 1rem;
-            border-bottom: 1px solid #EFF1F3; /* Softer internal borders */
+            border-bottom: 1px solid #EFF1F3;
         }
 
-        /* Footer styling - UPDATED */
+        /* Footer styling */
         .sakina-footer {
-            background: linear-gradient(90deg, var(--sakina-gray-dark) 0%, #4A4A4A 100%); /* UPDATED to darker grays */
-            color: var(--sakina-gray-light); /* UPDATED for contrast */
+            background: linear-gradient(90deg, var(--sakina-gray-dark) 0%, #4A4A4A 100%);
+            color: var(--sakina-gray-light);
         }
-         .sakina-footer .text-gray-300 { color: var(--sakina-gray-light) !important; } /* Override Tailwind if needed */
-         .sakina-footer .text-gray-400 { color: #A0AEC0 !important; } /* Lighter gray for separators */
+         .sakina-footer .text-gray-300 { color: var(--sakina-gray-light) !important; }
+         .sakina-footer .text-gray-400 { color: #A0AEC0 !important; }
 
-
-        /* Enhanced Card Styles - from your provided CSS, colors checked */
-        .card-enhanced { /* Used in home.html */
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            transition: all 0.3s ease;
-            border: 1px solid rgba(226, 232, 240, 0.8); /* Neutral border */
-            overflow: hidden;
-        }
-
-        .card-enhanced:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.15), 0 4px 6px -2px rgba(0, 0, 0, 0.08);
-            border-color: rgba(8, 126, 139, 0.3); /* Glow with new secondary blue - UPDATED */
-        }
-
-        /* Enhanced Table Styles - from your provided CSS, colors checked */
-        .table-enhanced { /* Used in home.html */
-            border-radius: 12px;
-            overflow: hidden;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            border: none; /* As per your style */
-        }
-
-        .table-enhanced thead {
-            background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-secondary) 100%); /* UPDATED */
-            color: white;
-        }
-
-        .table-enhanced thead th {
-            color: white !important;
-            font-weight: 600;
-        }
-
-        .table-enhanced tbody tr {
-            transition: all 0.2s ease;
-        }
-
-        .table-enhanced tbody tr:hover {
-            /* Lighter hover, using a very light tint of new blue secondary or light */
-            background: linear-gradient(90deg, rgba(8, 126, 139, 0.05) 0%, rgba(191, 215, 234, 0.05) 100%); /* UPDATED */
-            transform: scale(1.001);
-        }
-
-        .table-enhanced tbody tr:nth-child(even) {
-            background-color: rgba(248, 250, 252, 0.5); /* Neutral light alternating row */
-        }
-
-
-        /* Enhanced Buttons - from your provided CSS, colors checked */
-        .btn-enhanced { /* Used in home.html */
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            color: white; /* Assuming these are for primary actions */
-            /* Backgrounds are applied via Tailwind in home.html, e.g., bg-gradient-to-r from-blue-600 ... */
-            /* If specific btn-enhanced background is needed, define here using new vars */
-        }
-
-        .btn-enhanced:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-enhanced:active {
-            transform: translateY(0);
-        }
-
-        /* Loading Animation - Kept as is */
-        .loading-pulse {
-            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: .5;
-            }
-        }
-
-        /* Enhanced Glass Header - from your provided CSS, colors checked */
-        .glass-header { /* This is the nav class in your HTML structure */
-            background: rgba(11, 57, 84, 0.95); /* Tint of sakina-blue-primary - UPDATED */
+        /* Enhanced Glass Header */
+        .glass-header {
+            background: rgba(11, 57, 84, 0.95);
             backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(191, 215, 234, 0.1); /* Tint of sakina-blue-light - UPDATED */
+            border-bottom: 1px solid rgba(191, 215, 234, 0.1);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
         }
 
-        /* Enhanced Notifications - from your provided CSS, colors checked */
-        .notification-enhanced { /* Used in home.html */
-            border-radius: 12px;
-            box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            border-left-width: 4px; /* Border color applied by Tailwind in home.html, e.g., border-orange-400 */
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            /* Background applied by Tailwind in home.html, e.g., bg-gradient-to-r from-orange-50... */
-        }
-
-        .notification-enhanced:hover {
-            transform: translateX(4px);
-        }
-
-        .notification-enhanced::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.6), transparent); /* Shimmer can be kept light */
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        /* Enhanced Input Fields (focus) - from your provided CSS, colors checked */
-        /* This selector was specific to main inputs, but the one above is more general. Merging focus style: */
-        main input[type="text"]:focus,
-        main input[type="password"]:focus,
-        main input[type="email"]:focus,
-        main input[type="number"]:focus,
-        main input[type="date"]:focus,
-        main input[type="time"]:focus,
-        main select:focus,
-        main textarea:focus {
-            outline: none;
-            border-color: var(--sakina-blue-secondary); /* UPDATED */
-            /* Combined shadow from both input focus definitions */
-            box-shadow: 0 0 0 3px rgba(8, 126, 139, 0.2), 0 4px 6px -1px rgba(0, 0, 0, 0.1); /* UPDATED */
-            transform: translateY(-1px); /* This was from the enhanced version, keeping it */
-        }
-
-
-        /* Enhanced Progress Bars - from your provided CSS, colors checked */
-        .progress-bar {
-            height: 8px;
-            background: linear-gradient(90deg, #E5E7EB 0%, #F3F4F6 100%); /* Neutral background */
-            border-radius: 9999px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .progress-fill {
-            height: 100%;
-            border-radius: 9999px;
-            transition: width 0.5s ease;
-            position: relative;
-            overflow: hidden;
-            /* Applying new gradient to progress fill */
-            background: linear-gradient(90deg, var(--sakina-blue-secondary) 0%, var(--sakina-blue-primary) 100%); /* UPDATED */
-        }
-
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            bottom: 0;
-            right: 0;
-            background: linear-gradient(
-                90deg,
-                transparent,
-                rgba(255, 255, 255, 0.25), /* Shimmer, slightly more visible */
-                transparent
-            );
-            animation: progress-shimmer 1.5s infinite;
-        }
-
-        @keyframes progress-shimmer {
-            0% { transform: translateX(-100%); }
-            100% { transform: translateX(100%); }
-        }
-
-        /* Global link styling from your refined CSS */
+        /* Global link styling */
         main a {
             color: var(--sakina-blue-primary);
             text-decoration: none;
@@ -415,7 +247,7 @@
             text-decoration: underline;
         }
 
-        /* Title styling from your refined CSS */
+        /* Title styling */
         .content-title {
             font-size: 1.75rem;
             font-weight: 700;
@@ -425,56 +257,146 @@
             padding-bottom: 0.5rem;
         }
 
+        /* Mobile menu toggle */
+        .mobile-menu-button {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-menu-button {
+                display: block;
+            }
+            
+            .desktop-nav {
+                display: none;
+            }
+            
+            .mobile-nav {
+                display: block;
+            }
+            
+            .mobile-nav.hidden {
+                display: none;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .mobile-nav {
+                display: none;
+            }
+        }
+
+        /* Responsive utilities */
+        .mobile-only {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-only {
+                display: block;
+            }
+            
+            .mobile-hidden {
+                display: none;
+            }
+        }
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body class="flex flex-col min-h-screen fade-in"> <!-- Body background/text now from CSS var -->
+<body class="flex flex-col min-h-screen fade-in">
     <!-- Navigation -->
-    <!-- The HTML structure here is from your *second* prompt. -->
-    <!-- The class 'glass-header' was in your CSS but 'sakina-nav' was in older CSS. -->
-    <!-- Your HTML used 'glass-header' for the nav. -->
-    <nav class="glass-header p-4 shadow-lg">
-        <div class="container mx-auto flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <img src="{% static 'images/sakina_logo.png' %}" alt="Sakina Gas" class="sakina-logo">
-                <a href="{% url 'shipments:home' %}" class="text-white text-2xl font-bold hover:text-blue-200 transition-colors">
-                    Sakina Gas Fuel Tracker
-                </a>
+    <nav class="glass-header shadow-lg">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center py-3 lg:py-4">
+                <!-- Logo and Brand -->
+                <div class="flex items-center space-x-2 lg:space-x-3">
+                    <img src="{% static 'images/sakina_logo.png' %}" alt="Sakina Gas" class="sakina-logo">
+                    <a href="{% url 'shipments:home' %}" class="text-white text-lg lg:text-2xl font-bold hover:text-blue-200 transition-colors">
+                        <span class="hidden sm:inline">Sakina Gas Fuel Tracker</span>
+                        <span class="sm:hidden">Sakina Gas</span>
+                    </a>
+                </div>
+
+                <!-- Desktop Navigation -->
+                <div class="hidden lg:flex items-center space-x-4 text-white">
+                    {% if user.is_authenticated %}
+                        <span class="bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
+                            Welcome, <strong>{{ user.username }}</strong>
+                        </span>
+                        
+                        {% if perms.shipments.view_shipment %}
+                         <a href="{% url 'shipments:shipment-list' %}" class="hover:text-blue-200 transition-colors font-medium">Shipments</a>
+                        {% endif %}
+
+                        {% if perms.shipments.view_trip %}
+                         <a href="{% url 'shipments:trip-list' %}" class="hover:text-blue-200 transition-colors font-medium">Loadings</a>
+                        {% endif %}
+                        
+                        {% if perms.shipments.view_trip %}
+                        <a href="{% url 'shipments:truck-activity-dashboard' %}" class="hover:text-blue-200 transition-colors font-medium">Truck Activity</a>
+                        {% endif %}
+
+                        {% if perms.shipments.view_shipment and perms.shipments.view_trip %}
+                        <a href="{% url 'shipments:monthly-stock-summary' %}" class="hover:text-blue-200 transition-colors font-medium">Monthly Report</a>
+                        {% endif %}
+                        
+                        <a href="{% url 'password_change' %}" class="hover:text-blue-200 transition-colors">Change Password</a>
+                        
+                        <form method="post" action="{% url 'logout' %}" class="inline">
+                            {% csrf_token %}
+                            <button type="submit" class="hover:text-blue-200 bg-transparent border-none p-0 cursor-pointer transition-colors font-medium">Logout</button>
+                        </form>
+
+                    {% else %}
+                        <a href="{% url 'login' %}" class="sakina-btn-primary text-white px-4 py-2 rounded-lg font-medium">Login</a>
+                        <a href="{% url 'shipments:signup' %}" class="sakina-btn-accent text-white px-4 py-2 rounded-lg font-medium">Sign Up</a>
+                    {% endif %}
+                </div>
+
+                <!-- Mobile Menu Button -->
+                <button class="mobile-menu-button text-white lg:hidden" onclick="toggleMobileMenu()">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
             </div>
-            <div class="text-white flex items-center space-x-4">
-                {% if user.is_authenticated %}
-                    <span class="mr-2 bg-white bg-opacity-20 px-3 py-1 rounded-full text-sm">
-                        Welcome, <strong>{{ user.username }}</strong>
-                    </span>
-                    
-                    {% if perms.shipments.view_shipment %}
-                     <a href="{% url 'shipments:shipment-list' %}" class="hover:text-blue-200 transition-colors font-medium">Shipments</a>
-                    {% endif %}
 
-                    {% if perms.shipments.view_trip %}
-                     <a href="{% url 'shipments:trip-list' %}" class="hover:text-blue-200 transition-colors font-medium">Loadings</a>
-                    {% endif %}
-                    
-                    {% if perms.shipments.view_trip %}
-                    <a href="{% url 'shipments:truck-activity-dashboard' %}" class="hover:text-blue-200 transition-colors font-medium">Truck Activity</a>
-                    {% endif %}
+            <!-- Mobile Navigation Menu -->
+            <div id="mobile-menu" class="mobile-nav hidden lg:hidden pb-4">
+                <div class="flex flex-col space-y-3 text-white">
+                    {% if user.is_authenticated %}
+                        <div class="bg-white bg-opacity-20 px-3 py-2 rounded-lg text-sm text-center">
+                            Welcome, <strong>{{ user.username }}</strong>
+                        </div>
+                        
+                        {% if perms.shipments.view_shipment %}
+                         <a href="{% url 'shipments:shipment-list' %}" class="hover:text-blue-200 transition-colors font-medium py-2 px-3 rounded">Shipments</a>
+                        {% endif %}
 
-                    {% if perms.shipments.view_shipment and perms.shipments.view_trip %}
-                    <a href="{% url 'shipments:monthly-stock-summary' %}" class="hover:text-blue-200 transition-colors font-medium">Monthly Report</a>
-                    {% endif %}
-                    
-                    <a href="{% url 'password_change' %}" class="hover:text-blue-200 transition-colors">Change Password</a>
-                    
-                    <form method="post" action="{% url 'logout' %}" class="inline">
-                        {% csrf_token %}
-                        <button type="submit" class="hover:text-blue-200 bg-transparent border-none p-0 cursor-pointer transition-colors font-medium">Logout</button>
-                    </form>
+                        {% if perms.shipments.view_trip %}
+                         <a href="{% url 'shipments:trip-list' %}" class="hover:text-blue-200 transition-colors font-medium py-2 px-3 rounded">Loadings</a>
+                        {% endif %}
+                        
+                        {% if perms.shipments.view_trip %}
+                        <a href="{% url 'shipments:truck-activity-dashboard' %}" class="hover:text-blue-200 transition-colors font-medium py-2 px-3 rounded">Truck Activity</a>
+                        {% endif %}
 
-                {% else %}
-                    <!-- Ensure these use the updated button classes/styles if not using Tailwind directly -->
-                    <a href="{% url 'login' %}" class="sakina-btn-primary text-white px-4 py-2 rounded-lg font-medium">Login</a>
-                    <a href="{% url 'shipments:signup' %}" class="sakina-btn-accent text-white px-4 py-2 rounded-lg font-medium">Sign Up</a>
-                {% endif %}
+                        {% if perms.shipments.view_shipment and perms.shipments.view_trip %}
+                        <a href="{% url 'shipments:monthly-stock-summary' %}" class="hover:text-blue-200 transition-colors font-medium py-2 px-3 rounded">Monthly Report</a>
+                        {% endif %}
+                        
+                        <a href="{% url 'password_change' %}" class="hover:text-blue-200 transition-colors py-2 px-3 rounded">Change Password</a>
+                        
+                        <form method="post" action="{% url 'logout' %}">
+                            {% csrf_token %}
+                            <button type="submit" class="hover:text-blue-200 bg-transparent border-none w-full text-left py-2 px-3 rounded cursor-pointer transition-colors font-medium">Logout</button>
+                        </form>
+
+                    {% else %}
+                        <a href="{% url 'login' %}" class="sakina-btn-primary text-white px-4 py-3 rounded-lg font-medium text-center">Login</a>
+                        <a href="{% url 'shipments:signup' %}" class="sakina-btn-accent text-white px-4 py-3 rounded-lg font-medium text-center">Sign Up</a>
+                    {% endif %}
+                </div>
             </div>
         </div>
     </nav>
@@ -498,28 +420,53 @@
     </div>
 
     <!-- Main Content -->
-    <main class="container mx-auto mt-2 p-6 sakina-card flex-grow">
+    <main class="container mx-auto mt-2 p-4 lg:p-6 sakina-card flex-grow mx-4 lg:mx-auto">
         {% block content %}
         <!-- Content from child templates will go here -->
         {% endblock content %}
     </main>
 
     <!-- Footer -->
-    <footer class="sakina-footer text-center p-6 mt-6"> <!-- Removed text-gray-300, handled by sakina-footer class -->
+    <footer class="sakina-footer text-center p-4 lg:p-6 mt-6">
         <div class="flex flex-col sm:flex-row justify-center items-center space-y-2 sm:space-y-0 sm:space-x-6">
             <div class="flex items-center space-x-2">
                 <img src="{% static 'images/sakina_logo.png' %}" alt="Sakina Gas" class="sakina-logo">
-                <span class="font-bold text-lg">Sakina Gas Company</span>
+                <span class="font-bold text-sm lg:text-lg">Sakina Gas Company</span>
             </div>
-            <span class="text-gray-400">|</span> <!-- This will become a lighter gray via sakina-footer sub-styles -->
-            <span>© {% now "Y" %} Fuel Tracker System</span>
-            <span class="text-gray-400">|</span>
-            <span class="text-sm">Powering East Africa with Quality Fuel</span>
+            <span class="text-gray-400 hidden sm:inline">|</span>
+            <span class="text-sm lg:text-base">© {% now "Y" %} Fuel Tracker System</span>
+            <span class="text-gray-400 hidden sm:inline">|</span>
+            <span class="text-xs lg:text-sm">Powering East Africa with Quality Fuel</span>
         </div>
     </footer>
 
     <!-- Chart.js Library -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Mobile Menu Toggle Script -->
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Close mobile menu when clicking outside
+        document.addEventListener('click', function(event) {
+            const menu = document.getElementById('mobile-menu');
+            const button = document.querySelector('.mobile-menu-button');
+            
+            if (!menu.contains(event.target) && !button.contains(event.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+
+        // Close mobile menu when window is resized to desktop
+        window.addEventListener('resize', function() {
+            if (window.innerWidth >= 1024) {
+                document.getElementById('mobile-menu').classList.add('hidden');
+            }
+        });
+    </script>
 
     {% block extra_js %}{% endblock %}
 </body>

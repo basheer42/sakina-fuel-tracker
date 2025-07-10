@@ -31,7 +31,7 @@
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border-radius: 16px;
-        overflow: hidden; /* Important for border-radius clipping */
+        overflow: hidden;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     }
 
@@ -43,117 +43,241 @@
         background: linear-gradient(90deg, rgba(59, 130, 246, 0.05) 0%, rgba(234, 88, 12, 0.02) 100%);
         transform: scale(1.01);
     }
+
+    /* Mobile Card Layout */
+    .mobile-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .mobile-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
+    }
+
+    .mobile-card-header {
+        background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-bright) 100%);
+        color: white;
+        padding: 1rem;
+        font-weight: 600;
+    }
+
+    .mobile-card-body {
+        padding: 1rem;
+    }
+
+    .mobile-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .mobile-field:last-child {
+        border-bottom: none;
+    }
+
+    .mobile-label {
+        font-weight: 600;
+        color: #374151;
+        flex-shrink: 0;
+        margin-right: 1rem;
+        min-width: 80px;
+    }
+
+    .mobile-value {
+        text-align: right;
+        color: #1f2937;
+        flex-grow: 1;
+        word-break: break-word;
+    }
+
+    /* Responsive utilities */
+    @media (max-width: 768px) {
+        .responsive-padding {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        
+        .mobile-hidden {
+            display: none;
+        }
+        
+        .mobile-only {
+            display: block;
+        }
+        
+        .mobile-full-width {
+            width: 100%;
+        }
+    }
+
+    @media (min-width: 769px) {
+        .mobile-only {
+            display: none;
+        }
+    }
 </style>
 
-<div class="max-w-6xl mx-auto">
+<div class="max-w-6xl mx-auto responsive-padding">
     <!-- Header Section -->
-    <div class="sakina-card rounded-2xl p-8 mb-8">
-        <div class="flex items-center gap-6 mb-6">
-            <div class="w-16 h-16 bg-gradient-to-br from-blue-500 to-orange-500 rounded-2xl flex items-center justify-center">
-                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+    <div class="sakina-card rounded-2xl p-6 lg:p-8 mb-6 lg:mb-8">
+        <div class="flex items-center gap-4 lg:gap-6 mb-4 lg:mb-6">
+            <div class="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-blue-500 to-orange-500 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 lg:w-8 lg:h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4z"/>
                     <path d="M3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6z"/>
                 </svg>
             </div>
             <div>
-                <h2 class="text-4xl font-bold text-gray-900">{{ page_title }}</h2>
-                <p class="text-gray-600 mt-2">Comprehensive fuel tracking dashboard and analytics</p>
+                <h2 class="text-2xl lg:text-4xl font-bold text-gray-900">{{ page_title }}</h2>
+                <p class="text-sm lg:text-base text-gray-600 mt-1 lg:mt-2">Comprehensive fuel tracking dashboard and analytics</p>
             </div>
         </div>
     </div>
 
     <!-- Summary by Product -->
-    <div class="sakina-card rounded-2xl p-6 mb-8">
-        <div class="flex items-center gap-3 mb-6">
-            <div class="w-8 h-8 bg-blue-100 rounded-xl flex items-center justify-center">
-                <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+    <div class="sakina-card rounded-2xl p-4 lg:p-6 mb-6 lg:mb-8">
+        <div class="flex items-center gap-3 mb-4 lg:mb-6">
+            <div class="w-6 h-6 lg:w-8 lg:h-8 bg-blue-100 rounded-xl flex items-center justify-center">
+                <svg class="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4z"/>
                 </svg>
             </div>
-            <h3 class="text-2xl font-bold text-gray-800">Summary by Product</h3>
+            <h3 class="text-lg lg:text-2xl font-bold text-gray-800">Summary by Product</h3>
         </div>
         
         {% if product_summary %}
-            <div class="table-enhanced">
+            <!-- Desktop Table View -->
+            <div class="table-enhanced mobile-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead>
                             <tr class="bg-gradient-to-r from-blue-50 to-blue-100">
-                                <th class="py-4 px-6 text-left text-sm font-semibold text-blue-800">Product Name</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold text-blue-800">Total Quantity (L)</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold text-blue-800">Total Value</th>
+                                <th class="py-3 lg:py-4 px-4 lg:px-6 text-left text-sm font-semibold text-blue-800">Product Name</th>
+                                <th class="py-3 lg:py-4 px-4 lg:px-6 text-right text-sm font-semibold text-blue-800">Total Quantity (L)</th>
+                                <th class="py-3 lg:py-4 px-4 lg:px-6 text-right text-sm font-semibold text-blue-800">Total Value</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             {% for item in product_summary %}
                             <tr class="table-row-hover">
-                                <td class="py-4 px-6 text-left font-medium text-gray-900">{{ item.product_name }}</td>
-                                <td class="py-4 px-6 text-right text-gray-700">{{ item.total_quantity|floatformat:2|default:0 }}</td>
-                                <td class="py-4 px-6 text-right text-gray-700">${{ item.total_value|floatformat:2|default:0 }}</td>
+                                <td class="py-3 lg:py-4 px-4 lg:px-6 text-left font-medium text-gray-900 text-sm lg:text-base">{{ item.product_name }}</td>
+                                <td class="py-3 lg:py-4 px-4 lg:px-6 text-right text-gray-700 text-sm lg:text-base">{{ item.total_quantity|floatformat:0|default:0 }}</td>
+                                <td class="py-3 lg:py-4 px-4 lg:px-6 text-right text-gray-700 text-sm lg:text-base">${{ item.total_value|floatformat:0|default:0 }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            <!-- Mobile Card View -->
+            <div class="mobile-only">
+                {% for item in product_summary %}
+                <div class="mobile-card">
+                    <div class="mobile-card-header">
+                        <span class="font-bold">{{ item.product_name }}</span>
+                    </div>
+                    <div class="mobile-card-body">
+                        <div class="mobile-field">
+                            <span class="mobile-label">Quantity:</span>
+                            <span class="mobile-value font-semibold">{{ item.total_quantity|floatformat:0|default:0 }} L</span>
+                        </div>
+                        <div class="mobile-field">
+                            <span class="mobile-label">Total Value:</span>
+                            <span class="mobile-value font-bold text-green-600">${{ item.total_value|floatformat:0|default:0 }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         {% else %}
-            <div class="bg-orange-50 border-l-4 border-orange-400 p-6 rounded-xl">
+            <div class="bg-orange-50 border-l-4 border-orange-400 p-4 lg:p-6 rounded-xl">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <svg class="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                    <div class="w-6 h-6 lg:w-8 lg:h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                        <svg class="w-3 h-3 lg:w-4 lg:h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
                         </svg>
                     </div>
-                    <p class="text-orange-700 font-medium">No product data available for reporting.</p>
+                    <p class="text-orange-700 font-medium text-sm lg:text-base">No product data available for reporting.</p>
                 </div>
             </div>
         {% endif %}
     </div>
 
     <!-- Summary by Supplier -->
-    <div class="sakina-card rounded-2xl p-6 mb-8">
-        <div class="flex items-center gap-3 mb-6">
-            <div class="w-8 h-8 bg-green-100 rounded-xl flex items-center justify-center">
-                <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+    <div class="sakina-card rounded-2xl p-4 lg:p-6 mb-6 lg:mb-8">
+        <div class="flex items-center gap-3 mb-4 lg:mb-6">
+            <div class="w-6 h-6 lg:w-8 lg:h-8 bg-green-100 rounded-xl flex items-center justify-center">
+                <svg class="w-4 h-4 lg:w-5 lg:h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                     <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z"/>
                 </svg>
             </div>
-            <h3 class="text-2xl font-bold text-gray-800">Summary by Supplier</h3>
+            <h3 class="text-lg lg:text-2xl font-bold text-gray-800">Summary by Supplier</h3>
         </div>
         
         {% if supplier_summary %}
-            <div class="table-enhanced">
+            <!-- Desktop Table View -->
+            <div class="table-enhanced mobile-hidden">
                 <div class="overflow-x-auto">
                     <table class="min-w-full">
                         <thead>
                             <tr class="bg-gradient-to-r from-green-50 to-green-100">
-                                <th class="py-4 px-6 text-left text-sm font-semibold text-green-800">Supplier Name</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold text-green-800">Total Quantity (L)</th>
-                                <th class="py-4 px-6 text-right text-sm font-semibold text-green-800">Total Value</th>
+                                <th class="py-3 lg:py-4 px-4 lg:px-6 text-left text-sm font-semibold text-green-800">Supplier Name</th>
+                                <th class="py-3 lg:py-4 px-4 lg:px-6 text-right text-sm font-semibold text-green-800">Total Quantity (L)</th>
+                                <th class="py-3 lg:py-4 px-4 lg:px-6 text-right text-sm font-semibold text-green-800">Total Value</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             {% for item in supplier_summary %}
                             <tr class="table-row-hover">
-                                <td class="py-4 px-6 text-left font-medium text-gray-900">{{ item.supplier_name }}</td>
-                                <td class="py-4 px-6 text-right text-gray-700">{{ item.total_quantity|floatformat:2|default:0 }}</td>
-                                <td class="py-4 px-6 text-right text-gray-700">${{ item.total_value|floatformat:2|default:0 }}</td>
+                                <td class="py-3 lg:py-4 px-4 lg:px-6 text-left font-medium text-gray-900 text-sm lg:text-base">{{ item.supplier_name }}</td>
+                                <td class="py-3 lg:py-4 px-4 lg:px-6 text-right text-gray-700 text-sm lg:text-base">{{ item.total_quantity|floatformat:0|default:0 }}</td>
+                                <td class="py-3 lg:py-4 px-4 lg:px-6 text-right text-gray-700 text-sm lg:text-base">${{ item.total_value|floatformat:0|default:0 }}</td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
                 </div>
             </div>
+
+            <!-- Mobile Card View -->
+            <div class="mobile-only">
+                {% for item in supplier_summary %}
+                <div class="mobile-card">
+                    <div class="mobile-card-header">
+                        <span class="font-bold">{{ item.supplier_name }}</span>
+                    </div>
+                    <div class="mobile-card-body">
+                        <div class="mobile-field">
+                            <span class="mobile-label">Quantity:</span>
+                            <span class="mobile-value font-semibold">{{ item.total_quantity|floatformat:0|default:0 }} L</span>
+                        </div>
+                        <div class="mobile-field">
+                            <span class="mobile-label">Total Value:</span>
+                            <span class="mobile-value font-bold text-green-600">${{ item.total_value|floatformat:0|default:0 }}</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         {% else %}
-            <div class="bg-orange-50 border-l-4 border-orange-400 p-6 rounded-xl">
+            <div class="bg-orange-50 border-l-4 border-orange-400 p-4 lg:p-6 rounded-xl">
                 <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
-                        <svg class="w-4 h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                    <div class="w-6 h-6 lg:w-8 lg:h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                        <svg class="w-3 h-3 lg:w-4 lg:h-4 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
                         </svg>
                     </div>
-                    <p class="text-orange-700 font-medium">No supplier data available for reporting.</p>
+                    <p class="text-orange-700 font-medium text-sm lg:text-base">No supplier data available for reporting.</p>
                 </div>
             </div>
         {% endif %}
