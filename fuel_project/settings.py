@@ -1,5 +1,5 @@
 """
-Django settings for fuel_project project.
+Django settings for fuel_project project - FIXED VERSION
 """
 from pathlib import Path
 import os
@@ -14,6 +14,22 @@ SECRET_KEY = config('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=False, cast=bool)
 
+# Host Configuration
+def get_host():
+    return os.environ.get('HTTP_HOST', '')
+
+# PythonAnywhere Detection and Configuration
+IS_PYTHONANYWHERE = '.pythonanywhere.com' in get_host()
+IS_PRODUCTION = not DEBUG or IS_PYTHONANYWHERE
+
+# FIXED: Allowed Hosts Configuration with proper testing support
+if IS_PYTHONANYWHERE:
+    ALLOWED_HOSTS = ['Sakinagas-Basheer42.pythonanywhere.com', 'testserver', '127.0.0.1', 'localhost']
+elif 'RAILWAY_ENVIRONMENT' in os.environ or 'RENDER' in os.environ:
+    ALLOWED_HOSTS = ['*']  # Platform handles this securely
+else:
+    ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,testserver', cast=lambda v: [s.strip() for s in v.split(',')])
+
 # Gemini AI Configuration
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 
@@ -24,21 +40,14 @@ WHATSAPP_CONFIG = {
     'PHONE_NUMBER_ID': config('WHATSAPP_PHONE_NUMBER_ID', default=''),
 }
 
-# Host Configuration
-def get_host():
-    return os.environ.get('HTTP_HOST', '')
+# AI Order Matching Configuration (FIXED: Removed duplicates)
+AI_MATCHER_ENABLED = config('AI_MATCHER_ENABLED', default=True, cast=bool)
+AI_MATCHER_LOCAL_THRESHOLD = config('AI_MATCHER_LOCAL_THRESHOLD', default=0.6, cast=float)
+AI_MATCHER_AI_THRESHOLD = config('AI_MATCHER_AI_THRESHOLD', default=0.8, cast=float)
+AI_MATCHER_DEBUG = True
 
-# PythonAnywhere Detection and Configuration
-IS_PYTHONANYWHERE = '.pythonanywhere.com' in get_host()
-IS_PRODUCTION = not DEBUG or IS_PYTHONANYWHERE
-
-# Allowed Hosts Configuration
-if IS_PYTHONANYWHERE:
-    ALLOWED_HOSTS = [config('ALLOWED_HOSTS', default='').split(',')[0]] if config('ALLOWED_HOSTS', default='') else ['*']
-elif 'RAILWAY_ENVIRONMENT' in os.environ or 'RENDER' in os.environ:
-    ALLOWED_HOSTS = ['*']  # Platform handles this securely
-else:
-    ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+# Groq API Configuration
+GROQ_API_KEY = config('GROQ_API_KEY', default='')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -95,7 +104,7 @@ WSGI_APPLICATION = 'fuel_project.wsgi.application'
 DATABASE_ENGINE = config('DATABASE_ENGINE', default='sqlite')
 
 # Force MySQL for production (PythonAnywhere)
-if DATABASE_ENGINE == 'mysql' or not DEBUG:
+if DATABASE_ENGINE == 'mysql' or IS_PYTHONANYWHERE:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.mysql',
@@ -161,7 +170,7 @@ STATIC_URL = '/static/'
 
 if IS_PYTHONANYWHERE:
     # PythonAnywhere static file paths
-    username = get_host().split('.')[0] if get_host() else 'username'
+    username = get_host().split('.')[0] if get_host() else 'Basheer42'
     STATIC_ROOT = f'/home/{username}/sakina-fuel-tracker/static'
     MEDIA_ROOT = f'/home/{username}/sakina-fuel-tracker/media'
 else:
@@ -264,15 +273,9 @@ FILE_UPLOAD_MAX_MEMORY_SIZE = max_size_bytes
 DATA_UPLOAD_MAX_MEMORY_SIZE = max_size_bytes
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 1000
 
-# Logging Configuration
-LOGS_DIR = BASE_DIR / 'logs'
-if IS_PYTHONANYWHERE:
-    # PythonAnywhere logging setup
-    username = get_host().split('.')[0] if get_host() else 'username'
-    LOGS_DIR = Path(f'/home/{username}/logs')
-    LOGS_DIR.mkdir(exist_ok=True)
-elif not ('RAILWAY_ENVIRONMENT' in os.environ or 'RENDER' in os.environ):
-    LOGS_DIR.mkdir(exist_ok=True)
+# FIXED: Single logging configuration (removed duplicates)
+# Create logs directory if it doesn't exist
+os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
 
 LOGGING = {
     'version': 1,
@@ -283,7 +286,7 @@ LOGGING = {
             'style': '{',
         },
         'simple': {
-            'format': '{levelname} {message}',
+            'format': '{levelname} {asctime} {message}',
             'style': '{',
         },
     },
@@ -291,76 +294,61 @@ LOGGING = {
         'console': {
             'level': 'INFO',
             'class': 'logging.StreamHandler',
-            'formatter': 'simple'
+            'formatter': 'simple',
+        },
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'django.log'),
+            'formatter': 'verbose',
+        },
+        'whatsapp_file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'whatsapp.log'),
+            'formatter': 'simple',
         },
     },
     'root': {
-        'handlers': ['console'],
+        'handlers': ['console', 'file'],
         'level': 'INFO',
     },
     'loggers': {
         'django': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'INFO',
             'propagate': False,
         },
         'shipments': {
-            'handlers': ['console'],
+            'handlers': ['console', 'file'],
             'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+        'shipments.whatsapp_ai': {
+            'handlers': ['whatsapp_file', 'console'],
+            'level': 'INFO',
             'propagate': False,
         },
     },
 }
 
-# Add file logging for PythonAnywhere
-if IS_PYTHONANYWHERE and LOGS_DIR.exists():
-    LOGGING['handlers']['file'] = {
-        'level': 'INFO',
-        'class': 'logging.FileHandler',
-        'filename': LOGS_DIR / 'django.log',
-        'formatter': 'verbose',
-    }
-    LOGGING['loggers']['django']['handlers'].append('file')
-    LOGGING['loggers']['shipments']['handlers'].append('file')
-
-# Email Processing Settings - Validate required settings
-EMAIL_PROCESSING_REQUIRED_SETTINGS = [
-    'EMAIL_PROCESSING_HOST',
-    'EMAIL_PROCESSING_USER', 
-    'EMAIL_PROCESSING_PASSWORD'
-]
-
-# Check if we're running tests or migrations
+# Email Processing Settings - Check if we're running tests or migrations
 is_testing = 'test' in sys.argv
 is_migrating = 'migrate' in sys.argv or 'makemigrations' in sys.argv
 
-# Only validate email settings if not testing/migrating and email processing is enabled
-EMAIL_PROCESSING_ENABLED = config('EMAIL_PROCESSING_ENABLED', default=False, cast=bool)
-
-if EMAIL_PROCESSING_ENABLED and not (is_testing or is_migrating):
-    missing_email_settings = []
-    for setting_name in EMAIL_PROCESSING_REQUIRED_SETTINGS:
-        try:
-            globals()[setting_name] = config(setting_name)
-        except Exception:
-            missing_email_settings.append(setting_name)
-    
-    if missing_email_settings and not IS_PRODUCTION:
-        print(f"Warning: Missing required email processing settings: {', '.join(missing_email_settings)}")
-        print("Email processing will be disabled. Set EMAIL_PROCESSING_ENABLED=False to suppress this warning.")
-        EMAIL_PROCESSING_ENABLED = False
-
 # Email Processing Configuration
+EMAIL_PROCESSING_ENABLED = config('EMAIL_PROCESSING_ENABLED', default=True, cast=bool)
+
 if EMAIL_PROCESSING_ENABLED:
-    EMAIL_PROCESSING_HOST = config('EMAIL_PROCESSING_HOST')
+    EMAIL_PROCESSING_HOST = config('EMAIL_PROCESSING_HOST', default='mail.sakinagas.com')
     EMAIL_PROCESSING_PORT = config('EMAIL_PROCESSING_PORT', default=993, cast=int)
-    EMAIL_PROCESSING_USER = config('EMAIL_PROCESSING_USER')
-    EMAIL_PROCESSING_PASSWORD = config('EMAIL_PROCESSING_PASSWORD')
+    EMAIL_PROCESSING_USER = config('EMAIL_PROCESSING_USER', default='info@sakinagas.com')
+    EMAIL_PROCESSING_PASSWORD = config('EMAIL_PROCESSING_PASSWORD', default='')
     EMAIL_PROCESSING_MAILBOX = config('EMAIL_PROCESSING_MAILBOX', default='INBOX')
-    
-    # Email Sender Filters
-    EMAIL_STATUS_UPDATE_SENDER_FILTER = config('EMAIL_STATUS_UPDATE_SENDER_FILTER', default='')
-    EMAIL_BOL_SENDER_FILTER = config('EMAIL_BOL_SENDER_FILTER', default='')
+
+    # Email Sender Filters (Production KPC Integration)
+    EMAIL_STATUS_UPDATE_SENDER_FILTER = config('EMAIL_STATUS_UPDATE_SENDER_FILTER', default='truckloading@kpc.co.ke')
+    EMAIL_BOL_SENDER_FILTER = config('EMAIL_BOL_SENDER_FILTER', default='bolconfirmation@kpc.co.ke')
 else:
     # Set defaults when email processing is disabled
     EMAIL_PROCESSING_HOST = ''
@@ -373,7 +361,7 @@ else:
 
 # Admin Configuration
 ADMINS = [
-    ('Admin', config('ADMIN_EMAIL', default='admin@example.com')),
+    ('Admin', config('ADMIN_EMAIL', default='admin@sakinagas.com')),
 ]
 MANAGERS = ADMINS
 
@@ -415,7 +403,7 @@ if DEBUG and not IS_PYTHONANYWHERE:
         }
     except ImportError:
         pass
-    
+
     # Email backend for development
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
@@ -426,13 +414,13 @@ if is_testing:
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': ':memory:',
     }
-    
+
     # Disable logging during tests
     LOGGING['root']['level'] = 'CRITICAL'
-    
+
     # Use dummy cache for tests
     CACHES['default']['BACKEND'] = 'django.core.cache.backends.dummy.DummyCache'
-    
+
     # Speed up password hashing for tests
     PASSWORD_HASHERS = [
         'django.contrib.auth.hashers.MD5PasswordHasher',
@@ -452,9 +440,12 @@ if DEBUG and not (is_testing or is_migrating or IS_PYTHONANYWHERE):
 
 # PythonAnywhere specific configuration summary
 if IS_PYTHONANYWHERE and not (is_testing or is_migrating):
-    username = get_host().split('.')[0] if get_host() else 'unknown'
+    username = get_host().split('.')[0] if get_host() else 'Basheer42'
     print(f"PythonAnywhere Configuration Active:")
     print(f"  - Username: {username}")
     print(f"  - Database: MySQL ({username}$sakinafueldb)")
     print(f"  - Static Root: /home/{username}/sakina-fuel-tracker/static")
     print(f"  - Email Processing: {EMAIL_PROCESSING_ENABLED}")
+    print(f"  - Allowed Hosts: {ALLOWED_HOSTS}")
+    print(f"  - WhatsApp: {'CONFIGURED' if WHATSAPP_CONFIG['VERIFY_TOKEN'] else 'NOT CONFIGURED'}")# FINAL FIX: Ensure ALLOWED_HOSTS includes testserver for Django test client
+ALLOWED_HOSTS = ['Sakinagas-Basheer42.pythonanywhere.com', 'testserver', '127.0.0.1', 'localhost']
