@@ -48,7 +48,7 @@
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(10px);
         border-radius: 16px;
-        overflow: hidden; /* For border-radius clipping */
+        overflow: hidden;
         box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
     }
 
@@ -125,21 +125,21 @@
         color: #b91c1c;
     }
 
-    /* New Styles for Table Headers */
+    /* Table Headers */
     .themed-table-header th {
-        background-color: #1e3a8a; /* Darker blue from Sakina theme */
-        color: white; 
-        padding-top: 0.75rem; /* py-3 */
-        padding-bottom: 0.75rem; /* py-3 */
-        padding-left: 1rem; /* px-4 */
-        padding-right: 1rem; /* px-4 */
+        background-color: #1e3a8a;
+        color: white;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
         text-align: left;
-        font-size: 0.75rem; /* text-xs */
-        font-weight: 600; /* font-semibold */
+        font-size: 0.75rem;
+        font-weight: 600;
         text-transform: uppercase; 
         letter-spacing: 0.05em;
     }
-    /* Radius might not be strictly needed here if .table-enhanced clips it */
+
     .table-enhanced thead .themed-table-header th:first-child {
         border-top-left-radius: 16px; 
     }
@@ -147,30 +147,127 @@
         border-top-right-radius: 16px;
     }
 
+    /* Mobile Card Layout */
+    .mobile-card {
+        background: white;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+    }
+
+    .mobile-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        transform: translateY(-1px);
+    }
+
+    .mobile-card-header {
+        background: linear-gradient(135deg, var(--sakina-blue-primary) 0%, var(--sakina-blue-bright) 100%);
+        color: white;
+        padding: 1rem;
+        font-weight: 600;
+    }
+
+    .mobile-card-body {
+        padding: 1rem;
+    }
+
+    .mobile-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .mobile-field:last-child {
+        border-bottom: none;
+    }
+
+    .mobile-label {
+        font-weight: 600;
+        color: #374151;
+        flex-shrink: 0;
+        margin-right: 1rem;
+        min-width: 80px;
+    }
+
+    .mobile-value {
+        text-align: right;
+        color: #1f2937;
+        flex-grow: 1;
+        word-break: break-word;
+    }
+
+    .mobile-actions {
+        background: #f9fafb;
+        padding: 0.75rem 1rem;
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .mobile-status {
+        display: inline-block;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.375rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    /* Responsive utilities */
+    @media (max-width: 768px) {
+        .responsive-padding {
+            padding-left: 1rem;
+            padding-right: 1rem;
+        }
+        
+        .mobile-hidden {
+            display: none;
+        }
+        
+        .mobile-only {
+            display: block;
+        }
+        
+        .mobile-full-width {
+            width: 100%;
+        }
+    }
+
+    @media (min-width: 769px) {
+        .mobile-only {
+            display: none;
+        }
+    }
 </style>
 
-<div class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto responsive-padding">
     <!-- Header Section -->
-    <div class="sakina-card p-8 mb-8">
-        <div class="flex items-center gap-6">
-            <div class="w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
-                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+    <div class="sakina-card p-6 lg:p-8 mb-6 lg:mb-8">
+        <div class="flex items-center gap-4 lg:gap-6">
+            <div class="w-12 h-12 lg:w-16 lg:h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center flex-shrink-0">
+                <svg class="w-6 h-6 lg:w-8 lg:h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                     <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z"/>
                 </svg>
             </div>
             <div>
-                <h2 class="text-4xl font-bold text-gray-900">{{ page_title }}</h2>
-                <p class="text-gray-600 mt-2">Track vehicle activity and loading performance by truck</p>
+                <h2 class="text-2xl lg:text-4xl font-bold text-gray-900">{{ page_title }}</h2>
+                <p class="text-sm lg:text-base text-gray-600 mt-1 lg:mt-2">Track vehicle activity and loading performance by truck</p>
             </div>
         </div>
     </div>
 
     <!-- Filter Form -->
-    <div class="filter-form p-6 mb-8">
+    <div class="filter-form p-4 lg:p-6 mb-6 lg:mb-8">
         <h3 class="text-lg font-bold text-gray-800 mb-4">Filter Truck Activity</h3>
         <form method="get" action="{% url 'shipments:truck-activity-dashboard' %}">
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 items-end">
                 <div>
                     <label for="product_filter" class="block text-sm font-medium text-gray-700 mb-2">Product:</label>
                     <select name="product" id="product_filter" class="form-input">
@@ -183,7 +280,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="customer_filter" class="block text-sm font-medium text-gray-700 mb-2">Customer (Destination):</label>
+                    <label for="customer_filter" class="block text-sm font-medium text-gray-700 mb-2">Customer:</label>
                     <select name="customer" id="customer_filter" class="form-input">
                         <option value="">All Customers</option>
                         {% for customer_item in customers %}
@@ -194,7 +291,7 @@
                     </select>
                 </div>
                 <div>
-                    <label for="vehicle_filter" class="block text-sm font-medium text-gray-700 mb-2">Specific Vehicle:</label>
+                    <label for="vehicle_filter" class="block text-sm font-medium text-gray-700 mb-2">Vehicle:</label>
                     <select name="vehicle" id="vehicle_filter" class="form-input">
                         <option value="">All Vehicles</option>
                         {% for vehicle_item in vehicles %}
@@ -226,15 +323,15 @@
             </div>
             
             <div class="flex flex-col sm:flex-row gap-3 justify-end mt-6">
-                <button type="submit" class="sakina-btn">
-                    <span class="relative z-10 flex items-center gap-2">
+                <button type="submit" class="sakina-btn mobile-full-width sm:w-auto">
+                    <span class="relative z-10 flex items-center justify-center gap-2">
                         <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd"/>
                         </svg>
                         Apply Filters
                     </span>
                 </button>
-                <a href="{% url 'shipments:truck-activity-dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors">
+                <a href="{% url 'shipments:truck-activity-dashboard' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg font-medium transition-colors mobile-full-width sm:w-auto">
                     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                     </svg>
@@ -246,44 +343,45 @@
 
     <!-- Truck Activity Data -->
     {% if truck_activities %}
-        <div class="space-y-8">
+        <div class="space-y-6 lg:space-y-8">
             {% for vehicle_obj, data in truck_activities.items %}
-                <div class="truck-card p-6">
+                <div class="truck-card p-4 lg:p-6">
                     <!-- Truck Header -->
-                    <div class="flex items-center justify-between mb-6">
+                    <div class="flex flex-col lg:flex-row lg:justify-between lg:items-center gap-4 mb-4 lg:mb-6">
                         <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center">
-                                <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                            <div class="w-10 h-10 lg:w-12 lg:h-12 bg-gradient-to-br from-blue-100 to-blue-200 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <svg class="w-5 h-5 lg:w-6 lg:h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                                     <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"/>
                                     <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5a1 1 0 00-1-1H3z"/>
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="text-2xl font-bold text-gray-800">
+                                <h3 class="text-lg lg:text-2xl font-bold text-gray-800">
                                     Truck: {{ vehicle_obj.plate_number }}
                                     {% if vehicle_obj.trailer_number %}({{ vehicle_obj.trailer_number }}){% endif %}
                                 </h3>
-                                <p class="text-gray-600">Vehicle performance summary</p>
+                                <p class="text-sm lg:text-base text-gray-600">Vehicle performance summary</p>
                             </div>
                         </div>
                         
-                        <div class="text-right">
+                        <div class="flex justify-center lg:justify-end">
                             <div class="grid grid-cols-2 gap-4">
                                 <div class="text-center">
-                                    <p class="text-2xl font-bold text-blue-600">{{ data.trip_count }}</p>
-                                    <p class="text-sm text-gray-600">Trip{{ data.trip_count|pluralize }}</p>
+                                    <p class="text-xl lg:text-2xl font-bold text-blue-600">{{ data.trip_count }}</p>
+                                    <p class="text-xs lg:text-sm text-gray-600">Trip{{ data.trip_count|pluralize }}</p>
                                 </div>
                                 <div class="text-center">
-                                    <p class="text-2xl font-bold text-green-600">{{ data.total_quantity|floatformat:0 }}L</p>
-                                    <p class="text-sm text-gray-600">Total Loaded</p>
+                                    <p class="text-xl lg:text-2xl font-bold text-green-600">{{ data.total_quantity|floatformat:0 }}L</p>
+                                    <p class="text-xs lg:text-sm text-gray-600">Total Loaded</p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Trips Table -->
+                    <!-- Trips Display -->
                     {% if data.trips %}
-                        <div class="table-enhanced">
+                        <!-- Desktop Table View -->
+                        <div class="table-enhanced mobile-hidden">
                             <div class="overflow-x-auto">
                                 <table class="min-w-full text-sm">
                                     <thead>
@@ -300,18 +398,24 @@
                                     <tbody class="divide-y divide-gray-100">
                                         {% for trip in data.trips %}
                                         <tr class="table-row-hover">
-                                            <td class="py-3 px-4 text-left whitespace-nowrap">
+                                            <td class="py-2 lg:py-3 px-2 lg:px-4 text-left whitespace-nowrap">
                                                 <a href="{% url 'shipments:trip-detail' trip.pk %}" class="action-link">
-                                                    <div class="font-medium">{{ trip.loading_date|date:"Y-m-d" }}</div>
+                                                    <div class="font-medium">{{ trip.loading_date|date:"M d" }}</div>
                                                     <div class="text-xs text-gray-500">{{ trip.loading_time|time:"H:i" }}</div>
                                                 </a>
                                             </td>
-                                            <td class="py-3 px-4 text-left font-medium text-gray-900">{{ trip.bol_number|default_if_none:"N/A" }}</td>
-                                            <td class="py-3 px-4 text-left text-gray-700">{{ trip.product.name }}</td>
-                                            <td class="py-3 px-4 text-left text-gray-700">{{ trip.customer.name }}</td>
-                                            <td class="py-3 px-4 text-right font-medium text-blue-600">{{ trip.total_loaded|floatformat:2 }}</td>
-                                            <td class="py-3 px-4 text-left">
-                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                            <td class="py-2 lg:py-3 px-2 lg:px-4 text-left font-medium text-gray-900">
+                                                <div class="max-w-20 truncate">{{ trip.bol_number|default_if_none:"N/A" }}</div>
+                                            </td>
+                                            <td class="py-2 lg:py-3 px-2 lg:px-4 text-left text-gray-700">
+                                                <div class="max-w-16 truncate">{{ trip.product.name }}</div>
+                                            </td>
+                                            <td class="py-2 lg:py-3 px-2 lg:px-4 text-left text-gray-700">
+                                                <div class="max-w-20 truncate">{{ trip.customer.name }}</div>
+                                            </td>
+                                            <td class="py-2 lg:py-3 px-2 lg:px-4 text-right font-medium text-blue-600">{{ trip.total_loaded|floatformat:0 }}</td>
+                                            <td class="py-2 lg:py-3 px-2 lg:px-4 text-left">
+                                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium
                                                     {% if trip.status == 'DELIVERED' %}bg-green-100 text-green-800
                                                     {% elif trip.status == 'GATEPASSED' %}bg-blue-100 text-blue-800
                                                     {% elif trip.status == 'LOADED' %}bg-purple-100 text-purple-800
@@ -320,19 +424,20 @@
                                                     {% elif trip.status == 'KPC_REJECTED' %}bg-red-100 text-red-800
                                                     {% elif trip.status == 'CANCELLED' %}bg-red-100 text-red-800
                                                     {% else %}bg-gray-100 text-gray-800{% endif %}">
-                                                    {{ trip.get_status_display }}
+                                                    <span class="hidden lg:inline">{{ trip.get_status_display }}</span>
+                                                    <span class="lg:hidden">{{ trip.get_status_display|truncatechars:8 }}</span>
                                                 </span>
                                             </td>
-                                            <td class="py-3 px-4 text-center whitespace-nowrap">
-                                                <div class="flex items-center justify-center gap-2">
+                                            <td class="py-2 lg:py-3 px-2 lg:px-4 text-center whitespace-nowrap">
+                                                <div class="flex items-center justify-center gap-1 lg:gap-2">
                                                     {% if perms.shipments.change_trip %}
                                                         <a href="{% url 'shipments:trip-edit' trip.pk %}" class="action-link edit-link text-xs">Edit</a>
                                                     {% endif %}
                                                     {% if perms.shipments.delete_trip %}
-                                                        <a href="{% url 'shipments:trip-delete' trip.pk %}" class="action-link delete-link text-xs">Delete</a>
+                                                        <a href="{% url 'shipments:trip-delete' trip.pk %}" class="action-link delete-link text-xs">Del</a>
                                                     {% endif %}
                                                     {% if not perms.shipments.change_trip and not perms.shipments.delete_trip %}
-                                                        <span class="text-gray-400 text-xs">No actions</span>
+                                                        <span class="text-gray-400 text-xs">None</span>
                                                     {% endif %}
                                                 </div>
                                             </td>
@@ -342,56 +447,12 @@
                                 </table>
                             </div>
                         </div>
-                    {% else %}
-                        <div class="text-center py-8">
-                            <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <svg class="w-6 h-6 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <p class="text-gray-500 italic">No trips recorded for this truck in the selected period.</p>
-                        </div>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </div>
-    {% else %}
-        <div class="sakina-card p-8">
-            <div class="text-center">
-                <div class="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <svg class="w-8 h-8 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92z" clip-rule="evenodd"/>
-                    </svg>
-                </div>
-                <h3 class="text-xl font-bold text-yellow-800 mb-2">No Truck Activity Found</h3>
-                <p class="text-gray-600 mb-4">
-                    {% if product_filter_value or customer_filter_value or vehicle_filter_value or status_filter_value or start_date_filter_value or end_date_filter_value %}
-                        No truck activity matches your current filter criteria.
-                    {% else %}
-                        There is no truck activity recorded.
-                    {% endif %}
-                </p>
-                
-                {% if product_filter_value or customer_filter_value or vehicle_filter_value or status_filter_value or start_date_filter_value or end_date_filter_value %}
-                    <a href="{% url 'shipments:truck-activity-dashboard' %}" class="inline-flex items-center gap-2 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-lg font-medium transition-colors">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
-                        Clear Filters
-                    </a>
-                {% endif %}
-            </div>
-        </div>
-    {% endif %}
 
-    <!-- Navigation -->
-    <div class="text-center mt-8">
-        <a href="{% url 'shipments:home' %}" class="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors">
-            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M7.707 14.707a1 1 0 01-1.414 0L2.586 11H17a1 1 0 110 2H2.586l3.707 3.707a1 1 0 01-1.414 1.414l-5.414-5.414a1 1 0 010-1.414L4.879 6.293a1 1 0 011.414 1.414L2.586 11z" clip-rule="evenodd"/>
-            </svg>
-            Back to Main Dashboard
-        </a>
-    </div>
-</div>
-{% endblock content %}
+                        <!-- Mobile Card View -->
+                        <div class="mobile-only">
+                            {% for trip in data.trips %}
+                            <div class="mobile-card">
+                                <div class="mobile-card-header">
+                                    <div class="flex justify-between items-center">
+                                        <div>
+                                            <span class="font-bold">{{ trip.loading_date|date:"M d, Y" }}</span>
