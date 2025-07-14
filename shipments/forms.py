@@ -1,45 +1,43 @@
 # shipments/forms.py
 from django import forms
-from django.forms.models import inlineformset_factory
-# Import the models needed for forms, including Destination
-from .models import Shipment, Product, Trip, LoadingCompartment, Customer, Vehicle, Destination
+from django.forms import inlineformset_factory
+from .models import Shipment, Trip, LoadingCompartment, Product, Customer, Vehicle, Destination
+from decimal import Decimal
 
 
-# Form for Shipments (Stock In)
+# --- Forms for Shipments (Stock In) ---
 class ShipmentForm(forms.ModelForm):
-    # Explicitly define destination to ensure it uses ModelChoiceField and can be ordered
-    destination = forms.ModelChoiceField(
-        queryset=Destination.objects.all().order_by('name'),
-        required=False, # Consistent with model's null=True, blank=True for Shipment
-        widget=forms.Select(attrs={'class': ''}) # Rely on global CSS
-    )
-
     class Meta:
         model = Shipment
         fields = [
-            'vessel_id_tag',
-            'import_date',
-            'supplier_name',
-            'product',
-            'destination',
-            'quantity_litres',
-            'price_per_litre',
-            'notes'
+            'vessel_id_tag', 'import_date', 'supplier_name',
+            'product', 'destination', 'quantity_litres',
+            'price_per_litre', 'notes'
         ]
         widgets = {
-            'vessel_id_tag': forms.TextInput(attrs={'class': '', 'placeholder': 'e.g., AGO KG09/2025'}),
+            'vessel_id_tag': forms.TextInput(attrs={'class': '', 'placeholder': 'Unique vessel/batch ID'}),
             'import_date': forms.DateInput(attrs={'type': 'date', 'class': ''}),
-            'supplier_name': forms.TextInput(attrs={'class': '', 'placeholder': 'e.g., FuelCorp Inc.'}),
+            'supplier_name': forms.TextInput(attrs={'class': '', 'placeholder': 'Supplier company name'}),
             'product': forms.Select(attrs={'class': ''}),
-            'quantity_litres': forms.NumberInput(attrs={'class': '', 'step': '0.01'}),
-            'price_per_litre': forms.NumberInput(attrs={'class': '', 'step': '0.001'}),
-            'notes': forms.Textarea(attrs={'class': '', 'rows': 3, 'placeholder': 'Optional notes about the shipment...'}),
+            'destination': forms.Select(attrs={'class': ''}),
+            'quantity_litres': forms.NumberInput(attrs={'class': '', 'step': '0.01', 'placeholder': 'Quantity in litres'}),
+            'price_per_litre': forms.NumberInput(attrs={'class': '', 'step': '0.001', 'placeholder': 'Price per litre'}),
+            'notes': forms.Textarea(attrs={'class': '', 'rows': 3, 'placeholder': 'Additional notes...'}),
+        }
+        labels = {
+            'vessel_id_tag': 'Vessel/Batch ID',
+            'import_date': 'Import Date',
+            'supplier_name': 'Supplier Name',
+            'quantity_litres': 'Quantity (Litres)',
+            'price_per_litre': 'Price per Litre',
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         if 'product' in self.fields:
             self.fields['product'].queryset = Product.objects.all().order_by('name')
+        if 'destination' in self.fields:
+            self.fields['destination'].queryset = Destination.objects.all().order_by('name')
 
     def clean_quantity_litres(self):
         quantity = self.cleaned_data.get('quantity_litres')
@@ -141,8 +139,37 @@ class PdfLoadingAuthorityUploadForm(forms.Form):
     pdf_file = forms.FileField(
         label="Upload Export Loading Authority PDF",
         help_text="Upload the PDF document containing the loading authority details.",
-        widget=forms.ClearableFileInput(attrs={
+        widget=forms.FileInput(attrs={
             'class': 'mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer',
             'accept': '.pdf'
             })
     )
+
+# FORM FOR BULK PDF UPLOAD
+class BulkPdfLoadingAuthorityUploadForm(forms.Form):
+    pdf_files = forms.FileField(
+        label="Upload Multiple Loading Authority PDFs",
+        help_text="Select multiple PDF documents containing loading authority details. Hold Ctrl/Cmd to select multiple files.",
+        widget=forms.ClearableFileInput(attrs={
+            'class': 'mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer',
+            'accept': '.pdf',
+            'multiple': True
+        })
+    )
+
+    def clean_pdf_files(self):
+        files = self.files.getlist('pdf_files')
+
+        if not files:
+            raise forms.ValidationError("Please select at least one PDF file.")
+
+        # Validate each file
+        for file in files:
+            if not file.name.lower().endswith('.pdf'):
+                raise forms.ValidationError(f"File '{file.name}' is not a PDF. Please upload only PDF files.")
+
+            # Check file size (limit to 10MB per file)
+            if file.size > 10 * 1024 * 1024:
+                raise forms.ValidationError(f"File '{file.name}' is too large. Maximum size is 10MB per file.")
+
+        return files
