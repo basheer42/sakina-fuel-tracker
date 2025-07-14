@@ -40,6 +40,11 @@ WHATSAPP_CONFIG = {
     'PHONE_NUMBER_ID': config('WHATSAPP_PHONE_NUMBER_ID', default=''),
 }
 
+# Add this after your WHATSAPP_CONFIG
+TELEGRAM_CONFIG = {
+    'BOT_TOKEN': '7319501140:AAH-m2srzExUuyWSjw_G8SMm5wA10KZXhJw',
+}
+
 # AI Order Matching Configuration (FIXED: Removed duplicates)
 AI_MATCHER_ENABLED = config('AI_MATCHER_ENABLED', default=True, cast=bool)
 AI_MATCHER_LOCAL_THRESHOLD = config('AI_MATCHER_LOCAL_THRESHOLD', default=0.6, cast=float)

@@ -1,0 +1,246 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Bulk Upload Loading Authority PDFs{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Header Section -->
+    <div class="sakina-card p-8 mb-8">
+        <div class="flex items-center gap-6">
+            <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4V7h12v8z"/>
+                    <path d="M6 9h8v2H6V9zm0 3h8v1H6v-1z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-4xl font-bold text-gray-900">Bulk Upload Loading Authority PDFs</h2>
+                <p class="text-gray-600 mt-2">Upload multiple PDF documents at once for batch processing</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upload Type Toggle -->
+    <div class="sakina-card p-6 mb-8">
+        <div class="text-center">
+            <div class="inline-flex rounded-md shadow-sm" role="group">
+                <a href="{% url 'shipments:trip-upload-authority' %}" class="px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-blue-300 rounded-l-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-blue-500 focus:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Single Upload
+                </a>
+                <button type="button" class="px-6 py-3 text-sm font-medium text-blue-700 bg-blue-100 border-t border-b border-r border-blue-300 rounded-r-lg hover:bg-blue-200 focus:z-10 focus:ring-2 focus:ring-blue-500 focus:bg-blue-200">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    Bulk Upload
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-3">Upload multiple files at once, or switch to single upload for one file</p>
+        </div>
+    </div>
+
+    <!-- Upload Form -->
+    <div class="sakina-card p-8 mb-8">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <div class="upload-area mb-6" style="border: 2px dashed #d1d5db; border-radius: 1rem; padding: 2rem; text-align: center; background: linear-gradient(135deg, rgba(139, 92, 246, 0.08) 0%, rgba(196, 181, 253, 0.08) 100%);">
+                <div class="flex flex-col items-center">
+                    <svg class="w-16 h-16 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l3-3m0 0l3 3m-3-3v12"/>
+                    </svg>
+                    <h3 class="text-xl font-bold text-gray-700 mb-2">Select Multiple PDF Files</h3>
+                    <p class="text-gray-600 mb-6 text-center max-w-md">
+                        Hold <kbd class="px-2 py-1 bg-gray-200 rounded text-sm font-mono">Ctrl</kbd> (Windows) or 
+                        <kbd class="px-2 py-1 bg-gray-200 rounded text-sm font-mono">Cmd</kbd> (Mac) to select multiple files.
+                    </p>
+                    
+                    <div class="w-full max-w-md">
+                        <label for="{{ form.pdf_files.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            {{ form.pdf_files.label }}
+                        </label>
+                        {{ form.pdf_files }}
+                        
+                        {% if form.pdf_files.help_text %}
+                            <p class="mt-2 text-sm text-gray-500">{{ form.pdf_files.help_text }}</p>
+                        {% endif %}
+                        
+                        {% for error in form.pdf_files.errors %}
+                            <p class="mt-2 text-sm text-red-600 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                                {{ error }}
+                            </p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Display non-field errors -->
+            {% if form.non_field_errors %}
+                <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-400 rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <svg class="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            {% for error in form.non_field_errors %}
+                                <p class="text-red-700 font-medium">{{ error }}</p>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+
+            <!-- Submit Button -->
+            <div class="text-center">
+                <button type="submit" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 transition-colors duration-200">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    Process All PDFs
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Instructions -->
+    <div class="sakina-card p-6 mb-6">
+        <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+            </svg>
+            Bulk Upload Instructions
+        </h3>
+        
+        <div class="space-y-3 text-sm text-blue-700">
+            <div class="flex items-start gap-3">
+                <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span class="text-xs font-bold text-blue-600">1</span>
+                </div>
+                <p><strong>Select Multiple Files:</strong> Use Ctrl+Click (Windows) or Cmd+Click (Mac) to select multiple PDF files at once.</p>
+            </div>
+            
+            <div class="flex items-start gap-3">
+                <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span class="text-xs font-bold text-blue-600">2</span>
+                </div>
+                <p><strong>Batch Processing:</strong> All selected PDFs will be processed automatically and trip records created.</p>
+            </div>
+            
+            <div class="flex items-start gap-3">
+                <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span class="text-xs font-bold text-blue-600">3</span>
+                </div>
+                <p><strong>Results Summary:</strong> You'll get a detailed report showing successful and failed uploads.</p>
+            </div>
+            
+            <div class="flex items-start gap-3">
+                <div class="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <span class="text-xs font-bold text-blue-600">4</span>
+                </div>
+                <p><strong>Error Handling:</strong> Failed uploads won't affect successful ones - each file is processed independently.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Benefits -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="sakina-card p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                </svg>
+                Bulk Upload Benefits
+            </h3>
+            
+            <div class="space-y-3 text-sm text-purple-700">
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3 h-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <p><strong>Time Saving:</strong> Process multiple documents in one operation instead of uploading them one by one.</p>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3 h-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <p><strong>Batch Processing:</strong> All files are processed automatically with detailed success/failure reporting.</p>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3 h-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <p><strong>Error Resilience:</strong> If one file fails, the others continue processing successfully.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Technical Notes -->
+        <div class="sakina-card p-6">
+            <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                <svg class="w-5 h-5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                Important Notes
+            </h3>
+            
+            <div class="space-y-3 text-sm text-orange-700">
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3 h-3 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <p><strong>File Size Limit:</strong> Maximum 10MB per PDF file. Larger files will be rejected.</p>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3 h-3 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <p><strong>Duplicate Prevention:</strong> Files with existing KPC Order Numbers will be skipped to prevent duplicates.</p>
+                </div>
+                
+                <div class="flex items-start gap-3">
+                    <div class="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <svg class="w-3 h-3 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <p><strong>Processing Time:</strong> Large batches may take several minutes. Please be patient and don't refresh the page.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Add file count display
+document.getElementById('{{ form.pdf_files.id_for_label }}').addEventListener('change', function(e) {
+    const fileCount = e.target.files.length;
+    const label = document.querySelector('label[for="{{ form.pdf_files.id_for_label }}"]');
+    if (fileCount > 0) {
+        label.textContent = `Selected ${fileCount} file${fileCount === 1 ? '' : 's'}`;
+        label.classList.add('text-purple-600', 'font-bold');
+    } else {
+        label.textContent = '{{ form.pdf_files.label }}';
+        label.classList.remove('text-purple-600', 'font-bold');
+    }
+});
+</script>
+{% endblock content %}
