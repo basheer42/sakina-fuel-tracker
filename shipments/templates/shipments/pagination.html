@@ -1,0 +1,196 @@
+<!-- shipments/templates/shipments/pagination.html -->
+<!-- Reusable pagination component for all list pages -->
+{% if page_obj %}
+    {% if page_obj.has_other_pages %}
+        <div class="sakina-card p-4 lg:p-6 mt-6">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                <!-- Page Info -->
+                <div class="text-sm text-gray-600">
+                    Showing {{ page_obj.start_index }} to {{ page_obj.end_index }} of {{ page_obj.paginator.count }} results
+                </div>
+                
+                <!-- Pagination Controls -->
+                <nav class="flex items-center gap-2" aria-label="Pagination">
+                    <!-- Previous Page -->
+                    {% if page_obj.has_previous %}
+                        <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.previous_page_number }}" 
+                           class="pagination-btn pagination-btn-prev" 
+                           aria-label="Previous page">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                            <span class="hidden sm:inline">Previous</span>
+                        </a>
+                    {% else %}
+                        <span class="pagination-btn pagination-btn-disabled" aria-label="Previous page (disabled)">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                            <span class="hidden sm:inline">Previous</span>
+                        </span>
+                    {% endif %}
+
+                    <!-- Page Numbers -->
+                    <div class="flex items-center gap-1">
+                        {% if page_obj.number > 3 %}
+                            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page=1" 
+                               class="pagination-number">1</a>
+                            {% if page_obj.number > 4 %}
+                                <span class="pagination-ellipsis">...</span>
+                            {% endif %}
+                        {% endif %}
+
+                        {% for num in page_obj.paginator.page_range %}
+                            {% if num >= page_obj.number|add:'-2' and num <= page_obj.number|add:'2' %}
+                                {% if num == page_obj.number %}
+                                    <span class="pagination-number pagination-current" aria-current="page">{{ num }}</span>
+                                {% else %}
+                                    <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ num }}" 
+                                       class="pagination-number">{{ num }}</a>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if page_obj.number < page_obj.paginator.num_pages|add:'-2' %}
+                            {% if page_obj.number < page_obj.paginator.num_pages|add:'-3' %}
+                                <span class="pagination-ellipsis">...</span>
+                            {% endif %}
+                            <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}" 
+                               class="pagination-number">{{ page_obj.paginator.num_pages }}</a>
+                        {% endif %}
+                    </div>
+
+                    <!-- Next Page -->
+                    {% if page_obj.has_next %}
+                        <a href="?{% for key, value in request.GET.items %}{% if key != 'page' %}{{ key }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.next_page_number }}" 
+                           class="pagination-btn pagination-btn-next" 
+                           aria-label="Next page">
+                            <span class="hidden sm:inline">Next</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </a>
+                    {% else %}
+                        <span class="pagination-btn pagination-btn-disabled" aria-label="Next page (disabled)">
+                            <span class="hidden sm:inline">Next</span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                            </svg>
+                        </span>
+                    {% endif %}
+                </nav>
+            </div>
+
+            <!-- Mobile Page Jump (Optional) -->
+            <div class="mt-4 sm:hidden">
+                <form method="get" class="flex items-center gap-2">
+                    <!-- Preserve all GET parameters -->
+                    {% for key, value in request.GET.items %}
+                        {% if key != 'page' %}
+                            <input type="hidden" name="{{ key }}" value="{{ value }}">
+                        {% endif %}
+                    {% endfor %}
+                    
+                    <label for="page-jump" class="text-sm text-gray-600">Go to page:</label>
+                    <select name="page" id="page-jump" class="form-input w-20" onchange="this.form.submit()">
+                        {% for num in page_obj.paginator.page_range %}
+                            <option value="{{ num }}" {% if num == page_obj.number %}selected{% endif %}>{{ num }}</option>
+                        {% endfor %}
+                    </select>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+{% endif %}
+
+<style>
+/* Pagination Styles */
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    background-color: white;
+    color: #374151;
+    text-decoration: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.pagination-btn:hover:not(.pagination-btn-disabled) {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+    color: #111827;
+}
+
+.pagination-btn-disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.pagination-number {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 1px solid #d1d5db;
+    background-color: white;
+    color: #374151;
+    text-decoration: none;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.pagination-number:hover {
+    background-color: #f3f4f6;
+    border-color: #9ca3af;
+    color: #111827;
+}
+
+.pagination-current {
+    background-color: #3b82f6;
+    border-color: #3b82f6;
+    color: white;
+}
+
+.pagination-current:hover {
+    background-color: #2563eb;
+    border-color: #2563eb;
+    color: white;
+}
+
+.pagination-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: #6b7280;
+    font-weight: 500;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+    .pagination-btn {
+        padding: 0.5rem;
+    }
+    
+    .pagination-number {
+        width: 2rem;
+        height: 2rem;
+        font-size: 0.8125rem;
+    }
+    
+    .pagination-ellipsis {
+        width: 2rem;
+        height: 2rem;
+    }
+}
+</style>

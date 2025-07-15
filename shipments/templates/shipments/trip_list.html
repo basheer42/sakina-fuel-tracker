@@ -153,8 +153,8 @@
         text-align: left;
         font-size: 0.875rem;
         font-weight: 600;
-        text-transform: uppercase; 
-        letter-spacing: 0.05em; 
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
     }
 
     .table-enhanced thead .themed-table-header th:first-child {
@@ -242,24 +242,24 @@
             padding-left: 1rem;
             padding-right: 1rem;
         }
-        
+
         .mobile-hidden {
             display: none;
         }
-        
+
         .mobile-only {
             display: block;
         }
-        
+
         .mobile-stack {
             flex-direction: column;
             align-items: stretch;
         }
-        
+
         .mobile-full-width {
             width: 100%;
         }
-        
+
         .mobile-text-sm {
             font-size: 0.875rem;
         }
@@ -269,7 +269,7 @@
         .mobile-only {
             display: none;
         }
-        
+
         .desktop-table {
             display: table;
         }
@@ -280,7 +280,7 @@
         .summary-card {
             padding: 1rem;
         }
-        
+
         .summary-card .grid {
             grid-template-columns: 1fr;
             gap: 1rem;
@@ -303,7 +303,7 @@
                 <p class="text-sm lg:text-base text-gray-600 mt-1">Manage and track all fuel loading and dispatch records</p>
             </div>
         </div>
-        
+
         {% if can_add_trip %}
         <a href="{% url 'shipments:trip-add' %}" class="sakina-btn add-btn mobile-full-width lg:w-auto text-center">
             <span class="relative z-10 flex items-center justify-center gap-2">
@@ -374,7 +374,7 @@
                     <input type="date" name="end_date" id="end_date_filter" value="{{ end_date_filter_value|default:'' }}" class="form-input">
                 </div>
             </div>
-            
+
             <div class="flex flex-col sm:flex-row gap-3 justify-end mt-6">
                 <button type="submit" class="sakina-btn mobile-full-width sm:w-auto">
                     <span class="relative z-10 flex items-center justify-center gap-2">
@@ -587,7 +587,7 @@
                         There are currently no loadings recorded.
                     {% endif %}
                 </p>
-                
+
                 <div class="flex flex-col sm:flex-row gap-3 justify-center">
                     {% if product_filter_value or customer_filter_value or vehicle_filter_value or status_filter_value or start_date_filter_value or end_date_filter_value %}
                         <a href="{% url 'shipments:trip-list' %}" class="inline-flex items-center justify-center gap-2 px-4 py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-700 rounded-lg font-medium transition-colors mobile-full-width sm:w-auto">
@@ -597,7 +597,7 @@
                             Clear Filters
                         </a>
                     {% endif %}
-                    
+
                     {% if can_add_trip and not product_filter_value and not customer_filter_value and not vehicle_filter_value and not status_filter_value and not start_date_filter_value and not end_date_filter_value %}
                         <a href="{% url 'shipments:trip-add' %}" class="sakina-btn add-btn mobile-full-width sm:w-auto">
                             <span class="relative z-10 flex items-center justify-center gap-2">
@@ -612,5 +612,6 @@
             </div>
         </div>
     {% endif %}
+    {% include 'shipments/pagination.html' %}
 </div>
 {% endblock content %}

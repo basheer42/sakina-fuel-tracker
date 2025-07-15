@@ -5,6 +5,38 @@ from .models import Shipment, Trip, LoadingCompartment, Product, Customer, Vehic
 from decimal import Decimal
 
 
+# Custom widget for multiple file uploads
+class MultipleFileInput(forms.ClearableFileInput):
+    allow_multiple_selected = True
+
+    def __init__(self, attrs=None):
+        if attrs is None:
+            attrs = {}
+        attrs['multiple'] = True
+        super().__init__(attrs)
+
+    def value_from_datadict(self, data, files, name):
+        upload = files.getlist(name)
+        if not upload:
+            return None
+        return upload
+
+
+# Custom field for multiple file uploads
+class MultipleFileField(forms.FileField):
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault("widget", MultipleFileInput())
+        super().__init__(*args, **kwargs)
+
+    def clean(self, data, initial=None):
+        single_file_clean = super().clean
+        if isinstance(data, (list, tuple)):
+            result = [single_file_clean(d, initial) for d in data]
+        else:
+            result = single_file_clean(data, initial)
+        return result
+
+
 # --- Forms for Shipments (Stock In) ---
 class ShipmentForm(forms.ModelForm):
     class Meta:
@@ -147,19 +179,18 @@ class PdfLoadingAuthorityUploadForm(forms.Form):
 
 # FORM FOR BULK PDF UPLOAD
 class BulkPdfLoadingAuthorityUploadForm(forms.Form):
-    pdf_files = forms.FileField(
+    pdf_files = MultipleFileField(
         label="Upload Multiple Loading Authority PDFs",
         help_text="Select multiple PDF documents containing loading authority details. Hold Ctrl/Cmd to select multiple files.",
-        widget=forms.ClearableFileInput(attrs={
+        widget=MultipleFileInput(attrs={
             'class': 'mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer',
-            'accept': '.pdf',
-            'multiple': True
+            'accept': '.pdf'
         })
     )
 
     def clean_pdf_files(self):
-        files = self.files.getlist('pdf_files')
-
+        files = self.cleaned_data.get('pdf_files')
+        
         if not files:
             raise forms.ValidationError("Please select at least one PDF file.")
 
