@@ -53,15 +53,15 @@ class ShipmentForm(forms.ModelForm):
             'product': forms.Select(attrs={'class': ''}),
             'destination': forms.Select(attrs={'class': ''}),
             'quantity_litres': forms.NumberInput(attrs={'class': '', 'step': '0.01', 'placeholder': 'Quantity in litres'}),
-            'price_per_litre': forms.NumberInput(attrs={'class': '', 'step': '0.001', 'placeholder': 'Price per litre'}),
-            'notes': forms.Textarea(attrs={'class': '', 'rows': 3, 'placeholder': 'Additional notes...'}),
+            'price_per_litre': forms.NumberInput(attrs={'class': '', 'step': '0.001', 'placeholder': 'Price per litre (USD)'}),
+            'notes': forms.Textarea(attrs={'class': '', 'rows': 3, 'placeholder': 'Additional notes about this shipment...'}),
         }
         labels = {
             'vessel_id_tag': 'Vessel/Batch ID',
             'import_date': 'Import Date',
             'supplier_name': 'Supplier Name',
             'quantity_litres': 'Quantity (Litres)',
-            'price_per_litre': 'Price per Litre',
+            'price_per_litre': 'Price per Litre (USD)',
         }
 
     def __init__(self, *args, **kwargs):
@@ -77,12 +77,6 @@ class ShipmentForm(forms.ModelForm):
             raise forms.ValidationError("Quantity must be greater than zero.")
         return quantity
 
-    def clean_vessel_id_tag(self):
-        vessel_id = self.cleaned_data.get('vessel_id_tag')
-        if vessel_id and len(vessel_id.strip()) < 3:
-            raise forms.ValidationError("Vessel ID must be at least 3 characters long.")
-        return vessel_id.strip().upper() if vessel_id else vessel_id
-
     def clean_price_per_litre(self):
         price = self.cleaned_data.get('price_per_litre')
         if price and price <= 0:
@@ -90,31 +84,22 @@ class ShipmentForm(forms.ModelForm):
         return price
 
 
-# --- Forms and Formset for Trips (Stock Out) ---
+# --- Forms for Trips (Stock Out) ---
 class TripForm(forms.ModelForm):
-    # Explicitly define destination
-    destination = forms.ModelChoiceField(
-        queryset=Destination.objects.all().order_by('name'),
-        required=True, # As per Trip model (blank=False for destination)
-        widget=forms.Select(attrs={'class': ''}) # Rely on global CSS
-    )
-
     class Meta:
         model = Trip
         fields = [
-            'vehicle', 'customer', 'product', 'destination',
-            'loading_date', 'loading_time',
-            'kpc_order_number', # This field is for the KPC Order (Sxxxx)
-            # 'bol_number', # Omitted from manual form; handled by email processing for final BoL
-            'status', 'notes', 'kpc_comments'
+            'loading_date', 'loading_time', 'vehicle', 'customer',
+            'product', 'destination', 'kpc_order_number', 'status', 'notes', 'kpc_comments'
         ]
         widgets = {
+            'loading_date': forms.DateInput(attrs={'type': 'date', 'class': ''}),
+            'loading_time': forms.TimeInput(attrs={'type': 'time', 'class': ''}),
             'vehicle': forms.Select(attrs={'class': ''}),
             'customer': forms.Select(attrs={'class': ''}),
             'product': forms.Select(attrs={'class': ''}),
-            'loading_date': forms.DateInput(attrs={'type': 'date', 'class': ''}),
-            'loading_time': forms.TimeInput(attrs={'type': 'time', 'class': ''}),
-            'kpc_order_number': forms.TextInput(attrs={'class': '', 'placeholder': 'KPC Order No. (e.g. S0xxxx)'}),
+            'destination': forms.Select(attrs={'class': ''}),
+            'kpc_order_number': forms.TextInput(attrs={'class': '', 'placeholder': 'Loading Order No. (e.g. S0xxxx)'}),
             'status': forms.Select(attrs={'class': ''}),
             'notes': forms.Textarea(attrs={'class': '', 'rows': 3, 'placeholder': 'Notes for this loading...'}),
             'kpc_comments': forms.Textarea(attrs={'class': '', 'rows': 2, 'placeholder': 'Comments from KPC updates...'}),
@@ -122,7 +107,7 @@ class TripForm(forms.ModelForm):
         labels = {
             'loading_date': 'Authority/BOL Date',
             'loading_time': 'Authority/BOL Time',
-            'kpc_order_number': 'KPC Order No. / Initial BoL', # Label adjusted
+            'kpc_order_number': 'KPC Order No. / Initial BoL',
             'status': 'Loading Status',
             'kpc_comments': 'KPC Comments'
         }
@@ -136,11 +121,11 @@ class TripForm(forms.ModelForm):
         if 'product' in self.fields:
             self.fields['product'].queryset = Product.objects.all().order_by('name')
 
-    def clean_kpc_order_number(self): # This correctly cleans the kpc_order_number field
+    def clean_kpc_order_number(self):
         kpc_order_val = self.cleaned_data.get('kpc_order_number')
         if kpc_order_val and not kpc_order_val.startswith('S'):
             raise forms.ValidationError("KPC Loading Order Number must start with 'S'.")
-        return kpc_order_val.upper() if kpc_order_val else kpc_order_val
+        return kpc_order_val.upper() if kpc_order_val else kmp_order_val
 
 
 class LoadingCompartmentForm(forms.ModelForm):
@@ -174,10 +159,10 @@ class PdfLoadingAuthorityUploadForm(forms.Form):
         widget=forms.FileInput(attrs={
             'class': 'mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer',
             'accept': '.pdf'
-            })
+        })
     )
 
-# FORM FOR BULK PDF UPLOAD
+# FORM FOR BULK PDF UPLOAD - ✅ FIXED
 class BulkPdfLoadingAuthorityUploadForm(forms.Form):
     pdf_files = MultipleFileField(
         label="Upload Multiple Loading Authority PDFs",
