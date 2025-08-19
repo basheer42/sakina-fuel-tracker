@@ -185,9 +185,11 @@ class BulkPdfLoadingAuthorityUploadForm(forms.Form):
 
 # NEW: FORM FOR TR830 PDF UPLOAD (Shipments)
 class TR830UploadForm(forms.Form):
+    """Enhanced TR830 upload form with better validation and user experience"""
+    
     tr830_pdf = forms.FileField(
         label="Upload TR830 PDF Document",
-        help_text="Upload the KRA TR830 PDF document containing received entries per product/destination.",
+        help_text="Upload the KRA TR830 PDF document containing received entries per product/destination. Maximum file size: 10MB.",
         widget=forms.FileInput(attrs={
             'accept': '.pdf', 
             'class': 'form-control',
@@ -195,70 +197,98 @@ class TR830UploadForm(forms.Form):
         })
     )
     
-    # Optional: Default supplier name if not found in PDF
     default_supplier = forms.CharField(
         max_length=200,
         required=False,
-        label="Default Supplier Name (optional)",
-        help_text="If supplier name cannot be extracted from PDF, this will be used as fallback.",
+        initial="KPC",
+        label="Default Supplier Name",
+        help_text="Supplier name to use if not found in PDF. Defaults to 'KPC'.",
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'e.g., Default Oil Company Ltd'
+            'placeholder': 'e.g., Kuwait Petroleum Corporation'
         })
     )
     
-    # Optional: Default price per litre
     default_price_per_litre = forms.DecimalField(
         max_digits=7,
         decimal_places=3,
         required=False,
-        label="Default Price per Litre (USD, optional)",
-        help_text="Default price if not found in PDF. Leave blank to use 0.000.",
+        initial=Decimal('0.000'),
+        label="Default Price per Litre (USD)",
+        help_text="Price per litre if not found in PDF. Use 0.000 if unknown.",
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.001',
-            'placeholder': '0.000'
+            'placeholder': '0.000',
+            'min': '0'
         })
     )
 
     def clean_tr830_pdf(self):
+        """Enhanced PDF validation"""
         pdf_file = self.cleaned_data.get('tr830_pdf')
         
         if not pdf_file:
             raise forms.ValidationError("Please select a PDF file.")
         
-        # Check file extension
+        # File extension validation
         if not pdf_file.name.lower().endswith('.pdf'):
             raise forms.ValidationError("Only PDF files are allowed.")
         
-        # Check file size (10MB limit)
+        # File size validation (10MB limit)
         if pdf_file.size > 10 * 1024 * 1024:
             raise forms.ValidationError("File size must be less than 10MB.")
         
+        # Basic PDF content validation
+        try:
+            pdf_file.seek(0)
+            header = pdf_file.read(5)
+            if header != b'%PDF-':
+                raise forms.ValidationError("Invalid PDF file format.")
+            pdf_file.seek(0)
+        except Exception:
+            raise forms.ValidationError("Unable to read PDF file.")
+        
         return pdf_file
 
+    def clean_default_supplier(self):
+        """Validate supplier name"""
+        supplier = self.cleaned_data.get('default_supplier', '').strip()
+        if supplier and len(supplier) < 2:
+            raise forms.ValidationError("Supplier name must be at least 2 characters long.")
+        return supplier or "KPC"
+
     def clean_default_price_per_litre(self):
+        """Validate price"""
         price = self.cleaned_data.get('default_price_per_litre')
         if price is not None and price < 0:
             raise forms.ValidationError("Price cannot be negative.")
-        return price
+        return price or Decimal('0.000')
+
 
 # NEW: FORM FOR BULK TR830 PDF UPLOAD
 class BulkTR830UploadForm(forms.Form):
+    """Enhanced bulk TR830 upload form"""
+    
     tr830_files = MultipleFileField(
         label="Upload Multiple TR830 PDF Documents",
-        help_text="Select multiple TR830 PDF files to upload at once. Maximum 5 files.",
-        widget=MultipleFileInput(attrs={'accept': '.pdf', 'class': 'form-control'})
+        help_text="Select multiple TR830 PDF files to upload at once. Maximum 5 files, 10MB each.",
+        widget=MultipleFileInput(attrs={
+            'accept': '.pdf', 
+            'class': 'form-control',
+            'multiple': True
+        })
     )
     
     default_supplier = forms.CharField(
         max_length=200,
         required=False,
-        label="Default Supplier Name (optional)",
+        initial="KPC",
+        label="Default Supplier Name",
         help_text="Fallback supplier name for all uploads if not found in PDFs.",
         widget=forms.TextInput(attrs={
             'class': 'form-control',
-            'placeholder': 'e.g., Default Oil Company Ltd'
+            'placeholder': 'e.g., Kuwait Petroleum Corporation'
         })
     )
     
@@ -266,16 +296,19 @@ class BulkTR830UploadForm(forms.Form):
         max_digits=7,
         decimal_places=3,
         required=False,
-        label="Default Price per Litre (USD, optional)",
+        initial=Decimal('0.000'),
+        label="Default Price per Litre (USD)",
         help_text="Default price for all uploads if not found in PDFs.",
         widget=forms.NumberInput(attrs={
             'class': 'form-control',
             'step': '0.001',
-            'placeholder': '0.000'
+            'placeholder': '0.000',
+            'min': '0'
         })
     )
 
     def clean_tr830_files(self):
+        """Enhanced file validation for bulk upload"""
         files = self.cleaned_data.get('tr830_files', [])
         
         if not files:
@@ -285,15 +318,34 @@ class BulkTR830UploadForm(forms.Form):
             raise forms.ValidationError("Maximum 5 files allowed for TR830 bulk upload.")
         
         for file in files:
+            # Extension check
             if not file.name.lower().endswith('.pdf'):
                 raise forms.ValidationError(f"File '{file.name}' is not a PDF.")
-            if file.size > 10 * 1024 * 1024:  # 10MB limit
+            
+            # Size check
+            if file.size > 10 * 1024 * 1024:
                 raise forms.ValidationError(f"File '{file.name}' is too large. Maximum size is 10MB.")
+            
+            # Basic content check
+            try:
+                file.seek(0)
+                header = file.read(5)
+                if header != b'%PDF-':
+                    raise forms.ValidationError(f"File '{file.name}' is not a valid PDF.")
+                file.seek(0)
+            except Exception:
+                raise forms.ValidationError(f"Unable to read file '{file.name}'.")
         
         return files
 
+    def clean_default_supplier(self):
+        """Validate supplier name"""
+        supplier = self.cleaned_data.get('default_supplier', '').strip()
+        return supplier or "KPC"
+
     def clean_default_price_per_litre(self):
+        """Validate price"""
         price = self.cleaned_data.get('default_price_per_litre')
         if price is not None and price < 0:
             raise forms.ValidationError("Price cannot be negative.")
-        return price
+        return price or Decimal('0.000')

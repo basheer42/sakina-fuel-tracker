@@ -2699,15 +2699,22 @@ def bulk_upload_loading_authority_view(request):
 @require_http_methods(["GET", "POST"])
 @csrf_protect
 def upload_tr830_view(request):
-    """Upload and process single TR830 PDF to create shipments"""
+    """Enhanced TR830 upload view with robust error handling and validation"""
     if request.method == 'POST':
         form = TR830UploadForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                # Get the uploaded file
+                # Get form data
                 pdf_file = form.cleaned_data['tr830_pdf']
-                default_supplier = form.cleaned_data.get('default_supplier', 'Unknown Supplier')
+                default_supplier = form.cleaned_data.get('default_supplier', 'KPC').strip()
                 default_price = form.cleaned_data.get('default_price_per_litre', Decimal('0.000'))
+                
+                # Validate file
+                try:
+                    validate_file_upload(pdf_file, allowed_extensions=ALLOWED_PDF_EXTENSIONS)
+                except ValidationError as e:
+                    messages.error(request, f"File validation failed: {e}")
+                    return render(request, 'shipments/upload_tr830.html', {'form': form})
 
                 # Create temporary file
                 with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
@@ -2716,21 +2723,38 @@ def upload_tr830_view(request):
                     temp_file_path = temp_file.name
 
                 try:
-                    # Parse the PDF
+                    # Enhanced parsing with the new parser
                     parser = TR830Parser()
                     import_date, entries = parser.parse_pdf(temp_file_path)
 
-                    if not entries:
-                        messages.error(request, "No valid entries found in the TR830 document.")
+                    # Validate parsing results
+                    success, parsing_errors = parser.validate_parsing_result(entries)
+                    if not success:
+                        error_msg = "TR830 parsing validation failed: " + "; ".join(parsing_errors)
+                        messages.error(request, error_msg)
                         return render(request, 'shipments/upload_tr830.html', {'form': form})
 
-                    # Create shipments from entries
+                    # Generate parsing summary
+                    summary = parser.get_parsing_summary(entries)
+                    logger.info(f"TR830 parsing summary: {summary}")
+
+                    # Process entries and create shipments
                     created_shipments = []
                     errors = []
+                    skipped_entries = []
 
                     with transaction.atomic():
-                        for entry in entries:
+                        for idx, entry in enumerate(entries, 1):
                             try:
+                                # Enhanced validation
+                                if not entry.avalue or entry.avalue <= 0:
+                                    skipped_entries.append(f"Entry {idx}: Invalid quantity ({entry.avalue})")
+                                    continue
+
+                                if not entry.product_type:
+                                    skipped_entries.append(f"Entry {idx}: No product type identified")
+                                    continue
+
                                 # Get or create product
                                 product, created = Product.objects.get_or_create(
                                     name=entry.product_type,
@@ -2739,32 +2763,24 @@ def upload_tr830_view(request):
                                 if created:
                                     logger.info(f"Created new product: {product.name}")
 
-                                # Get or create destination
-                                destination, created = Destination.objects.get_or_create(
-                                    name=entry.destination,
-                                    defaults={'name': entry.destination}
-                                )
-                                if created:
-                                    logger.info(f"Created new destination: {destination.name}")
+                                # Get or create destination (if provided)
+                                destination = None
+                                if entry.destination:
+                                    destination, created = Destination.objects.get_or_create(
+                                        name=entry.destination,
+                                        defaults={'name': entry.destination}
+                                    )
+                                    if created:
+                                        logger.info(f"Created new destination: {destination.name}")
 
-                                # Determine supplier
-                                supplier_name = entry.supplier or default_supplier or 'Unknown Supplier'
+                                # Generate vessel ID with enhanced formatting
+                                vessel_id = entry.marks or f"TR830-{datetime.datetime.now().strftime('%Y%m%d')}-{idx:03d}"
+                                vessel_id = parser.format_vessel_id(vessel_id)
 
-                                # Create vessel ID from marks
-                                vessel_id = parser.format_vessel_id(entry.marks)
+                                # Use supplier from entry or default
+                                supplier_name = entry.supplier or default_supplier or "Unknown Supplier"
 
-                                # Check if shipment already exists
-                                existing_shipment = Shipment.objects.filter(
-                                    vessel_id_tag=vessel_id,
-                                    import_date=import_date.date(),
-                                    product=product
-                                ).first()
-
-                                if existing_shipment:
-                                    errors.append(f"Shipment with vessel ID '{vessel_id}' already exists for {import_date.date()}")
-                                    continue
-
-                                # Create the shipment
+                                # Create shipment with enhanced data
                                 shipment = Shipment.objects.create(
                                     user=request.user,
                                     vessel_id_tag=vessel_id,
@@ -2774,39 +2790,75 @@ def upload_tr830_view(request):
                                     destination=destination,
                                     quantity_litres=entry.avalue,
                                     price_per_litre=default_price,
-                                    notes=f"Auto-created from TR830 upload. Description: {entry.description}"
+                                    notes=f"Created from TR830 PDF: {pdf_file.name}\n"
+                                          f"Original description: {entry.description}\n"
+                                          f"Reference: {entry.reference_number}\n"
+                                          f"Processing date: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}"
                                 )
 
                                 created_shipments.append(shipment)
-                                logger.info(f"Created shipment: {shipment}")
+                                logger.info(f"Created shipment from TR830: {shipment}")
+
+                            except IntegrityError as e:
+                                if 'vessel_id_tag' in str(e).lower():
+                                    # Handle duplicate vessel ID
+                                    error_msg = f"Entry {idx}: Vessel ID '{vessel_id}' already exists"
+                                    errors.append(error_msg)
+                                    logger.warning(error_msg)
+                                else:
+                                    error_msg = f"Entry {idx}: Database error - {str(e)}"
+                                    errors.append(error_msg)
+                                    logger.error(error_msg)
+                                continue
 
                             except Exception as e:
-                                error_msg = f"Error creating shipment for {entry.marks}: {str(e)}"
+                                error_msg = f"Entry {idx}: Unexpected error - {str(e)}"
                                 errors.append(error_msg)
-                                logger.error(error_msg)
+                                logger.error(f"Error creating shipment for entry {idx}: {e}", exc_info=True)
+                                continue
 
-                    # Generate summary
-                    summary = parser.get_parsing_summary(entries)
-
-                    # Show results
+                    # Enhanced success messaging with detailed summary
                     if created_shipments:
-                        messages.success(
-                            request,
-                            f"Successfully created {len(created_shipments)} shipments from TR830. "
-                            f"Total quantity: {summary['total_quantity']} litres."
+                        total_quantity = sum(s.quantity_litres for s in created_shipments)
+                        success_msg = (
+                            f"✅ Successfully created {len(created_shipments)} shipments from TR830 document!\n"
+                            f"📊 Total quantity: {total_quantity:,.2f} litres\n"
+                            f"📅 Import date: {import_date.date()}\n"
+                            f"🏭 Products: {', '.join(summary.get('products_found', []))}\n"
+                            f"🌍 Destinations: {', '.join(summary.get('destinations', ['Not specified']))}"
                         )
+                        messages.success(request, success_msg)
 
+                    # Show warnings for skipped entries
+                    if skipped_entries:
+                        for skip_msg in skipped_entries[:5]:  # Show max 5
+                            messages.warning(request, f"⚠️ Skipped: {skip_msg}")
+                        if len(skipped_entries) > 5:
+                            messages.warning(request, f"... and {len(skipped_entries) - 5} more entries skipped")
+
+                    # Show errors
                     if errors:
-                        for error in errors:
-                            messages.warning(request, error)
+                        for error in errors[:5]:  # Show max 5 errors
+                            messages.error(request, f"❌ {error}")
+                        if len(errors) > 5:
+                            messages.error(request, f"... and {len(errors) - 5} more errors occurred")
 
-                    # Redirect to shipment list
-                    return redirect('shipments:shipment-list')
+                    # Enhanced parsing warnings
+                    if 'warnings' in summary:
+                        for warning in summary['warnings']:
+                            messages.warning(request, f"⚠️ Parse Warning: {warning}")
+
+                    # Redirect with success
+                    if created_shipments:
+                        return redirect('shipments:shipment-list')
+                    else:
+                        messages.error(request, "No shipments were created. Please check the TR830 document format.")
 
                 except TR830ParseError as e:
-                    messages.error(request, f"Error parsing TR830 PDF: {str(e)}")
+                    messages.error(request, f"❌ TR830 parsing failed: {str(e)}")
+                    logger.error(f"TR830 parsing error: {e}")
                 except Exception as e:
-                    messages.error(request, f"Unexpected error processing TR830: {str(e)}")
+                    messages.error(request, f"❌ Unexpected error processing TR830: {str(e)}")
                     logger.error(f"Unexpected error in TR830 upload: {e}", exc_info=True)
 
                 finally:
@@ -2817,12 +2869,17 @@ def upload_tr830_view(request):
                         pass
 
             except Exception as e:
-                messages.error(request, f"Error uploading file: {str(e)}")
+                messages.error(request, f"❌ Error uploading file: {str(e)}")
+                logger.error(f"File upload error in TR830: {e}", exc_info=True)
         else:
-            # Form validation errors
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
+            # Enhanced form validation error display
+            for field, field_errors in form.errors.items():
+                for error in field_errors:
+                    if field == '__all__':
+                        messages.error(request, f"Form Error: {error}")
+                    else:
+                        field_label = form.fields[field].label if field in form.fields else field.replace('_', ' ').title()
+                        messages.error(request, f"❌ {field_label}: {error}")
     else:
         form = TR830UploadForm()
 
@@ -2834,75 +2891,111 @@ def upload_tr830_view(request):
 @require_http_methods(["GET", "POST"])
 @csrf_protect
 def bulk_upload_tr830_view(request):
-    """Upload and process multiple TR830 PDFs to create shipments"""
+    """Enhanced bulk TR830 upload view with comprehensive processing"""
     if request.method == 'POST':
         form = BulkTR830UploadForm(request.POST, request.FILES)
         if form.is_valid():
             try:
-                # Get the uploaded files
+                # Get form data
                 pdf_files = form.cleaned_data['tr830_files']
-                default_supplier = form.cleaned_data.get('default_supplier', 'Unknown Supplier')
+                default_supplier = form.cleaned_data.get('default_supplier', 'KPC').strip()
                 default_price = form.cleaned_data.get('default_price_per_litre', Decimal('0.000'))
 
+                # Processing tracking
+                processing_results = []
                 all_created_shipments = []
-                all_errors = []
-                processing_summary = []
+                total_errors = []
+                
+                logger.info(f"Starting bulk TR830 processing: {len(pdf_files)} files")
 
                 # Process each file
-                for pdf_file in pdf_files:
+                for file_idx, pdf_file in enumerate(pdf_files, 1):
+                    file_result = {
+                        'filename': pdf_file.name,
+                        'file_index': file_idx,
+                        'shipments_created': 0,
+                        'total_quantity': Decimal('0'),
+                        'errors': [],
+                        'warnings': [],
+                        'processing_time': None
+                    }
+                    
+                    start_time = timezone.now()
+                    
                     try:
-                        # Create temporary file for this PDF
+                        # Validate individual file
+                        try:
+                            validate_file_upload(pdf_file, allowed_extensions=ALLOWED_PDF_EXTENSIONS)
+                        except ValidationError as e:
+                            file_result['errors'].append(f"File validation failed: {e}")
+                            processing_results.append(file_result)
+                            continue
+
+                        # Create temporary file
                         with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
                             for chunk in pdf_file.chunks():
                                 temp_file.write(chunk)
                             temp_file_path = temp_file.name
 
                         try:
-                            # Parse this PDF
+                            # Parse with enhanced parser
                             parser = TR830Parser()
                             import_date, entries = parser.parse_pdf(temp_file_path)
 
-                            if not entries:
-                                all_errors.append(f"No valid entries found in {pdf_file.name}")
+                            # Validate parsing
+                            success, parsing_errors = parser.validate_parsing_result(entries)
+                            if not success:
+                                file_result['errors'].extend(parsing_errors)
+                                processing_results.append(file_result)
                                 continue
 
-                            # Create shipments from entries
-                            file_created_shipments = []
-                            file_errors = []
+                            # Get parsing summary
+                            summary = parser.get_parsing_summary(entries)
+                            if 'warnings' in summary:
+                                file_result['warnings'].extend(summary['warnings'])
 
+                            # Process entries
+                            file_created_shipments = []
+                            
                             with transaction.atomic():
-                                for entry in entries:
+                                for idx, entry in enumerate(entries, 1):
                                     try:
-                                        # Get or create product
-                                        product, created = Product.objects.get_or_create(
+                                        # Validation
+                                        if not entry.avalue or entry.avalue <= 0:
+                                            file_result['warnings'].append(f"Entry {idx}: Invalid quantity")
+                                            continue
+
+                                        if not entry.product_type:
+                                            file_result['warnings'].append(f"Entry {idx}: No product type")
+                                            continue
+
+                                        # Create database objects
+                                        product, _ = Product.objects.get_or_create(
                                             name=entry.product_type,
                                             defaults={'name': entry.product_type}
                                         )
 
-                                        # Get or create destination
-                                        destination, created = Destination.objects.get_or_create(
-                                            name=entry.destination,
-                                            defaults={'name': entry.destination}
-                                        )
+                                        destination = None
+                                        if entry.destination:
+                                            destination, _ = Destination.objects.get_or_create(
+                                                name=entry.destination,
+                                                defaults={'name': entry.destination}
+                                            )
 
-                                        # Determine supplier
-                                        supplier_name = entry.supplier or default_supplier or 'Unknown Supplier'
+                                        # Generate unique vessel ID
+                                        base_vessel_id = entry.marks or f"TR830-{file_idx:02d}-{idx:03d}"
+                                        vessel_id = parser.format_vessel_id(base_vessel_id)
+                                        
+                                        # Ensure uniqueness across all files in this batch
+                                        counter = 1
+                                        original_vessel_id = vessel_id
+                                        while Shipment.objects.filter(vessel_id_tag=vessel_id).exists():
+                                            vessel_id = f"{original_vessel_id}-{counter:02d}"
+                                            counter += 1
 
-                                        # Create vessel ID from marks
-                                        vessel_id = parser.format_vessel_id(entry.marks)
+                                        supplier_name = entry.supplier or default_supplier or "Unknown Supplier"
 
-                                        # Check if shipment already exists
-                                        existing_shipment = Shipment.objects.filter(
-                                            vessel_id_tag=vessel_id,
-                                            import_date=import_date.date(),
-                                            product=product
-                                        ).first()
-
-                                        if existing_shipment:
-                                            file_errors.append(f"Shipment '{vessel_id}' already exists")
-                                            continue
-
-                                        # Create the shipment
+                                        # Create shipment
                                         shipment = Shipment.objects.create(
                                             user=request.user,
                                             vessel_id_tag=vessel_id,
@@ -2912,77 +3005,92 @@ def bulk_upload_tr830_view(request):
                                             destination=destination,
                                             quantity_litres=entry.avalue,
                                             price_per_litre=default_price,
-                                            notes=f"Auto-created from TR830 bulk upload ({pdf_file.name}). Description: {entry.description}"
+                                            notes=f"Bulk TR830 upload from: {pdf_file.name}\n"
+                                                  f"File {file_idx} of {len(pdf_files)}\n"
+                                                  f"Original description: {entry.description}\n"
+                                                  f"Reference: {entry.reference_number}"
                                         )
 
                                         file_created_shipments.append(shipment)
+                                        all_created_shipments.append(shipment)
 
                                     except Exception as e:
-                                        error_msg = f"Error creating shipment for {entry.marks} in {pdf_file.name}: {str(e)}"
-                                        file_errors.append(error_msg)
+                                        error_msg = f"Entry {idx}: {str(e)}"
+                                        file_result['errors'].append(error_msg)
+                                        logger.error(f"Error in bulk TR830 entry {idx}: {e}")
 
-                            # Add to overall results
-                            all_created_shipments.extend(file_created_shipments)
-                            all_errors.extend(file_errors)
-
-                            # Generate summary for this file
-                            summary = parser.get_parsing_summary(entries)
-                            processing_summary.append({
-                                'filename': pdf_file.name,
-                                'entries_found': len(entries),
-                                'shipments_created': len(file_created_shipments),
-                                'errors': len(file_errors),
-                                'total_quantity': summary['total_quantity']
-                            })
+                            # Update file results
+                            file_result['shipments_created'] = len(file_created_shipments)
+                            file_result['total_quantity'] = sum(s.quantity_litres for s in file_created_shipments)
+                            file_result['processing_time'] = (timezone.now() - start_time).total_seconds()
 
                         finally:
-                            # Clean up this temporary file
+                            # Clean up temp file
                             try:
                                 os.unlink(temp_file_path)
                             except OSError:
                                 pass
 
-                    except TR830ParseError as e:
-                        all_errors.append(f"Error parsing {pdf_file.name}: {str(e)}")
                     except Exception as e:
-                        all_errors.append(f"Unexpected error processing {pdf_file.name}: {str(e)}")
-                        logger.error(f"Unexpected error in bulk TR830 upload for {pdf_file.name}: {e}", exc_info=True)
+                        file_result['errors'].append(f"Processing error: {str(e)}")
+                        logger.error(f"Error processing TR830 file {pdf_file.name}: {e}", exc_info=True)
 
-                # Show overall results
-                if all_created_shipments:
-                    total_quantity = sum(s.quantity_litres for s in all_created_shipments)
-                    messages.success(
-                        request,
-                        f"Bulk upload completed! Created {len(all_created_shipments)} shipments "
-                        f"from {len(pdf_files)} files. Total quantity: {total_quantity} litres."
+                    processing_results.append(file_result)
+
+                # Generate comprehensive summary
+                total_shipments = len(all_created_shipments)
+                total_quantity = sum(s.quantity_litres for s in all_created_shipments)
+                successful_files = len([r for r in processing_results if r['shipments_created'] > 0])
+                total_processing_time = sum(r['processing_time'] for r in processing_results if r['processing_time'])
+
+                # Enhanced success messaging
+                if total_shipments > 0:
+                    success_msg = (
+                        f"🎉 Bulk TR830 processing completed!\n"
+                        f"📁 Files processed: {successful_files}/{len(pdf_files)}\n"
+                        f"📦 Shipments created: {total_shipments}\n"
+                        f"📊 Total quantity: {total_quantity:,.2f} litres\n"
+                        f"⏱️ Processing time: {total_processing_time:.1f} seconds"
                     )
+                    messages.success(request, success_msg)
 
-                # Show file-by-file summary
-                for summary in processing_summary:
-                    if summary['shipments_created'] > 0:
+                # Show file-by-file results
+                for result in processing_results:
+                    if result['shipments_created'] > 0:
                         messages.info(
                             request,
-                            f"{summary['filename']}: {summary['shipments_created']} shipments created "
-                            f"({summary['total_quantity']} L)"
+                            f"✅ {result['filename']}: {result['shipments_created']} shipments "
+                            f"({result['total_quantity']:,.0f}L) in {result['processing_time']:.1f}s"
+                        )
+                    elif result['errors']:
+                        messages.error(
+                            request,
+                            f"❌ {result['filename']}: {'; '.join(result['errors'][:2])}"
                         )
 
-                if all_errors:
-                    for error in all_errors[:10]:  # Show max 10 errors
-                        messages.warning(request, error)
-                    if len(all_errors) > 10:
-                        messages.warning(request, f"... and {len(all_errors) - 10} more errors")
+                # Show warnings
+                all_warnings = []
+                for result in processing_results:
+                    all_warnings.extend(result['warnings'])
+                
+                for warning in all_warnings[:10]:  # Limit warnings shown
+                    messages.warning(request, f"⚠️ {warning}")
 
-                # Redirect to shipment list
-                return redirect('shipments:shipment-list')
+                # Redirect on success
+                if total_shipments > 0:
+                    return redirect('shipments:shipment-list')
+                else:
+                    messages.error(request, "❌ No shipments were created from any TR830 files.")
 
             except Exception as e:
-                messages.error(request, f"Error processing bulk upload: {str(e)}")
-                logger.error(f"Error in bulk TR830 upload: {e}", exc_info=True)
+                messages.error(request, f"❌ Bulk processing error: {str(e)}")
+                logger.error(f"Error in bulk TR830 processing: {e}", exc_info=True)
         else:
             # Form validation errors
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"{field}: {error}")
+            for field, field_errors in form.errors.items():
+                for error in field_errors:
+                    field_label = form.fields[field].label if field in form.fields else field.replace('_', ' ').title()
+                    messages.error(request, f"❌ {field_label}: {error}")
     else:
         form = BulkTR830UploadForm()
 

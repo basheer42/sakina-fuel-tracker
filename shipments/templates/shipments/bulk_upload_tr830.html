@@ -1,429 +1,280 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Bulk Upload TR830 - Sakina Gas Fuel Tracker{% endblock title %}
+{% block title %}Upload TR830 Document{% endblock %}
+
+{% block extra_css %}
+<style>
+.tr830-upload-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.file-upload-area {
+    border: 2px dashed #e2e8f0;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+    cursor: pointer;
+}
+
+.file-upload-area:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.file-upload-area.dragover {
+    border-color: #1d4ed8;
+    background: #dbeafe;
+}
+
+.upload-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1rem;
+    color: #6b7280;
+}
+
+.file-info {
+    background: #f0f9ff;
+    border: 1px solid #0ea5e9;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    display: none;
+}
+
+.feature-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-top: 2rem;
+}
+
+.feature-item {
+    padding: 1.5rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    border: 1px solid #e5e7eb;
+}
+
+.feature-icon {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 1rem;
+    color: #3b82f6;
+}
+</style>
+{% endblock %}
 
 {% block content %}
-<style>
-    /* Inherit TR830 styling from single upload */
-    .tr830-upload-container {
-        background: linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(249, 250, 251, 0.9) 100%);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-        border: 1px solid rgba(59, 130, 246, 0.1);
-    }
-
-    .file-upload-area {
-        border: 2px dashed #8b5cf6;
-        border-radius: 12px;
-        padding: 2rem;
-        text-align: center;
-        transition: all 0.3s ease;
-        background: rgba(139, 92, 246, 0.02);
-    }
-
-    .file-upload-area:hover {
-        border-color: #7c3aed;
-        background: rgba(139, 92, 246, 0.05);
-        transform: translateY(-2px);
-    }
-
-    .file-upload-area.dragover {
-        border-color: #10b981;
-        background: rgba(16, 185, 129, 0.1);
-    }
-
-    .upload-icon {
-        width: 4rem;
-        height: 4rem;
-        margin: 0 auto 1rem;
-        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        border-radius: 1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .form-field {
-        margin-bottom: 1.5rem;
-    }
-
-    .form-label {
-        display: block;
-        font-weight: 600;
-        color: #374151;
-        margin-bottom: 0.5rem;
-    }
-
-    .form-input {
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 0.875rem;
-        transition: all 0.2s ease;
-        background-color: #fcfcfc;
-    }
-
-    .form-input:focus {
-        outline: none;
-        border-color: #8b5cf6;
-        box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
-        background-color: white;
-    }
-
-    .help-text {
-        font-size: 0.75rem;
-        color: #6b7280;
-        margin-top: 0.25rem;
-    }
-
-    .tr830-info-card {
-        background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
-        border-radius: 12px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        border-left: 4px solid #8b5cf6;
-    }
-
-    .submit-btn {
-        background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-        color: white;
-        padding: 0.875rem 2rem;
-        border-radius: 12px;
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-        transition: all 0.3s ease;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .submit-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
-    }
-
-    .submit-btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-        transform: none;
-    }
-
-    .cancel-btn {
-        background: #6b7280;
-        color: white;
-        padding: 0.875rem 2rem;
-        border-radius: 12px;
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.3s ease;
-        margin-right: 1rem;
-    }
-
-    .cancel-btn:hover {
-        background: #4b5563;
-        color: white;
-        text-decoration: none;
-    }
-
-    .file-list {
-        background: #f9fafb;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-top: 1rem;
-        max-height: 200px;
-        overflow-y: auto;
-    }
-
-    .file-item {
-        display: flex;
-        align-items: center;
-        justify-content: between;
-        padding: 0.5rem;
-        background: white;
-        border-radius: 6px;
-        margin-bottom: 0.5rem;
-        font-size: 0.875rem;
-    }
-
-    .file-item:last-child {
-        margin-bottom: 0;
-    }
-
-    .file-remove {
-        color: #ef4444;
-        cursor: pointer;
-        margin-left: auto;
-        padding: 0.25rem;
-        border-radius: 4px;
-        transition: background-color 0.2s;
-    }
-
-    .file-remove:hover {
-        background: #fee2e2;
-    }
-</style>
-
-<div class="max-w-4xl mx-auto">
+<div class="tr830-upload-container">
     <!-- Header -->
     <div class="mb-8">
         <div class="flex items-center gap-4 mb-4">
-            <div class="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
                 </svg>
             </div>
             <div>
-                <h1 class="text-3xl font-bold text-gray-900">Bulk Upload TR830 Documents</h1>
-                <p class="text-gray-600 mt-1">Import multiple TR830 PDF documents at once (max 5 files)</p>
+                <h1 class="text-3xl font-bold text-gray-900">Upload TR830 Document</h1>
+                <p class="text-gray-600 mt-1">Import shipment data from KRA TR830 PDF documents</p>
             </div>
         </div>
     </div>
 
     <!-- Information Card -->
-    <div class="tr830-info-card">
+    <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6 mb-8">
         <div class="flex items-start gap-3">
-            <div class="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+            <div class="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                 <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
                     <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
                 </svg>
             </div>
             <div>
-                <h3 class="font-semibold text-purple-800 mb-2">Bulk TR830 Processing</h3>
-                <p class="text-purple-700 text-sm leading-relaxed mb-2">
-                    Upload up to 5 TR830 PDF documents simultaneously. Each file will be processed individually and shipments will be created for all valid entries found.
+                <h3 class="font-semibold text-blue-900 mb-2">What is TR830?</h3>
+                <p class="text-blue-800 text-sm leading-relaxed">
+                    TR830 is a KRA document that shows captured/received entries per product per destination.
+                    It contains vessel information, product types (PMS/AGO), quantities, and destination details.
+                    Our enhanced parser can extract this data automatically and create shipment records.
                 </p>
-                <div class="text-purple-700 text-sm">
-                    <strong>Tips for bulk upload:</strong>
-                    <ul class="mt-1 space-y-1">
-                        <li>• Ensure all files are valid PDF documents</li>
-                        <li>• Each file should contain TR830 data with clear MARKS, AVALUE, and DESCRIPTION sections</li>
-                        <li>• Duplicate shipments (same vessel ID, date, product) will be skipped</li>
-                        <li>• You'll receive a detailed summary after processing</li>
-                    </ul>
-                </div>
             </div>
         </div>
     </div>
 
     <!-- Upload Form -->
-    <div class="tr830-upload-container p-8">
-        <form method="post" enctype="multipart/form-data" id="bulk-tr830-upload-form">
-            {% csrf_token %}
-            
-            <!-- File Upload Section -->
-            <div class="form-field">
-                <label for="id_tr830_files" class="form-label">
-                    TR830 PDF Documents * (Max 5 files)
-                </label>
-                <div class="file-upload-area" id="file-upload-area">
-                    <div class="upload-icon">
-                        <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l3-3m0 0l3 3m-3-3v12"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <p class="text-lg font-semibold text-gray-700 mb-2">Choose multiple TR830 PDF files</p>
-                        <p class="text-sm text-gray-500 mb-4">Drag and drop or click to browse (max 5 files)</p>
-                        <input type="file" name="tr830_files" id="id_tr830_files" accept=".pdf" multiple class="hidden" required>
-                        <button type="button" onclick="document.getElementById('id_tr830_files').click()" 
-                                class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors">
-                            Browse Files
-                        </button>
-                    </div>
-                </div>
-                <div class="help-text">
-                    Upload up to 5 KRA TR830 PDF documents. Maximum file size per file: 10MB.
-                </div>
-                
-                <!-- File List Display -->
-                <div id="file-list" class="file-list hidden">
-                    <h4 class="font-semibold text-gray-700 mb-2">Selected Files:</h4>
-                    <div id="file-items"></div>
-                </div>
-            </div>
+    <form method="post" enctype="multipart/form-data" id="tr830-upload-form">
+        {% csrf_token %}
+        
+        <!-- File Upload Area -->
+        <div class="file-upload-area" id="file-upload-area">
+            <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <h3 class="text-lg font-semibold text-gray-900 mb-2">Drop your TR830 PDF here</h3>
+            <p class="text-gray-600 mb-4">or click to browse files</p>
+            {{ form.tr830_pdf }}
+            <p class="text-sm text-gray-500 mt-2">
+                Maximum file size: 10MB • Supported format: PDF only
+            </p>
+        </div>
 
-            <!-- Default Supplier -->
-            <div class="form-field">
-                <label for="id_default_supplier" class="form-label">
-                    Default Supplier Name (Optional)
-                </label>
-                <input type="text" name="default_supplier" id="id_default_supplier" 
-                       class="form-input" placeholder="e.g., Kenya Pipeline Company">
-                <div class="help-text">
-                    Fallback supplier name for all uploads if not found in PDFs.
+        <!-- File Info Display -->
+        <div class="file-info" id="file-info">
+            <div class="flex items-center gap-3">
+                <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
+                </svg>
+                <div class="flex-1">
+                    <p class="font-medium text-gray-900" id="file-name"></p>
+                    <p class="text-sm text-gray-600" id="file-size"></p>
                 </div>
-            </div>
-
-            <!-- Default Price -->
-            <div class="form-field">
-                <label for="id_default_price_per_litre" class="form-label">
-                    Default Price per Litre (USD, Optional)
-                </label>
-                <input type="number" name="default_price_per_litre" id="id_default_price_per_litre" 
-                       class="form-input" step="0.001" placeholder="0.000">
-                <div class="help-text">
-                    Default price for all uploads if not found in PDFs.
-                </div>
-            </div>
-
-            <!-- Submit Buttons -->
-            <div class="flex items-center justify-between pt-6 border-t border-gray-200">
-                <a href="{% url 'shipments:shipment-list' %}" class="cancel-btn">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L4.414 9H17a1 1 0 110 2H4.414l5.293 5.293a1 1 0 010 1.414z" clip-rule="evenodd"/>
+                <button type="button" class="text-red-600 hover:text-red-800" id="remove-file">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
                     </svg>
-                    Cancel
-                </a>
-                
-                <button type="submit" class="submit-btn" id="submit-btn" disabled>
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
-                    Process All TR830 Files
                 </button>
             </div>
-        </form>
-    </div>
+        </div>
 
-    <!-- Additional Links -->
-    <div class="mt-8 text-center">
-        <div class="flex flex-col sm:flex-row gap-4 justify-center">
-            <a href="{% url 'shipments:upload-tr830' %}" 
-               class="inline-flex items-center gap-2 text-purple-600 hover:text-purple-700 font-medium">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-                </svg>
-                Upload Single TR830 File
-            </a>
-            <a href="{% url 'shipments:shipment-add' %}" 
-               class="inline-flex items-center gap-2 text-gray-600 hover:text-gray-700 font-medium">
-                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd"/>
-                </svg>
-                Manual Shipment Entry
-            </a>
+        <!-- Additional Options -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+            <div>
+                <label for="{{ form.default_supplier.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.default_supplier.label }}
+                </label>
+                {{ form.default_supplier }}
+                <p class="text-sm text-gray-500 mt-1">{{ form.default_supplier.help_text }}</p>
+            </div>
+            
+            <div>
+                <label for="{{ form.default_price_per_litre.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                    {{ form.default_price_per_litre.label }}
+                </label>
+                {{ form.default_price_per_litre }}
+                <p class="text-sm text-gray-500 mt-1">{{ form.default_price_per_litre.help_text }}</p>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex justify-end mt-8">
+            <button type="submit" id="submit-btn" class="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                <span class="flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l2 2 4-4"/>
+                    </svg>
+                    Process TR830 Document
+                </span>
+            </button>
+        </div>
+    </form>
+
+    <!-- Features Section -->
+    <div class="feature-list">
+        <div class="feature-item">
+            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <h4 class="font-semibold text-gray-900 mb-2">Enhanced Parsing</h4>
+            <p class="text-gray-600 text-sm">Advanced regex patterns with multiple fallback strategies for reliable data extraction.</p>
+        </div>
+        
+        <div class="feature-item">
+            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+            <h4 class="font-semibold text-gray-900 mb-2">Intelligent Extraction</h4>
+            <p class="text-gray-600 text-sm">Automatically identifies vessel names, product types, quantities, and destinations.</p>
+        </div>
+        
+        <div class="feature-item">
+            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+            </svg>
+            <h4 class="font-semibold text-gray-900 mb-2">Validation & Safety</h4>
+            <p class="text-gray-600 text-sm">Comprehensive validation ensures data integrity and prevents duplicate entries.</p>
         </div>
     </div>
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const fileInput = document.getElementById('id_tr830_files');
     const uploadArea = document.getElementById('file-upload-area');
-    const fileList = document.getElementById('file-list');
-    const fileItems = document.getElementById('file-items');
+    const fileInput = document.getElementById('id_tr830_pdf');
+    const fileInfo = document.getElementById('file-info');
+    const fileName = document.getElementById('file-name');
+    const fileSize = document.getElementById('file-size');
+    const removeBtn = document.getElementById('remove-file');
+    const form = document.getElementById('tr830-upload-form');
     const submitBtn = document.getElementById('submit-btn');
-    
-    let selectedFiles = [];
-    
-    // File input change handler
-    fileInput.addEventListener('change', function(e) {
-        updateFileList(Array.from(e.target.files));
-    });
-    
-    function updateFileList(files) {
-        selectedFiles = files.slice(0, 5); // Limit to 5 files
-        
-        if (selectedFiles.length > 0) {
-            displayFileList();
-            submitBtn.disabled = false;
-            uploadArea.style.borderColor = '#10b981';
-            uploadArea.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
-        } else {
-            fileList.classList.add('hidden');
-            submitBtn.disabled = true;
-            uploadArea.style.borderColor = '#8b5cf6';
-            uploadArea.style.backgroundColor = 'rgba(139, 92, 246, 0.02)';
-        }
-    }
-    
-    function displayFileList() {
-        fileItems.innerHTML = '';
-        fileList.classList.remove('hidden');
-        
-        selectedFiles.forEach((file, index) => {
-            const fileItem = document.createElement('div');
-            fileItem.className = 'file-item';
-            fileItem.innerHTML = `
-                <div class="flex-1">
-                    <span class="font-medium">${file.name}</span>
-                    <span class="text-gray-500 ml-2">(${(file.size / 1024 / 1024).toFixed(2)} MB)</span>
-                </div>
-                <button type="button" class="file-remove" onclick="removeFile(${index})">
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                    </svg>
-                </button>
-            `;
-            fileItems.appendChild(fileItem);
-        });
-    }
-    
-    // Global function for removing files
-    window.removeFile = function(index) {
-        selectedFiles.splice(index, 1);
-        updateFileList(selectedFiles);
-        
-        // Update the file input
-        const dt = new DataTransfer();
-        selectedFiles.forEach(file => dt.items.add(file));
-        fileInput.files = dt.files;
-    };
-    
-    // Drag and drop handlers
+
+    // Drag and drop functionality
     uploadArea.addEventListener('dragover', function(e) {
         e.preventDefault();
         uploadArea.classList.add('dragover');
     });
-    
-    uploadArea.addEventListener('dragleave', function(e) {
-        e.preventDefault();
+
+    uploadArea.addEventListener('dragleave', function() {
         uploadArea.classList.remove('dragover');
     });
-    
+
     uploadArea.addEventListener('drop', function(e) {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
         
-        const files = Array.from(e.dataTransfer.files).filter(file => 
-            file.type === 'application/pdf'
-        );
-        
+        const files = e.dataTransfer.files;
         if (files.length > 0) {
-            updateFileList(files);
-            // Update the file input
-            const dt = new DataTransfer();
-            files.forEach(file => dt.items.add(file));
-            fileInput.files = dt.files;
+            fileInput.files = files;
+            handleFileSelection(files[0]);
         }
     });
-    
-    // Form submission handler
-    document.getElementById('bulk-tr830-upload-form').addEventListener('submit', function(e) {
-        if (selectedFiles.length === 0) {
+
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
+
+    fileInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            handleFileSelection(this.files[0]);
+        }
+    });
+
+    removeBtn.addEventListener('click', function() {
+        fileInput.value = '';
+        fileInfo.style.display = 'none';
+        uploadArea.style.display = 'block';
+    });
+
+    function handleFileSelection(file) {
+        fileName.textContent = file.name;
+        fileSize.textContent = formatFileSize(file.size);
+        fileInfo.style.display = 'block';
+        uploadArea.style.display = 'none';
+    }
+
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        if (!fileInput.files.length) {
             e.preventDefault();
-            alert('Please select at least one PDF file.');
+            alert('Please select a TR830 PDF file first.');
             return;
         }
-        
+
         submitBtn.disabled = true;
-        submitBtn.innerHTML = `
-            <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            Processing ${selectedFiles.length} TR830 files...
-        `;
+        submitBtn.innerHTML = '<span class="flex items-center gap-2"><div class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>Processing...</span>';
     });
 });
 </script>
-{% endblock content %}
+{% endblock %}
