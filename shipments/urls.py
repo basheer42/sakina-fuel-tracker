@@ -2,7 +2,6 @@
 from django.urls import path
 from . import views
 from .telegram_bot import telegram_webhook
-from .whatsapp_ai import whatsapp_webhook  # Add this line
 
 app_name = 'shipments'
 
@@ -14,8 +13,9 @@ urlpatterns = [
     path('shipments/<int:pk>/', views.shipment_detail_view, name='shipment-detail'),
     path('shipments/edit/<int:pk>/', views.shipment_edit_view, name='shipment-edit'),
     path('shipments/delete/<int:pk>/', views.shipment_delete_view, name='shipment-delete'),
-    path('whatsapp/webhook/', whatsapp_webhook, name='whatsapp-webhook'),
     path('webhooks/telegram/', telegram_webhook, name='telegram_webhook'),
+    path('shipments/upload-tr830/', views.upload_tr830_view, name='upload-tr830'),
+    path('shipments/bulk-upload-tr830/', views.bulk_upload_tr830_view, name='bulk-upload-tr830'),
     path('trips/list/', views.trip_list_view, name='trip-list'),
     path('trips/add/', views.trip_add_view, name='trip-add'),
     path('trips/<int:pk>/', views.trip_detail_view, name='trip-detail'),

@@ -12,8 +12,11 @@ from django.contrib.auth.models import User
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from .models import UserProfile
-from .forms import PdfLoadingAuthorityUploadForm, BulkPdfLoadingAuthorityUploadForm
-
+from .forms import (
+    PdfLoadingAuthorityUploadForm, BulkPdfLoadingAuthorityUploadForm, ShipmentForm,
+    TripForm, LoadingCompartmentFormSet, TR830UploadForm, BulkTR830UploadForm
+)
+import io
 import pdfplumber
 from django.conf import settings
 from django.contrib import messages
@@ -33,11 +36,11 @@ from django.utils import timezone
 from django.views.decorators.csrf import csrf_protect
 from django.views.decorators.http import require_http_methods, require_POST
 
-from .forms import LoadingCompartmentFormSet, PdfLoadingAuthorityUploadForm, ShipmentForm, TripForm
 from .models import (
     Customer, Destination, LoadingCompartment, Product,
     Shipment, ShipmentDepletion, Trip, Vehicle
 )
+from .tr830_parser import TR830Parser, TR830ParseError
 
 # Initialize logger
 logger = logging.getLogger('shipments')
@@ -2592,10 +2595,6 @@ def setup_admin(request):
         'example_url': '/setup-admin/?phone=+254703616091'
     })
 
-# Add this to your shipments/views.py file
-
-from .forms import BulkPdfLoadingAuthorityUploadForm  # Add this import
-
 @login_required
 @permission_required('shipments.add_trip', raise_exception=True)
 @require_http_methods(["GET", "POST"])
@@ -2695,5 +2694,296 @@ def bulk_upload_loading_authority_view(request):
 
     return render(request, 'shipments/bulk_upload_loading_authority.html', {'form': form})
 
-# Add this to your shipments/urls.py urlpatterns list:
-# path('setup-admin/', views.setup_admin, name='setup-admin'),
+@login_required
+@permission_required('shipments.add_shipment', raise_exception=True)
+@require_http_methods(["GET", "POST"])
+@csrf_protect
+def upload_tr830_view(request):
+    """Upload and process single TR830 PDF to create shipments"""
+    if request.method == 'POST':
+        form = TR830UploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                # Get the uploaded file
+                pdf_file = form.cleaned_data['tr830_pdf']
+                default_supplier = form.cleaned_data.get('default_supplier', 'Unknown Supplier')
+                default_price = form.cleaned_data.get('default_price_per_litre', Decimal('0.000'))
+
+                # Create temporary file
+                with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                    for chunk in pdf_file.chunks():
+                        temp_file.write(chunk)
+                    temp_file_path = temp_file.name
+
+                try:
+                    # Parse the PDF
+                    parser = TR830Parser()
+                    import_date, entries = parser.parse_pdf(temp_file_path)
+
+                    if not entries:
+                        messages.error(request, "No valid entries found in the TR830 document.")
+                        return render(request, 'shipments/upload_tr830.html', {'form': form})
+
+                    # Create shipments from entries
+                    created_shipments = []
+                    errors = []
+
+                    with transaction.atomic():
+                        for entry in entries:
+                            try:
+                                # Get or create product
+                                product, created = Product.objects.get_or_create(
+                                    name=entry.product_type,
+                                    defaults={'name': entry.product_type}
+                                )
+                                if created:
+                                    logger.info(f"Created new product: {product.name}")
+
+                                # Get or create destination
+                                destination, created = Destination.objects.get_or_create(
+                                    name=entry.destination,
+                                    defaults={'name': entry.destination}
+                                )
+                                if created:
+                                    logger.info(f"Created new destination: {destination.name}")
+
+                                # Determine supplier
+                                supplier_name = entry.supplier or default_supplier or 'Unknown Supplier'
+
+                                # Create vessel ID from marks
+                                vessel_id = parser.format_vessel_id(entry.marks)
+
+                                # Check if shipment already exists
+                                existing_shipment = Shipment.objects.filter(
+                                    vessel_id_tag=vessel_id,
+                                    import_date=import_date.date(),
+                                    product=product
+                                ).first()
+
+                                if existing_shipment:
+                                    errors.append(f"Shipment with vessel ID '{vessel_id}' already exists for {import_date.date()}")
+                                    continue
+
+                                # Create the shipment
+                                shipment = Shipment.objects.create(
+                                    user=request.user,
+                                    vessel_id_tag=vessel_id,
+                                    import_date=import_date.date(),
+                                    supplier_name=supplier_name,
+                                    product=product,
+                                    destination=destination,
+                                    quantity_litres=entry.avalue,
+                                    price_per_litre=default_price,
+                                    notes=f"Auto-created from TR830 upload. Description: {entry.description}"
+                                )
+
+                                created_shipments.append(shipment)
+                                logger.info(f"Created shipment: {shipment}")
+
+                            except Exception as e:
+                                error_msg = f"Error creating shipment for {entry.marks}: {str(e)}"
+                                errors.append(error_msg)
+                                logger.error(error_msg)
+
+                    # Generate summary
+                    summary = parser.get_parsing_summary(entries)
+
+                    # Show results
+                    if created_shipments:
+                        messages.success(
+                            request,
+                            f"Successfully created {len(created_shipments)} shipments from TR830. "
+                            f"Total quantity: {summary['total_quantity']} litres."
+                        )
+
+                    if errors:
+                        for error in errors:
+                            messages.warning(request, error)
+
+                    # Redirect to shipment list
+                    return redirect('shipments:shipment-list')
+
+                except TR830ParseError as e:
+                    messages.error(request, f"Error parsing TR830 PDF: {str(e)}")
+                except Exception as e:
+                    messages.error(request, f"Unexpected error processing TR830: {str(e)}")
+                    logger.error(f"Unexpected error in TR830 upload: {e}", exc_info=True)
+
+                finally:
+                    # Clean up temporary file
+                    try:
+                        os.unlink(temp_file_path)
+                    except OSError:
+                        pass
+
+            except Exception as e:
+                messages.error(request, f"Error uploading file: {str(e)}")
+        else:
+            # Form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+    else:
+        form = TR830UploadForm()
+
+    return render(request, 'shipments/upload_tr830.html', {'form': form})
+
+
+@login_required
+@permission_required('shipments.add_shipment', raise_exception=True)
+@require_http_methods(["GET", "POST"])
+@csrf_protect
+def bulk_upload_tr830_view(request):
+    """Upload and process multiple TR830 PDFs to create shipments"""
+    if request.method == 'POST':
+        form = BulkTR830UploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                # Get the uploaded files
+                pdf_files = form.cleaned_data['tr830_files']
+                default_supplier = form.cleaned_data.get('default_supplier', 'Unknown Supplier')
+                default_price = form.cleaned_data.get('default_price_per_litre', Decimal('0.000'))
+
+                all_created_shipments = []
+                all_errors = []
+                processing_summary = []
+
+                # Process each file
+                for pdf_file in pdf_files:
+                    try:
+                        # Create temporary file for this PDF
+                        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                            for chunk in pdf_file.chunks():
+                                temp_file.write(chunk)
+                            temp_file_path = temp_file.name
+
+                        try:
+                            # Parse this PDF
+                            parser = TR830Parser()
+                            import_date, entries = parser.parse_pdf(temp_file_path)
+
+                            if not entries:
+                                all_errors.append(f"No valid entries found in {pdf_file.name}")
+                                continue
+
+                            # Create shipments from entries
+                            file_created_shipments = []
+                            file_errors = []
+
+                            with transaction.atomic():
+                                for entry in entries:
+                                    try:
+                                        # Get or create product
+                                        product, created = Product.objects.get_or_create(
+                                            name=entry.product_type,
+                                            defaults={'name': entry.product_type}
+                                        )
+
+                                        # Get or create destination
+                                        destination, created = Destination.objects.get_or_create(
+                                            name=entry.destination,
+                                            defaults={'name': entry.destination}
+                                        )
+
+                                        # Determine supplier
+                                        supplier_name = entry.supplier or default_supplier or 'Unknown Supplier'
+
+                                        # Create vessel ID from marks
+                                        vessel_id = parser.format_vessel_id(entry.marks)
+
+                                        # Check if shipment already exists
+                                        existing_shipment = Shipment.objects.filter(
+                                            vessel_id_tag=vessel_id,
+                                            import_date=import_date.date(),
+                                            product=product
+                                        ).first()
+
+                                        if existing_shipment:
+                                            file_errors.append(f"Shipment '{vessel_id}' already exists")
+                                            continue
+
+                                        # Create the shipment
+                                        shipment = Shipment.objects.create(
+                                            user=request.user,
+                                            vessel_id_tag=vessel_id,
+                                            import_date=import_date.date(),
+                                            supplier_name=supplier_name,
+                                            product=product,
+                                            destination=destination,
+                                            quantity_litres=entry.avalue,
+                                            price_per_litre=default_price,
+                                            notes=f"Auto-created from TR830 bulk upload ({pdf_file.name}). Description: {entry.description}"
+                                        )
+
+                                        file_created_shipments.append(shipment)
+
+                                    except Exception as e:
+                                        error_msg = f"Error creating shipment for {entry.marks} in {pdf_file.name}: {str(e)}"
+                                        file_errors.append(error_msg)
+
+                            # Add to overall results
+                            all_created_shipments.extend(file_created_shipments)
+                            all_errors.extend(file_errors)
+
+                            # Generate summary for this file
+                            summary = parser.get_parsing_summary(entries)
+                            processing_summary.append({
+                                'filename': pdf_file.name,
+                                'entries_found': len(entries),
+                                'shipments_created': len(file_created_shipments),
+                                'errors': len(file_errors),
+                                'total_quantity': summary['total_quantity']
+                            })
+
+                        finally:
+                            # Clean up this temporary file
+                            try:
+                                os.unlink(temp_file_path)
+                            except OSError:
+                                pass
+
+                    except TR830ParseError as e:
+                        all_errors.append(f"Error parsing {pdf_file.name}: {str(e)}")
+                    except Exception as e:
+                        all_errors.append(f"Unexpected error processing {pdf_file.name}: {str(e)}")
+                        logger.error(f"Unexpected error in bulk TR830 upload for {pdf_file.name}: {e}", exc_info=True)
+
+                # Show overall results
+                if all_created_shipments:
+                    total_quantity = sum(s.quantity_litres for s in all_created_shipments)
+                    messages.success(
+                        request,
+                        f"Bulk upload completed! Created {len(all_created_shipments)} shipments "
+                        f"from {len(pdf_files)} files. Total quantity: {total_quantity} litres."
+                    )
+
+                # Show file-by-file summary
+                for summary in processing_summary:
+                    if summary['shipments_created'] > 0:
+                        messages.info(
+                            request,
+                            f"{summary['filename']}: {summary['shipments_created']} shipments created "
+                            f"({summary['total_quantity']} L)"
+                        )
+
+                if all_errors:
+                    for error in all_errors[:10]:  # Show max 10 errors
+                        messages.warning(request, error)
+                    if len(all_errors) > 10:
+                        messages.warning(request, f"... and {len(all_errors) - 10} more errors")
+
+                # Redirect to shipment list
+                return redirect('shipments:shipment-list')
+
+            except Exception as e:
+                messages.error(request, f"Error processing bulk upload: {str(e)}")
+                logger.error(f"Error in bulk TR830 upload: {e}", exc_info=True)
+        else:
+            # Form validation errors
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+    else:
+        form = BulkTR830UploadForm()
+
+    return render(request, 'shipments/bulk_upload_tr830.html', {'form': form})
