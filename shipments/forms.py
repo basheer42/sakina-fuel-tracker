@@ -171,32 +171,33 @@ class BulkPdfLoadingAuthorityUploadForm(forms.Form):
         files = self.cleaned_data.get('pdf_files', [])
         if not files:
             raise forms.ValidationError("Please select at least one PDF file.")
-        
+
         if len(files) > 10:
             raise forms.ValidationError("Maximum 10 files allowed.")
-        
+
         for file in files:
             if not file.name.lower().endswith('.pdf'):
                 raise forms.ValidationError(f"File '{file.name}' is not a PDF.")
             if file.size > 10 * 1024 * 1024:  # 10MB limit
                 raise forms.ValidationError(f"File '{file.name}' is too large. Maximum size is 10MB.")
-        
+
         return files
 
-# NEW: FORM FOR TR830 PDF UPLOAD (Shipments)
+
+# FORM FOR TR830 PDF UPLOAD (Shipments)
 class TR830UploadForm(forms.Form):
     """Enhanced TR830 upload form with better validation and user experience"""
-    
+
     tr830_pdf = forms.FileField(
         label="Upload TR830 PDF Document",
         help_text="Upload the KRA TR830 PDF document containing received entries per product/destination. Maximum file size: 10MB.",
         widget=forms.FileInput(attrs={
-            'accept': '.pdf', 
+            'accept': '.pdf',
             'class': 'form-control',
             'id': 'tr830-file-input'
         })
     )
-    
+
     default_supplier = forms.CharField(
         max_length=200,
         required=False,
@@ -208,7 +209,7 @@ class TR830UploadForm(forms.Form):
             'placeholder': 'e.g., Kuwait Petroleum Corporation'
         })
     )
-    
+
     default_price_per_litre = forms.DecimalField(
         max_digits=7,
         decimal_places=3,
@@ -227,18 +228,18 @@ class TR830UploadForm(forms.Form):
     def clean_tr830_pdf(self):
         """Enhanced PDF validation"""
         pdf_file = self.cleaned_data.get('tr830_pdf')
-        
+
         if not pdf_file:
             raise forms.ValidationError("Please select a PDF file.")
-        
+
         # File extension validation
         if not pdf_file.name.lower().endswith('.pdf'):
             raise forms.ValidationError("Only PDF files are allowed.")
-        
+
         # File size validation (10MB limit)
         if pdf_file.size > 10 * 1024 * 1024:
             raise forms.ValidationError("File size must be less than 10MB.")
-        
+
         # Basic PDF content validation
         try:
             pdf_file.seek(0)
@@ -248,7 +249,7 @@ class TR830UploadForm(forms.Form):
             pdf_file.seek(0)
         except Exception:
             raise forms.ValidationError("Unable to read PDF file.")
-        
+
         return pdf_file
 
     def clean_default_supplier(self):
@@ -266,20 +267,20 @@ class TR830UploadForm(forms.Form):
         return price or Decimal('0.000')
 
 
-# NEW: FORM FOR BULK TR830 PDF UPLOAD
+# FORM FOR BULK TR830 PDF UPLOAD
 class BulkTR830UploadForm(forms.Form):
     """Enhanced bulk TR830 upload form"""
-    
+
     tr830_files = MultipleFileField(
         label="Upload Multiple TR830 PDF Documents",
         help_text="Select multiple TR830 PDF files to upload at once. Maximum 5 files, 10MB each.",
         widget=MultipleFileInput(attrs={
-            'accept': '.pdf', 
+            'accept': '.pdf',
             'class': 'form-control',
             'multiple': True
         })
     )
-    
+
     default_supplier = forms.CharField(
         max_length=200,
         required=False,
@@ -291,7 +292,7 @@ class BulkTR830UploadForm(forms.Form):
             'placeholder': 'e.g., Kuwait Petroleum Corporation'
         })
     )
-    
+
     default_price_per_litre = forms.DecimalField(
         max_digits=7,
         decimal_places=3,
@@ -310,22 +311,22 @@ class BulkTR830UploadForm(forms.Form):
     def clean_tr830_files(self):
         """Enhanced file validation for bulk upload"""
         files = self.cleaned_data.get('tr830_files', [])
-        
+
         if not files:
             raise forms.ValidationError("Please select at least one PDF file.")
-        
+
         if len(files) > 5:
             raise forms.ValidationError("Maximum 5 files allowed for TR830 bulk upload.")
-        
+
         for file in files:
             # Extension check
             if not file.name.lower().endswith('.pdf'):
                 raise forms.ValidationError(f"File '{file.name}' is not a PDF.")
-            
+
             # Size check
             if file.size > 10 * 1024 * 1024:
                 raise forms.ValidationError(f"File '{file.name}' is too large. Maximum size is 10MB.")
-            
+
             # Basic content check
             try:
                 file.seek(0)
@@ -335,7 +336,7 @@ class BulkTR830UploadForm(forms.Form):
                 file.seek(0)
             except Exception:
                 raise forms.ValidationError(f"Unable to read file '{file.name}'.")
-        
+
         return files
 
     def clean_default_supplier(self):
