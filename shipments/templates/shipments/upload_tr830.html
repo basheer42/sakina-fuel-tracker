@@ -1,57 +1,265 @@
+<!-- shipments/templates/shipments/upload_tr830.html -->
 {% extends "base.html" %}
 {% load static %}
-{% load form_tags %}
-{% block title %}Upload TR830 Document{% endblock %}
+
+{% block title %}{{ page_title|default:"Upload TR830 Document" }}{% endblock %}
 
 {% block extra_css %}
 <style>
 .tr830-upload-container {
-    max-width: 800px;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.page-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.page-title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.page-subtitle {
+    font-size: 1.125rem;
+    color: #6b7280;
+    max-width: 600px;
     margin: 0 auto;
 }
 
-.file-upload-area {
-    border: 2px dashed #e2e8f0;
+.info-section {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #f59e0b;
     border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.info-section::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.info-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #92400e;
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.info-text {
+    color: #92400e;
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.feature-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 0.5rem;
+}
+
+.feature-item {
+    color: #92400e;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.feature-item::before {
+    content: '✓';
+    color: #059669;
+    font-weight: bold;
+    font-size: 1rem;
+}
+
+.upload-section {
+    background: white;
+    border-radius: 16px;
     padding: 2rem;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+    margin-bottom: 2rem;
+}
+
+.file-upload-area {
+    border: 3px dashed #d1d5db;
+    border-radius: 16px;
+    padding: 3rem 2rem;
     text-align: center;
     transition: all 0.3s ease;
-    background: #f8fafc;
+    background: #f9fafb;
     cursor: pointer;
+    position: relative;
+    overflow: hidden;
 }
 
 .file-upload-area:hover {
     border-color: #3b82f6;
     background: #eff6ff;
+    transform: translateY(-2px);
 }
 
 .file-upload-area.dragover {
     border-color: #1d4ed8;
     background: #dbeafe;
+    transform: scale(1.02);
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
 }
 
 .upload-icon {
-    width: 64px;
-    height: 64px;
-    margin: 0 auto 1rem;
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.5rem;
     color: #6b7280;
+    transition: all 0.3s ease;
 }
 
-.file-info {
-    background: #f0f9ff;
-    border: 1px solid #0ea5e9;
-    border-radius: 8px;
-    padding: 1rem;
+.file-upload-area:hover .upload-icon {
+    color: #3b82f6;
+    transform: scale(1.1);
+}
+
+.upload-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 0.5rem;
+}
+
+.upload-subtitle {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+}
+
+.upload-button {
+    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+    color: white;
+    padding: 0.875rem 2rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+}
+
+.upload-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.file-requirements {
+    font-size: 0.875rem;
+    color: #6b7280;
     margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.file-input {
     display: none;
 }
 
-.form-section {
-    background: white;
+.file-info {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border: 2px solid #10b981;
     border-radius: 12px;
-    padding: 2rem;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    display: none;
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.file-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.file-name {
+    font-weight: 600;
+    color: #064e3b;
+    font-size: 1rem;
+}
+
+.file-size {
+    color: #047857;
+    font-size: 0.875rem;
+}
+
+.file-actions {
+    margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+.btn-submit {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 0.875rem 2.5rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.btn-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+}
+
+.btn-submit:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.btn-clear {
+    background: #6b7280;
+    color: white;
+    padding: 0.875rem 2rem;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1rem;
+}
+
+.btn-clear:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
 }
 
 .form-group {
@@ -63,15 +271,17 @@
     font-weight: 600;
     color: #374151;
     margin-bottom: 0.5rem;
+    font-size: 1rem;
 }
 
 .form-input {
     width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
+    padding: 0.875rem;
+    border: 2px solid #d1d5db;
+    border-radius: 10px;
     font-size: 1rem;
-    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    transition: all 0.3s ease;
+    background: white;
 }
 
 .form-input:focus {
@@ -83,248 +293,233 @@
 .help-text {
     font-size: 0.875rem;
     color: #6b7280;
-    margin-top: 0.25rem;
+    margin-top: 0.5rem;
+    line-height: 1.5;
 }
 
-.feature-list {
+.features-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 1rem;
-    margin-top: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 3rem;
 }
 
-.feature-item {
-    padding: 1.5rem;
+.feature-card {
     background: white;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
-.feature-icon {
-    width: 40px;
-    height: 40px;
-    margin-bottom: 1rem;
+.feature-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+    border-color: #3b82f6;
+}
+
+.feature-card-icon {
+    width: 60px;
+    height: 60px;
+    margin: 0 auto 1rem;
     color: #3b82f6;
 }
 
-.btn-primary {
-    background-color: #3b82f6;
-    color: white;
-    padding: 0.75rem 2rem;
-    border: none;
-    border-radius: 8px;
+.feature-card-title {
+    font-size: 1.25rem;
     font-weight: 600;
-    cursor: pointer;
-    transition: background-color 0.15s ease-in-out;
+    color: #1f2937;
+    margin-bottom: 0.75rem;
 }
 
-.btn-primary:hover {
-    background-color: #2563eb;
+.feature-card-text {
+    color: #6b7280;
+    line-height: 1.6;
 }
 
-.btn-primary:disabled {
-    background-color: #9ca3af;
-    cursor: not-allowed;
-}
-
-.btn-secondary {
-    background-color: #6b7280;
-    color: white;
-    padding: 0.75rem 2rem;
-    border: none;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.15s ease-in-out;
-}
-
-.btn-secondary:hover {
-    background-color: #4b5563;
-    color: white;
-    text-decoration: none;
-}
-
-.info-section {
-    background: #fef3c7;
-    border: 1px solid #fbbf24;
-    border-radius: 8px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .tr830-upload-container {
+        padding: 1rem;
+    }
+    
+    .page-title {
+        font-size: 2rem;
+    }
+    
+    .upload-section {
+        padding: 1.5rem;
+    }
+    
+    .file-upload-area {
+        padding: 2rem 1rem;
+    }
+    
+    .upload-icon {
+        width: 60px;
+        height: 60px;
+    }
+    
+    .file-actions {
+        flex-direction: column;
+    }
+    
+    .features-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
 }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="tr830-upload-container">
-    <!-- Header -->
-    <div class="mb-8">
-        <div class="flex items-center gap-4 mb-4">
-            <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
-                </svg>
-            </div>
-            <div>
-                <h1 class="text-3xl font-bold text-gray-900">Upload TR830 Document</h1>
-                <p class="text-gray-600">Import shipment data from KRA TR830 PDF documents</p>
-            </div>
-        </div>
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">{{ page_title|default:"Upload TR830 Document" }}</h1>
+        <p class="page-subtitle">
+            {{ help_text|default:"Upload TR830 transit documents to automatically create shipments in the system. The system will extract vessel information, product types, quantities, and destinations." }}
+        </p>
     </div>
 
-    <!-- Info Section -->
+    <!-- Information Section -->
     <div class="info-section">
-        <div class="flex items-start gap-3">
-            <svg class="w-6 h-6 text-amber-600 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-            </svg>
-            <div>
-                <h3 class="text-lg font-semibold text-amber-800 mb-2">What is TR830?</h3>
-                <p class="text-amber-700 mb-2">
-                    TR830 is a KRA document that shows captured/received entries per product per destination.
-                    It contains vessel information, product types (PMS/AGO), quantities, and destination details.
-                    Our enhanced parser can extract this data automatically and create shipment records.
-                </p>
-                <ul class="text-amber-700 text-sm space-y-1">
-                    <li>• Supports PDF format only</li>
-                    <li>• Maximum file size: 10MB</li>
-                    <li>• Automatically detects product types (PMS/AGO)</li>
-                    <li>• Creates shipments with FIFO stock management</li>
-                </ul>
-            </div>
-        </div>
+        <h3 class="info-title">
+            <span>📄</span>
+            TR830 Document Upload
+        </h3>
+        <p class="info-text">
+            TR830 documents contain vessel information, product types (PMS/AGO), quantities, and destination details.
+            Our enhanced parser can extract this data automatically and create shipment records.
+        </p>
+        <ul class="feature-list">
+            <li class="feature-item">Supports PDF format only</li>
+            <li class="feature-item">Maximum file size: 10MB</li>
+            <li class="feature-item">Auto-detects product types</li>
+            <li class="feature-item">FIFO stock management</li>
+        </ul>
     </div>
 
-    <!-- Upload Form -->
-    <div class="form-section">
+    <!-- Upload Section -->
+    <div class="upload-section">
         <form method="post" enctype="multipart/form-data" id="tr830-upload-form">
             {% csrf_token %}
 
             <!-- File Upload Area -->
             <div class="form-group">
-                <label class="form-label">{{ form.tr830_pdf.label }}</label>
                 <div class="file-upload-area" id="file-upload-area">
                     <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
                     </svg>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Drop your TR830 PDF here</h3>
-                    <p class="text-gray-600 mb-4">or click to browse files</p>
+                    <h3 class="upload-title">Drop your TR830 PDF here</h3>
+                    <p class="upload-subtitle">or click to browse files</p>
+                    
+                    <button type="button" class="upload-button" onclick="document.getElementById('{{ form.tr830_pdf.id_for_label }}').click()">
+                        Choose File
+                    </button>
+                    
                     {{ form.tr830_pdf }}
-                    <p class="text-sm text-gray-500 mt-2">
-                        Maximum file size: 10MB • Supported format: PDF only
-                    </p>
+                    
+                    <div class="file-requirements">
+                        <strong>Requirements:</strong> PDF format • Maximum 10MB • TR830 document type
+                    </div>
                 </div>
+
                 {% if form.tr830_pdf.help_text %}
                     <div class="help-text">{{ form.tr830_pdf.help_text }}</div>
                 {% endif %}
+                
                 {% if form.tr830_pdf.errors %}
                     <div class="text-red-600 text-sm mt-1">
                         {% for error in form.tr830_pdf.errors %}
-                            <p>{{ error }}</p>
+                            <p>❌ {{ error }}</p>
                         {% endfor %}
                     </div>
                 {% endif %}
             </div>
 
-            <!-- File Info Display -->
-            <div class="file-info" id="file-info">
-                <div class="flex items-center gap-3">
-                    <svg class="w-8 h-8 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z"/>
-                    </svg>
-                    <div class="flex-1">
-                        <p class="font-medium text-gray-900" id="file-name"></p>
-                        <p class="text-sm text-gray-600" id="file-size"></p>
+            <!-- File Information Display -->
+            <div id="file-info" class="file-info">
+                <div class="file-details">
+                    <div>
+                        <div class="file-name" id="file-name"></div>
+                        <div class="file-size" id="file-size"></div>
                     </div>
-                    <button type="button" class="text-red-600 hover:text-red-800" id="remove-file">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
-                        </svg>
+                </div>
+                
+                <div class="file-actions">
+                    <button type="submit" class="btn-submit" id="submit-btn">
+                        📤 Upload and Process TR830
+                    </button>
+                    <button type="button" class="btn-clear" onclick="clearFile()">
+                        🗑️ Clear File
                     </button>
                 </div>
             </div>
 
-            <!-- Default Supplier -->
+            <!-- Additional Options (if form has them) -->
+            {% if form.default_supplier %}
             <div class="form-group">
                 <label for="{{ form.default_supplier.id_for_label }}" class="form-label">
                     {{ form.default_supplier.label }}
                 </label>
-                {{ form.default_supplier|add_class:"form-input" }}
+                {{ form.default_supplier }}
                 {% if form.default_supplier.help_text %}
                     <div class="help-text">{{ form.default_supplier.help_text }}</div>
                 {% endif %}
-                {% if form.default_supplier.errors %}
-                    <div class="text-red-600 text-sm mt-1">
-                        {% for error in form.default_supplier.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
             </div>
+            {% endif %}
 
-            <!-- Default Price -->
+            {% if form.default_price_per_litre %}
             <div class="form-group">
                 <label for="{{ form.default_price_per_litre.id_for_label }}" class="form-label">
                     {{ form.default_price_per_litre.label }}
                 </label>
-                {{ form.default_price_per_litre|add_class:"form-input" }}
+                {{ form.default_price_per_litre }}
                 {% if form.default_price_per_litre.help_text %}
                     <div class="help-text">{{ form.default_price_per_litre.help_text }}</div>
                 {% endif %}
-                {% if form.default_price_per_litre.errors %}
-                    <div class="text-red-600 text-sm mt-1">
-                        {% for error in form.default_price_per_litre.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                {% endif %}
             </div>
-
-            <!-- Submit Buttons -->
-            <div class="flex gap-4 mt-8">
-                <button type="submit" class="btn-primary" id="submit-btn">
-                    <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l2 2 4-4"/>
-                    </svg>
-                    Process TR830 Document
-                </button>
-
-                <a href="{% url 'shipments:bulk-upload-tr830' %}" class="btn-secondary">
-                    <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Bulk Upload
-                </a>
-            </div>
+            {% endif %}
         </form>
     </div>
 
     <!-- Features Section -->
-    <div class="feature-list">
-        <div class="feature-item">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+    <div class="features-grid">
+        <div class="feature-card">
+            <svg class="feature-card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
             </svg>
-            <h4 class="font-semibold text-gray-900 mb-2">Automatic Processing</h4>
-            <p class="text-gray-600 text-sm">Extracts vessel information, products, and quantities automatically</p>
+            <h4 class="feature-card-title">Smart Parsing</h4>
+            <p class="feature-card-text">
+                Automatically extracts vessel names, product types, quantities, and destinations from TR830 documents.
+            </p>
         </div>
 
-        <div class="feature-item">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        <div class="feature-card">
+            <svg class="feature-card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M13 10V3L4 14h7v7l9-11h-7z"/>
             </svg>
-            <h4 class="font-semibold text-gray-900 mb-2">Stock Management</h4>
-            <p class="text-gray-600 text-sm">Creates shipments with proper FIFO inventory tracking</p>
+            <h4 class="feature-card-title">Instant Processing</h4>
+            <p class="feature-card-text">
+                Creates shipment records instantly with proper validation and error checking.
+            </p>
         </div>
 
-        <div class="feature-item">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+        <div class="feature-card">
+            <svg class="feature-card-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
             </svg>
-            <h4 class="font-semibold text-gray-900 mb-2">Data Validation</h4>
-            <p class="text-gray-600 text-sm">Validates quantities, products, and destinations before creating shipments</p>
+            <h4 class="feature-card-title">Data Validation</h4>
+            <p class="feature-card-text">
+                Validates quantities, products, and destinations before creating shipments in the system.
+            </p>
         </div>
     </div>
 </div>
@@ -334,21 +529,16 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const uploadArea = document.getElementById('file-upload-area');
-    const fileInput = document.querySelector('#id_tr830_pdf');
+    const fileInput = document.getElementById('{{ form.tr830_pdf.id_for_label }}');
     const fileInfo = document.getElementById('file-info');
-    const fileName = document.getElementById('file-name');
-    const fileSize = document.getElementById('file-size');
-    const removeBtn = document.getElementById('remove-file');
     const form = document.getElementById('tr830-upload-form');
     const submitBtn = document.getElementById('submit-btn');
 
-    // Make file input hidden
-    fileInput.style.display = 'none';
-
-    // Click to upload
-    uploadArea.addEventListener('click', function() {
-        fileInput.click();
-    });
+    // Make sure the file input exists
+    if (!fileInput) {
+        console.error('File input not found');
+        return;
+    }
 
     // Drag and drop functionality
     uploadArea.addEventListener('dragover', function(e) {
@@ -364,11 +554,16 @@ document.addEventListener('DOMContentLoaded', function() {
     uploadArea.addEventListener('drop', function(e) {
         e.preventDefault();
         uploadArea.classList.remove('dragover');
-
+        
         const files = e.dataTransfer.files;
         if (files.length > 0) {
-            fileInput.files = files;
-            displayFileInfo(files[0]);
+            const file = files[0];
+            if (file.type === 'application/pdf') {
+                fileInput.files = files;
+                displayFileInfo(file);
+            } else {
+                alert('Please select a PDF file.');
+            }
         }
     });
 
@@ -376,16 +571,52 @@ document.addEventListener('DOMContentLoaded', function() {
     fileInput.addEventListener('change', function(e) {
         if (e.target.files.length > 0) {
             displayFileInfo(e.target.files[0]);
+        } else {
+            hideFileInfo();
         }
     });
 
-    // Remove file
-    removeBtn.addEventListener('click', function() {
-        fileInput.value = '';
-        fileInfo.style.display = 'none';
-    });
+    // Display file information
+    function displayFileInfo(file) {
+        const fileName = document.getElementById('file-name');
+        const fileSize = document.getElementById('file-size');
+        
+        if (fileName && fileSize) {
+            fileName.textContent = file.name;
+            fileSize.textContent = formatFileSize(file.size);
+            fileInfo.style.display = 'block';
+            
+            // Enable submit button
+            if (submitBtn) {
+                submitBtn.disabled = false;
+            }
+        }
+    }
 
-    // Form submission
+    // Hide file information
+    function hideFileInfo() {
+        fileInfo.style.display = 'none';
+        if (submitBtn) {
+            submitBtn.disabled = true;
+        }
+    }
+
+    // Format file size
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    // Clear file function
+    window.clearFile = function() {
+        fileInput.value = '';
+        hideFileInfo();
+    };
+
+    // Form submission validation
     form.addEventListener('submit', function(e) {
         if (!fileInput.files.length) {
             e.preventDefault();
@@ -394,32 +625,33 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         const file = fileInput.files[0];
-        if (!file.name.toLowerCase().endsWith('.pdf')) {
+        if (file.type !== 'application/pdf') {
             e.preventDefault();
             alert('Please select a PDF file.');
             return;
         }
 
-        // Disable submit button to prevent double submission
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `
-            <svg class="inline w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
-            </svg>
-            Processing...
-        `;
+        if (file.size > 10 * 1024 * 1024) { // 10MB
+            e.preventDefault();
+            alert('File size must be less than 10MB.');
+            return;
+        }
+
+        // Show loading state
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ Processing...';
+        }
     });
 
-    function displayFileInfo(file) {
-        fileName.textContent = file.name;
-        fileSize.textContent = formatFileSize(file.size);
-        fileInfo.style.display = 'block';
-    }
+    // Click to upload functionality
+    uploadArea.addEventListener('click', function() {
+        fileInput.click();
+    });
 
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    // Initialize submit button state
+    if (submitBtn) {
+        submitBtn.disabled = true;
     }
 });
 </script>

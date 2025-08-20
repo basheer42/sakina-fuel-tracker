@@ -2003,7 +2003,11 @@ def upload_tr830_view(request):
     else:
         form = TR830UploadForm()
 
-    return render(request, 'shipments/upload_tr830.html', {'form': form})
+    context = {
+        'form': form,
+        'page_title': 'Upload TR830 Document',
+    }
+    return render(request, 'shipments/upload_tr830.html', context)
 
 
 @login_required

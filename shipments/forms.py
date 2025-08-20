@@ -1,6 +1,7 @@
 # shipments/forms.py
 from django import forms
 from django.forms import inlineformset_factory
+from django.core.validators import FileExtensionValidator
 from .models import Shipment, Trip, LoadingCompartment, Product, Customer, Vehicle, Destination
 from decimal import Decimal
 
@@ -47,40 +48,47 @@ class ShipmentForm(forms.ModelForm):
             'price_per_litre', 'notes'
         ]
         widgets = {
-            'vessel_id_tag': forms.TextInput(attrs={'class': '', 'placeholder': 'Unique vessel/batch ID'}),
-            'import_date': forms.DateInput(attrs={'type': 'date', 'class': ''}),
-            'supplier_name': forms.TextInput(attrs={'class': '', 'placeholder': 'Supplier company name'}),
-            'product': forms.Select(attrs={'class': ''}),
-            'destination': forms.Select(attrs={'class': ''}),
-            'quantity_litres': forms.NumberInput(attrs={'class': '', 'step': '0.01', 'placeholder': 'Quantity in litres'}),
-            'price_per_litre': forms.NumberInput(attrs={'class': '', 'step': '0.001', 'placeholder': 'Price per litre (USD)'}),
-            'notes': forms.Textarea(attrs={'class': '', 'rows': 3, 'placeholder': 'Additional notes about this shipment...'}),
+            'vessel_id_tag': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Unique vessel/batch ID'
+            }),
+            'import_date': forms.DateInput(attrs={
+                'type': 'date', 
+                'class': 'form-control'
+            }),
+            'supplier_name': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Supplier company name'
+            }),
+            'product': forms.Select(attrs={'class': 'form-control'}),
+            'destination': forms.Select(attrs={'class': 'form-control'}),
+            'quantity_litres': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.01', 
+                'placeholder': 'Quantity in litres'
+            }),
+            'price_per_litre': forms.NumberInput(attrs={
+                'class': 'form-control', 
+                'step': '0.001', 
+                'placeholder': 'Price per litre in USD'
+            }),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 3, 
+                'placeholder': 'Additional notes or comments'
+            }),
         }
-        labels = {
-            'vessel_id_tag': 'Vessel/Batch ID',
-            'import_date': 'Import Date',
-            'supplier_name': 'Supplier Name',
-            'quantity_litres': 'Quantity (Litres)',
-            'price_per_litre': 'Price per Litre (USD)',
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if 'product' in self.fields:
-            self.fields['product'].queryset = Product.objects.all().order_by('name')
-        if 'destination' in self.fields:
-            self.fields['destination'].queryset = Destination.objects.all().order_by('name')
 
     def clean_quantity_litres(self):
         quantity = self.cleaned_data.get('quantity_litres')
-        if quantity and quantity <= 0:
+        if quantity is not None and quantity <= 0:
             raise forms.ValidationError("Quantity must be greater than zero.")
         return quantity
 
     def clean_price_per_litre(self):
         price = self.cleaned_data.get('price_per_litre')
-        if price and price <= 0:
-            raise forms.ValidationError("Price per litre must be greater than zero.")
+        if price is not None and price < 0:
+            raise forms.ValidationError("Price cannot be negative.")
         return price
 
 
@@ -89,97 +97,132 @@ class TripForm(forms.ModelForm):
     class Meta:
         model = Trip
         fields = [
-            'loading_date', 'loading_time', 'vehicle', 'customer',
-            'product', 'destination', 'kpc_order_number', 'status', 'notes', 'kpc_comments'
+            'kpc_order_number', 'bol_number', 'loading_date', 'loading_time',
+            'customer', 'destination', 'vehicle', 'product', 'status', 'notes'
         ]
         widgets = {
-            'loading_date': forms.DateInput(attrs={'type': 'date', 'class': ''}),
-            'loading_time': forms.TimeInput(attrs={'type': 'time', 'class': ''}),
-            'vehicle': forms.Select(attrs={'class': ''}),
-            'customer': forms.Select(attrs={'class': ''}),
-            'product': forms.Select(attrs={'class': ''}),
-            'destination': forms.Select(attrs={'class': ''}),
-            'kpc_order_number': forms.TextInput(attrs={'class': '', 'placeholder': 'Loading Order No. (e.g. S0xxxx)'}),
-            'status': forms.Select(attrs={'class': ''}),
-            'notes': forms.Textarea(attrs={'class': '', 'rows': 3, 'placeholder': 'Notes for this loading...'}),
-            'kpc_comments': forms.Textarea(attrs={'class': '', 'rows': 2, 'placeholder': 'Comments from KPC updates...'}),
+            'kpc_order_number': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'KPC Loading Order No (e.g., S02106)'
+            }),
+            'bol_number': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Final BoL Number (optional)'
+            }),
+            'loading_date': forms.DateInput(attrs={
+                'type': 'date', 
+                'class': 'form-control'
+            }),
+            'loading_time': forms.TimeInput(attrs={
+                'type': 'time', 
+                'class': 'form-control'
+            }),
+            'customer': forms.Select(attrs={'class': 'form-control'}),
+            'destination': forms.Select(attrs={'class': 'form-control'}),
+            'vehicle': forms.Select(attrs={'class': 'form-control'}),
+            'product': forms.Select(attrs={'class': 'form-control'}),
+            'status': forms.Select(attrs={'class': 'form-control'}),
+            'notes': forms.Textarea(attrs={
+                'class': 'form-control', 
+                'rows': 3, 
+                'placeholder': 'Trip notes or special instructions'
+            }),
         }
-        labels = {
-            'loading_date': 'Authority/BOL Date',
-            'loading_time': 'Authority/BOL Time',
-            'kpc_order_number': 'KPC Order No. / Initial BoL',
-            'status': 'Loading Status',
-            'kpc_comments': 'KPC Comments'
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        if 'vehicle' in self.fields:
-            self.fields['vehicle'].queryset = Vehicle.objects.all().order_by('plate_number')
-        if 'customer' in self.fields:
-            self.fields['customer'].queryset = Customer.objects.all().order_by('name')
-        if 'product' in self.fields:
-            self.fields['product'].queryset = Product.objects.all().order_by('name')
 
     def clean_kpc_order_number(self):
-        kpc_order_val = self.cleaned_data.get('kpc_order_number')
-        if kpc_order_val and not kpc_order_val.startswith('S'):
-            raise forms.ValidationError("KPC Loading Order Number must start with 'S'.")
-        return kpc_order_val.upper() if kpc_order_val else kpc_order_val
+        kpc_order = self.cleaned_data.get('kpc_order_number')
+        if kpc_order:
+            kpc_order = kpc_order.strip().upper()
+            if len(kpc_order) < 3:
+                raise forms.ValidationError("KPC Order Number must be at least 3 characters.")
+        return kpc_order
 
 
-class LoadingCompartmentForm(forms.ModelForm):
-    class Meta:
-        model = LoadingCompartment
-        fields = ['compartment_number', 'quantity_requested_litres']
-        widgets = {
-            'compartment_number': forms.NumberInput(attrs={
-                'class': 'w-20 inline-block mr-2 bg-gray-100 text-gray-700 border-gray-300',
-                'readonly': True,
-                'tabindex': '-1',
-            }),
-            'quantity_requested_litres': forms.NumberInput(attrs={'class': 'w-40 inline-block', 'step': '0.01', 'placeholder': 'Quantity (L)', 'min': '0'}),
-        }
-        labels = {
-            'compartment_number': 'Comp. #',
-            'quantity_requested_litres': 'Qty Requested (L)',
-        }
-
+# FormSet for Loading Compartments
 LoadingCompartmentFormSet = inlineformset_factory(
-    Trip, LoadingCompartment, form=LoadingCompartmentForm,
+    Trip, LoadingCompartment,
     fields=['compartment_number', 'quantity_requested_litres'],
-    extra=3, min_num=3, validate_min=True, max_num=3, can_delete=False
+    extra=1,
+    can_delete=True,
+    widgets={
+        'compartment_number': forms.NumberInput(attrs={
+            'class': 'form-control',
+            'min': '1',
+            'max': '10',
+            'placeholder': 'Compartment number (1-10)'
+        }),
+        'quantity_requested_litres': forms.NumberInput(attrs={
+            'class': 'form-control', 
+            'step': '0.01', 
+            'placeholder': 'Quantity in litres'
+        }),
+    }
 )
 
-# FORM FOR PDF UPLOAD (Loading Authority - Trips)
+
+# FORM FOR SINGLE PDF UPLOAD (Loading Authority - Trips)
 class PdfLoadingAuthorityUploadForm(forms.Form):
     pdf_file = forms.FileField(
         label="Upload Export Loading Authority PDF",
-        help_text="Upload the PDF document containing the loading authority details.",
-        widget=forms.FileInput(attrs={'accept': '.pdf', 'class': 'form-control'})
+        help_text="Upload a PDF file containing the export loading authority document. Maximum file size: 10MB.",
+        validators=[FileExtensionValidator(allowed_extensions=['pdf'])],
+        widget=forms.FileInput(attrs={
+            'accept': '.pdf', 
+            'class': 'form-control'
+        })
     )
+
+    def clean_pdf_file(self):
+        pdf_file = self.cleaned_data.get('pdf_file')
+        
+        if pdf_file:
+            # Check file size (10MB limit)
+            if pdf_file.size > 10 * 1024 * 1024:
+                raise forms.ValidationError("File size cannot exceed 10MB.")
+            
+            # Check file type
+            if not pdf_file.name.lower().endswith('.pdf'):
+                raise forms.ValidationError("Only PDF files are allowed.")
+            
+            # Check content type
+            if pdf_file.content_type != 'application/pdf':
+                raise forms.ValidationError("Invalid file type. Please upload a PDF file.")
+        
+        return pdf_file
+
 
 # FORM FOR BULK PDF UPLOAD (Loading Authority - Trips)
 class BulkPdfLoadingAuthorityUploadForm(forms.Form):
     pdf_files = MultipleFileField(
         label="Upload Multiple Export Loading Authority PDFs",
-        help_text="Select multiple PDF files to upload at once. Maximum 10 files.",
-        widget=MultipleFileInput(attrs={'accept': '.pdf', 'class': 'form-control'})
+        help_text="Select multiple PDF files to upload at once. Maximum 10 files, 10MB each.",
+        widget=MultipleFileInput(attrs={
+            'accept': '.pdf', 
+            'class': 'form-control'
+        })
     )
 
     def clean_pdf_files(self):
         files = self.cleaned_data.get('pdf_files', [])
+        
         if not files:
             raise forms.ValidationError("Please select at least one PDF file.")
 
         if len(files) > 10:
-            raise forms.ValidationError("Maximum 10 files allowed.")
+            raise forms.ValidationError("Maximum 10 files allowed per upload.")
 
         for file in files:
+            # Check file extension
             if not file.name.lower().endswith('.pdf'):
                 raise forms.ValidationError(f"File '{file.name}' is not a PDF.")
+            
+            # Check file size
             if file.size > 10 * 1024 * 1024:  # 10MB limit
                 raise forms.ValidationError(f"File '{file.name}' is too large. Maximum size is 10MB.")
+            
+            # Check content type
+            if file.content_type != 'application/pdf':
+                raise forms.ValidationError(f"File '{file.name}' has invalid content type.")
 
         return files
 
@@ -191,9 +234,10 @@ class TR830UploadForm(forms.Form):
     tr830_pdf = forms.FileField(
         label="Upload TR830 PDF Document",
         help_text="Upload the KRA TR830 PDF document containing received entries per product/destination. Maximum file size: 10MB.",
+        validators=[FileExtensionValidator(allowed_extensions=['pdf'])],
         widget=forms.FileInput(attrs={
             'accept': '.pdf',
-            'class': 'form-control',
+            'class': 'form-control file-input',
             'id': 'tr830-file-input'
         })
     )
@@ -205,20 +249,20 @@ class TR830UploadForm(forms.Form):
         label="Default Supplier Name",
         help_text="Supplier name to use if not found in PDF. Defaults to 'KPC'.",
         widget=forms.TextInput(attrs={
-            'class': 'form-control',
+            'class': 'form-control form-input',
             'placeholder': 'e.g., Kuwait Petroleum Corporation'
         })
     )
 
     default_price_per_litre = forms.DecimalField(
-        max_digits=7,
+        max_digits=10,
         decimal_places=3,
         required=False,
         initial=Decimal('0.000'),
         label="Default Price per Litre (USD)",
         help_text="Price per litre if not found in PDF. Use 0.000 if unknown.",
         widget=forms.NumberInput(attrs={
-            'class': 'form-control',
+            'class': 'form-control form-input',
             'step': '0.001',
             'placeholder': '0.000',
             'min': '0'
@@ -246,7 +290,7 @@ class TR830UploadForm(forms.Form):
             header = pdf_file.read(5)
             if header != b'%PDF-':
                 raise forms.ValidationError("Invalid PDF file format.")
-            pdf_file.seek(0)
+            pdf_file.seek(0)  # Reset file pointer
         except Exception:
             raise forms.ValidationError("Unable to read PDF file.")
 
@@ -273,11 +317,12 @@ class BulkTR830UploadForm(forms.Form):
 
     tr830_files = MultipleFileField(
         label="Upload Multiple TR830 PDF Documents",
-        help_text="Select multiple TR830 PDF files to upload at once. Maximum 5 files, 10MB each.",
+        help_text="Select multiple TR830 PDF files to upload at once. Maximum 10 files, 10MB each.",
         widget=MultipleFileInput(attrs={
             'accept': '.pdf',
             'class': 'form-control',
-            'multiple': True
+            'multiple': True,
+            'id': 'bulk-tr830-files'
         })
     )
 
@@ -294,7 +339,7 @@ class BulkTR830UploadForm(forms.Form):
     )
 
     default_price_per_litre = forms.DecimalField(
-        max_digits=7,
+        max_digits=10,
         decimal_places=3,
         required=False,
         initial=Decimal('0.000'),
@@ -309,39 +354,45 @@ class BulkTR830UploadForm(forms.Form):
     )
 
     def clean_tr830_files(self):
-        """Enhanced file validation for bulk upload"""
-        files = self.cleaned_data.get('tr830_files', [])
-
+        """Validate uploaded files"""
+        files = self.files.getlist('tr830_files')
+        
         if not files:
             raise forms.ValidationError("Please select at least one PDF file.")
-
-        if len(files) > 5:
-            raise forms.ValidationError("Maximum 5 files allowed for TR830 bulk upload.")
-
+        
+        if len(files) > 10:
+            raise forms.ValidationError("Maximum 10 files allowed per upload.")
+        
         for file in files:
-            # Extension check
+            # Check file size
+            if file.size > 10 * 1024 * 1024:
+                raise forms.ValidationError(f"File '{file.name}' exceeds 10MB limit.")
+            
+            # Check file type
             if not file.name.lower().endswith('.pdf'):
                 raise forms.ValidationError(f"File '{file.name}' is not a PDF.")
-
-            # Size check
-            if file.size > 10 * 1024 * 1024:
-                raise forms.ValidationError(f"File '{file.name}' is too large. Maximum size is 10MB.")
-
-            # Basic content check
+            
+            # Check content type
+            if file.content_type != 'application/pdf':
+                raise forms.ValidationError(f"File '{file.name}' has invalid content type.")
+            
+            # Basic PDF validation
             try:
                 file.seek(0)
                 header = file.read(5)
                 if header != b'%PDF-':
                     raise forms.ValidationError(f"File '{file.name}' is not a valid PDF.")
-                file.seek(0)
+                file.seek(0)  # Reset file pointer
             except Exception:
-                raise forms.ValidationError(f"Unable to read file '{file.name}'.")
-
+                raise forms.ValidationError(f"Unable to read PDF file '{file.name}'.")
+        
         return files
 
     def clean_default_supplier(self):
         """Validate supplier name"""
         supplier = self.cleaned_data.get('default_supplier', '').strip()
+        if supplier and len(supplier) < 2:
+            raise forms.ValidationError("Supplier name must be at least 2 characters long.")
         return supplier or "KPC"
 
     def clean_default_price_per_litre(self):
@@ -350,3 +401,175 @@ class BulkTR830UploadForm(forms.Form):
         if price is not None and price < 0:
             raise forms.ValidationError("Price cannot be negative.")
         return price or Decimal('0.000')
+
+
+# --- Search and Filter Forms ---
+class ShipmentSearchForm(forms.Form):
+    """Form for searching and filtering shipments"""
+    
+    search = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by vessel ID, supplier, or notes...'
+        })
+    )
+    
+    product = forms.ModelChoiceField(
+        queryset=Product.objects.all(),
+        required=False,
+        empty_label="All Products",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    destination = forms.ModelChoiceField(
+        queryset=Destination.objects.all(),
+        required=False,
+        empty_label="All Destinations",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+    
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+
+
+class TripSearchForm(forms.Form):
+    """Form for searching and filtering trips"""
+    
+    search = forms.CharField(
+        max_length=200,
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'Search by KPC order number, BoL number, or notes...'
+        })
+    )
+    
+    customer = forms.ModelChoiceField(
+        queryset=Customer.objects.all(),
+        required=False,
+        empty_label="All Customers",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    destination = forms.ModelChoiceField(
+        queryset=Destination.objects.all(),
+        required=False,
+        empty_label="All Destinations",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    vehicle = forms.ModelChoiceField(
+        queryset=Vehicle.objects.all(),
+        required=False,
+        empty_label="All Vehicles",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    product = forms.ModelChoiceField(
+        queryset=Product.objects.all(),
+        required=False,
+        empty_label="All Products",
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    status = forms.ChoiceField(
+        choices=[('', 'All Statuses')] + Trip.STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    date_from = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+    
+    date_to = forms.DateField(
+        required=False,
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+
+
+# --- Quick Action Forms ---
+class QuickShipmentStatusForm(forms.Form):
+    """Quick form to update shipment - simplified since Shipment doesn't have status choices"""
+    
+    notes = forms.CharField(
+        max_length=500,
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Update shipment notes...'
+        })
+    )
+
+
+class QuickTripStatusForm(forms.Form):
+    """Quick form to update trip status"""
+    
+    status = forms.ChoiceField(
+        choices=Trip.STATUS_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    notes = forms.CharField(
+        max_length=500,
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 2,
+            'placeholder': 'Optional status update notes...'
+        })
+    )
+
+
+# --- Utility Forms ---
+class DateRangeForm(forms.Form):
+    """Form for selecting date ranges in reports"""
+    
+    start_date = forms.DateField(
+        label="Start Date",
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+    
+    end_date = forms.DateField(
+        label="End Date",
+        widget=forms.DateInput(attrs={
+            'type': 'date',
+            'class': 'form-control'
+        })
+    )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        
+        if start_date and end_date and start_date > end_date:
+            raise forms.ValidationError("Start date cannot be after end date.")
+        
+        return cleaned_data
