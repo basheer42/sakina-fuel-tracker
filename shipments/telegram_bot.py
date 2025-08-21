@@ -1,5 +1,5 @@
 # shipments/telegram_bot.py
-# Complete fix for TR830 Telegram Bot processing
+# Complete Telegram Bot implementation - FIXED VERSION
 import os
 import json
 import logging
@@ -22,9 +22,14 @@ class TelegramBot:
             raise ValueError("TELEGRAM_BOT_TOKEN not found in environment variables")
         
         # Import here to avoid circular imports
-        from .tr830_parser import TR830Parser, TR830ParseError
-        self.tr830_parser = TR830Parser()
-        self.TR830ParseError = TR830ParseError
+        try:
+            from .tr830_parser import TR830Parser, TR830ParseError
+            self.tr830_parser = TR830Parser()
+            self.TR830ParseError = TR830ParseError
+        except ImportError as e:
+            logger.error(f"Failed to import TR830Parser: {e}")
+            self.tr830_parser = None
+            self.TR830ParseError = Exception
 
     def webhook_handler(self, webhook_data):
         """Main webhook handler for Telegram updates"""
@@ -80,8 +85,12 @@ class TelegramBot:
             response = requests.post(url, json=data)
             if response.status_code != 200:
                 logger.error(f"Failed to send message: {response.text}")
+                print(f"🔥 DEBUG: Send message failed: {response.text}")
+            else:
+                print(f"🔥 DEBUG: Message sent successfully to {chat_id}")
         except Exception as e:
             logger.error(f"Error sending message: {e}")
+            print(f"🔥 DEBUG: Error in send_message: {e}")
 
     def get_user_context(self, chat_id):
         """Get user context from Telegram chat ID"""
@@ -112,13 +121,15 @@ class TelegramBot:
             file_info_url = f"https://api.telegram.org/bot{self.bot_token}/getFile"
             file_info_response = requests.get(file_info_url, params={'file_id': file_id})
             
-            print(f"🔥 DEBUG: File info response: {file_info_response.json()}")
+            print(f"🔥 DEBUG: File info response: {file_info_response.status_code}")
             
             if file_info_response.status_code != 200:
+                print(f"🔥 DEBUG: Failed to get file info: {file_info_response.text}")
                 return None
             
             file_info = file_info_response.json()
             if not file_info.get('ok'):
+                print(f"🔥 DEBUG: File info not ok: {file_info}")
                 return None
             
             file_path = file_info['result']['file_path']
@@ -289,37 +300,37 @@ Just send a document or type a command!"""
         elif any(word in message_lower for word in ['shipment', 'vessel', 'arrival']):
             return self._handle_shipments_query(user_context)
         else:
-            return """ℹ️ I didn't understand your request. 
+            return """ℹ️ I didn't understand your request.
 
-Here's what I can help with:
-• Upload TR830 documents for processing
-• Check stock levels
-• View trip information
-• Get business summaries
-
-Use /help for a complete list of commands."""
+Try one of these:
+📊 Type `stock` for inventory levels
+🚛 Type `trips` for recent loadings
+📦 Type `shipments` for vessel arrivals
+📄 Upload a TR830 PDF for processing
+❓ Use `/help` for all commands"""
 
     def _handle_stock_query(self, user_context):
-        """Handle stock queries"""
+        """Handle stock/inventory queries"""
         try:
-            from .models import Shipment
+            from .models import Shipment, Product
             
-            # Get stock summary using existing models
-            active_shipments = Shipment.objects.filter(quantity_remaining__gt=0)
+            products = Product.objects.all()
+            stock_info = "📊 *Current Stock Levels*\n\n"
             
-            if not active_shipments:
-                return "📊 *Stock Status:* No active inventory"
+            for product in products:
+                total_quantity = sum(
+                    shipment.quantity_remaining 
+                    for shipment in Shipment.objects.filter(
+                        product=product,
+                        quantity_remaining__gt=0
+                    )
+                )
+                stock_info += f"⛽ *{product.name}*: {total_quantity:,.0f}L\n"
             
-            stock_summary = "📊 *Current Stock Levels:*\n\n"
-            for shipment in active_shipments[:10]:  # Limit to 10 for readability
-                stock_summary += f"⛽ *{shipment.product.name}* ({shipment.destination})\n"
-                stock_summary += f"   📦 Remaining: {shipment.quantity_remaining:,.0f}L\n"
-                stock_summary += f"   🚢 Vessel: {shipment.vessel_id_tag}\n\n"
-            
-            return stock_summary
+            return stock_info or "📊 No stock information available."
             
         except Exception as e:
-            logger.error(f"Error getting stock info: {e}")
+            logger.error(f"Error handling stock query: {e}")
             return "❌ Error retrieving stock information."
 
     def _handle_trips_query(self, user_context):
@@ -327,22 +338,26 @@ Use /help for a complete list of commands."""
         try:
             from .models import Trip
             
-            recent_trips = Trip.objects.filter(user_id=user_context['user_id']).order_by('-loading_date')[:5]
+            recent_trips = Trip.objects.filter(
+                user_id=user_context['user_id']
+            ).order_by('-loading_date')[:5]
             
             if not recent_trips:
-                return "🚛 *No recent trips found*"
+                return "🚛 No recent trips found."
             
-            trips_summary = "🚛 *Recent Trips:*\n\n"
+            trips_info = "🚛 *Recent Trips*\n\n"
             for trip in recent_trips:
-                trips_summary += f"📋 *{trip.kpc_order_number or 'N/A'}*\n"
-                trips_summary += f"   📅 Date: {trip.loading_date}\n"
-                trips_summary += f"   ⛽ Product: {trip.product.name}\n"
-                trips_summary += f"   📍 Status: {trip.get_status_display()}\n\n"
+                trips_info += f"📋 *Order:* {trip.kpc_order_number or 'N/A'}\n"
+                trips_info += f"⛽ *Product:* {trip.product.name}\n"
+                trips_info += f"📊 *Quantity:* {trip.quantity_loaded:,.0f}L\n"
+                trips_info += f"📅 *Date:* {trip.loading_date.strftime('%d/%m/%Y')}\n"
+                trips_info += f"🚛 *Vehicle:* {trip.vehicle.plate_number}\n"
+                trips_info += f"📍 *Status:* {trip.get_status_display()}\n\n"
             
-            return trips_summary
+            return trips_info
             
         except Exception as e:
-            logger.error(f"Error getting trips info: {e}")
+            logger.error(f"Error handling trips query: {e}")
             return "❌ Error retrieving trips information."
 
     def _handle_shipments_query(self, user_context):
@@ -350,22 +365,22 @@ Use /help for a complete list of commands."""
         try:
             from .models import Shipment
             
-            recent_shipments = Shipment.objects.filter(user_id=user_context['user_id']).order_by('-import_date')[:5]
+            recent_shipments = Shipment.objects.order_by('-import_date')[:5]
             
             if not recent_shipments:
-                return "📦 *No recent shipments found*"
+                return "📦 No recent shipments found."
             
-            shipments_summary = "📦 *Recent Shipments:*\n\n"
+            shipments_info = "📦 *Recent Shipments*\n\n"
             for shipment in recent_shipments:
-                shipments_summary += f"🚢 *{shipment.vessel_id_tag}*\n"
-                shipments_summary += f"   📅 Import: {shipment.import_date}\n"
-                shipments_summary += f"   ⛽ Product: {shipment.product.name}\n"
-                shipments_summary += f"   📊 Quantity: {shipment.quantity_litres:,.0f}L\n\n"
+                shipments_info += f"🚢 *Vessel:* {shipment.vessel_id_tag}\n"
+                shipments_info += f"⛽ *Product:* {shipment.product.name}\n"
+                shipments_info += f"📊 *Remaining:* {shipment.quantity_remaining:,.0f}L\n"
+                shipments_info += f"📅 *Arrival:* {shipment.import_date.strftime('%d/%m/%Y')}\n\n"
             
-            return shipments_summary
+            return shipments_info
             
         except Exception as e:
-            logger.error(f"Error getting shipments info: {e}")
+            logger.error(f"Error handling shipments query: {e}")
             return "❌ Error retrieving shipments information."
 
     def _is_tr830_document(self, filename, file_content):
@@ -381,7 +396,13 @@ Use /help for a complete list of commands."""
             # For PDF files, try to extract some text to check content
             if filename_lower.endswith('.pdf'):
                 try:
-                    import pdfplumber
+                    # Try to import pdfplumber, fallback gracefully if not available
+                    try:
+                        import pdfplumber
+                    except ImportError:
+                        print("🔥 DEBUG: pdfplumber not available, using filename check only")
+                        return False
+                    
                     with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
                         tmp_file.write(file_content)
                         tmp_file.flush()
@@ -417,6 +438,9 @@ Use /help for a complete list of commands."""
         try:
             print(f"🔥 DEBUG: Initiating TR830 processing: {filename}")
             
+            if not self.tr830_parser:
+                return "❌ TR830 parser not available. Please contact administrator."
+            
             # Parse the TR830 document first
             with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
                 tmp_file.write(file_content)
@@ -430,284 +454,150 @@ Use /help for a complete list of commands."""
                 if not entries:
                     return "❌ No shipment data found in the TR830 document. Please check the file format."
                 
-                if len(entries) > 1:
-                    return f"⚠️ Warning: Found {len(entries)} entries in TR830. Expected only 1. Please check the document."
+                print(f"🔥 DEBUG: Parsed {len(entries)} entries from TR830")
                 
-                entry = entries[0]  # Should be only one entry now
-                
-                # Store TR830 data for interactive processing
+                # Store parsed data in cache for interactive processing
                 tr830_data = {
+                    'step': 'awaiting_supplier',
                     'filename': filename,
                     'import_date': import_date.isoformat(),
-                    'vessel': entry.marks,
-                    'product_type': entry.product_type,
-                    'destination': entry.destination,
-                    'quantity': str(entry.avalue),
-                    'description': entry.description,
-                    'step': 'supplier',  # Start with supplier input
+                    'entries': [
+                        {
+                            'vessel': entry.vessel,
+                            'product_type': entry.product_type,
+                            'quantity': str(entry.quantity),
+                            'destination_name': entry.destination_name
+                        } for entry in entries
+                    ],
                     'user_id': user_context['user_id']
                 }
                 
-                # Store the TR830 data using reliable method
-                self._set_tr830_state(chat_id, tr830_data)
+                self._save_tr830_state(chat_id, tr830_data)
                 
-                # Send parsing summary and request supplier
-                response_msg = f"✅ *TR830 Document Parsed Successfully!*\n\n"
-                response_msg += f"📄 *Document:* {filename}\n"
-                response_msg += f"📅 *Import Date:* {import_date.strftime('%d/%m/%Y')}\n"
-                response_msg += f"🚢 *Vessel:* {entry.marks}\n"
-                response_msg += f"⛽ *Product:* {entry.product_type}\n"
-                response_msg += f"🌍 *Destination:* {entry.destination}\n"
-                response_msg += f"📊 *Quantity:* {entry.avalue:,.0f}L\n\n"
+                # Create initial response with parsed data
+                response = "✅ *TR830 Document Parsed Successfully!*\n\n"
+                response += f"📄 *File:* {filename}\n"
+                response += f"📅 *Import Date:* {import_date.strftime('%d/%m/%Y')}\n\n"
                 
-                response_msg += f"📝 *Step 1 of 2: Enter Supplier Name*\n\n"
-                response_msg += f"Please enter the supplier name for this shipment:\n"
-                response_msg += f"Example: `Kuwait Petroleum Corporation`\n\n"
-                response_msg += f"💡 Type `/cancel` to cancel this process."
+                response += "*🚢 Parsed Shipment Data:*\n"
+                for i, entry in enumerate(entries, 1):
+                    response += f"{i}. *Vessel:* {entry.vessel}\n"
+                    response += f"   *Product:* {entry.product_type}\n"
+                    response += f"   *Quantity:* {entry.quantity:,.0f}L\n"
+                    response += f"   *Destination:* {entry.destination_name}\n\n"
                 
-                return response_msg
+                response += "🏭 *Step 1: Please provide the supplier name*\n"
+                response += "Type the supplier company name (e.g., 'Kuwait Petroleum Corporation'):"
+                
+                return response
                 
             finally:
-                # Clean up temporary file
-                try:
-                    os.unlink(temp_path)
-                except:
-                    pass
-                    
-        except self.TR830ParseError as e:
-            return f"❌ Error parsing TR830 document: {str(e)}\n\nPlease check if this is a valid TR830 document."
+                os.unlink(temp_path)
+                
         except Exception as e:
             print(f"🔥 DEBUG: Error in _initiate_tr830_processing: {e}")
             logger.error(f"Error initiating TR830 processing: {e}")
-            return "❌ Error processing TR830 document. Please try again or contact support."
-
-    def _get_tr830_state(self, chat_id):
-        """Get TR830 processing state using hybrid approach (Database + File backup)"""
-        print(f"🔥 DEBUG: Getting TR830 state for chat_id: {chat_id}")
-        
-        try:
-            # Try DATABASE first
-            from .models import TR830ProcessingState
-            
-            try:
-                state_obj = TR830ProcessingState.objects.get(chat_id=chat_id)
-                state_data = {
-                    'filename': state_obj.filename,
-                    'import_date': state_obj.import_date.isoformat(),
-                    'vessel': state_obj.vessel,
-                    'product_type': state_obj.product_type,
-                    'destination': state_obj.destination,
-                    'quantity': str(state_obj.quantity),
-                    'description': state_obj.description,
-                    'step': state_obj.step,
-                    'user_id': state_obj.user_id,
-                    'supplier': state_obj.supplier or ''
-                }
-                print(f"🔥 DEBUG: Found state in DATABASE: step='{state_data.get('step')}'")
-                return state_data
-                
-            except TR830ProcessingState.DoesNotExist:
-                print(f"🔥 DEBUG: No state found in database")
-                
-                # Fallback to CACHE
-                cache_key = f"tr830_processing_{chat_id}"
-                cached_state = cache.get(cache_key)
-                if cached_state:
-                    print(f"🔥 DEBUG: Found state in CACHE: step='{cached_state.get('step')}'")
-                    return cached_state
-                
-                print(f"🔥 DEBUG: No state found in cache either")
-                return None
-                
-        except Exception as e:
-            print(f"🔥 DEBUG: Error accessing state: {e}")
             import traceback
             traceback.print_exc()
-            return None
-
-    def _set_tr830_state(self, chat_id, state):
-        """Set TR830 processing state using hybrid approach (Database + Cache backup)"""
-        print(f"🔥 DEBUG: Setting TR830 state for chat_id: {chat_id}, step: {state.get('step')}")
-        
-        try:
-            from .models import TR830ProcessingState
-            from django.contrib.auth.models import User
-            
-            # First, delete any existing state
-            TR830ProcessingState.objects.filter(chat_id=chat_id).delete()
-            
-            # Create new state in DATABASE
-            user = User.objects.get(id=state['user_id'])
-            
-            # Handle datetime parsing carefully
-            import_date_str = state['import_date']
-            if isinstance(import_date_str, str):
-                import_date = datetime.fromisoformat(import_date_str.replace('Z', '+00:00'))
-            else:
-                import_date = import_date_str
-            
-            # Make sure import_date is timezone-aware
-            if import_date.tzinfo is None:
-                import_date = timezone.make_aware(import_date)
-            
-            TR830ProcessingState.objects.create(
-                chat_id=chat_id,
-                filename=state['filename'],
-                import_date=import_date,
-                vessel=state['vessel'],
-                product_type=state['product_type'],
-                destination=state['destination'],
-                quantity=Decimal(state['quantity']),
-                description=state['description'],
-                step=state['step'],
-                user=user,
-                supplier=state.get('supplier', '')
-            )
-            
-            print(f"🔥 DEBUG: State created in DATABASE")
-            
-            # Also backup to CACHE
-            cache_key = f"tr830_processing_{chat_id}"
-            cache.set(cache_key, state, 1800)  # 30 minutes
-            print(f"🔥 DEBUG: State also stored in cache")
-            
-        except Exception as e:
-            print(f"🔥 DEBUG: Error setting state: {e}")
-            import traceback
-            traceback.print_exc()
-
-    def _clear_tr830_state(self, chat_id):
-        """Clear TR830 processing state from all storage methods"""
-        print(f"🔥 DEBUG: Clearing TR830 state for chat_id: {chat_id}")
-        
-        try:
-            # Clear from DATABASE
-            from .models import TR830ProcessingState
-            deleted_count, _ = TR830ProcessingState.objects.filter(chat_id=chat_id).delete()
-            print(f"🔥 DEBUG: Deleted {deleted_count} database records")
-            
-            # Clear from CACHE
-            cache_key = f"tr830_processing_{chat_id}"
-            cache.delete(cache_key)
-            print(f"🔥 DEBUG: Cache cleared")
-            
-        except Exception as e:
-            print(f"🔥 DEBUG: Error clearing state: {e}")
+            return f"❌ Error processing TR830 document: {str(e)}"
 
     def _handle_tr830_input(self, chat_id, message_text, tr830_state):
-        """Handle user input during TR830 processing flow"""
+        """Handle input during TR830 interactive processing"""
         try:
             current_step = tr830_state.get('step')
+            print(f"🔥 DEBUG: Handling TR830 input for step: {current_step}")
             
-            if current_step == 'supplier':
-                # User entered supplier name
-                supplier_name = message_text.strip()
+            if current_step == 'awaiting_supplier':
+                # User provided supplier name
+                tr830_state['supplier'] = message_text.strip()
+                tr830_state['step'] = 'awaiting_price'
                 
-                if len(supplier_name) < 2:
-                    return "❌ Supplier name too short. Please enter a valid supplier name (at least 2 characters)."
+                self._save_tr830_state(chat_id, tr830_state)
                 
-                # Update state with supplier and move to price step
-                tr830_state['supplier'] = supplier_name
-                tr830_state['step'] = 'price'
-                self._set_tr830_state(chat_id, tr830_state)
-                
-                return f"✅ *Supplier Set: {supplier_name}*\n\n📝 *Step 2 of 2: Enter Price per Litre*\n\nPlease enter the price per litre (USD):\nExample: `0.68` or `0.750`\n\n💡 Type `/cancel` to cancel this process."
-                
-            elif current_step == 'price':
-                # User entered price per litre
-                try:
-                    # Clean the input and convert to Decimal
-                    price_text = message_text.strip().replace('$', '').replace(',', '')
-                    price_per_litre = Decimal(price_text)
-                    
-                    if price_per_litre <= 0:
-                        return "❌ Price must be greater than 0. Please enter a valid price (e.g., 0.68):"
-                    
-                    if price_per_litre > 10:
-                        return "❌ Price seems too high (over $10/L). Please double-check and enter the correct price:"
-                    
-                    # Create the shipment
-                    return self._create_tr830_shipment(chat_id, tr830_state, price_per_litre)
-                    
-                except (InvalidOperation, ValueError):
-                    return "❌ Invalid price format. Please enter a decimal number (e.g., 0.68):"
-            
-            return "❌ Unknown processing step. Please try uploading the TR830 document again."
-            
-        except Exception as e:
-            logger.error(f"Error handling TR830 input: {e}")
-            print(f"🔥 DEBUG: Error in _handle_tr830_input: {e}")
-            import traceback
-            traceback.print_exc()
-            self._clear_tr830_state(chat_id)
-            return f"❌ Error processing your input: {str(e)}\n\nPlease try uploading the TR830 document again."
+                return f"""✅ *Supplier Set:* {message_text}
 
-    def _create_tr830_shipment(self, chat_id, tr830_state, price_per_litre):
+💰 *Step 2: Please provide the price per litre*
+Type the price in USD (e.g., '0.65' for $0.65 per litre):"""
+            
+            elif current_step == 'awaiting_price':
+                # User provided price
+                try:
+                    price_per_litre = Decimal(message_text.strip())
+                    if price_per_litre <= 0:
+                        return "❌ Price must be greater than zero. Please enter a valid price:"
+                    
+                    tr830_state['price_per_litre'] = str(price_per_litre)
+                    
+                    # Now create the shipment
+                    return self._create_tr830_shipment(chat_id, tr830_state)
+                    
+                except (ValueError, InvalidOperation):
+                    return "❌ Invalid price format. Please enter a number (e.g., '0.65'):"
+            
+            else:
+                return "❌ Unknown processing step. Please start over with /cancel and upload a new TR830."
+                
+        except Exception as e:
+            print(f"🔥 DEBUG: Error in _handle_tr830_input: {e}")
+            logger.error(f"Error handling TR830 input: {e}")
+            self._clear_tr830_state(chat_id)
+            return "❌ Error processing your input. Please start over."
+
+    def _create_tr830_shipment(self, chat_id, tr830_state):
         """Create shipment from TR830 data"""
         try:
-            # Import the required models
-            from .models import Destination, Product, Shipment
-            from django.contrib.auth.models import User
+            print(f"🔥 DEBUG: Creating TR830 shipment")
             
-            # Extract data from state
-            import_date_str = tr830_state['import_date']
-            if isinstance(import_date_str, str):
-                import_date = datetime.fromisoformat(import_date_str.replace('Z', '+00:00'))
-            else:
-                import_date = import_date_str
-                
-            vessel = tr830_state['vessel']
-            product_type = tr830_state['product_type']
-            destination_name = tr830_state['destination']
-            quantity = Decimal(tr830_state['quantity'])
+            from .models import Shipment, Product, Destination
+            
             supplier = tr830_state['supplier']
-            filename = tr830_state['filename']
-            description = tr830_state['description']
-            user_id = tr830_state['user_id']
+            price_per_litre = Decimal(tr830_state['price_per_litre'])
+            import_date = datetime.fromisoformat(tr830_state['import_date'])
+            entries = tr830_state['entries']
+            
+            created_shipments = []
             
             with transaction.atomic():
-                # Get user
-                user = User.objects.get(id=user_id)
-                
-                # Get or create product
-                product, created = Product.objects.get_or_create(
-                    name=product_type,
-                    defaults={'description': f'{product_type} fuel'}
-                )
-                
-                if created:
-                    print(f"🔥 DEBUG: Created new product: {product_type}")
-                
-                # Get or create destination
-                destination, dest_created = Destination.objects.get_or_create(
-                    name=destination_name,
-                    defaults={}
-                )
-                
-                if dest_created:
-                    print(f"🔥 DEBUG: Created new destination: {destination_name}")
-                
-                # Create shipment - FIXED: Use quantity_litres instead of quantity_loaded
-                shipment = Shipment.objects.create(
-                    user=user,
-                    vessel_id_tag=vessel,
-                    supplier_name=supplier,
-                    product=product,
-                    quantity_litres=quantity,  # FIXED: Use correct field name
-                    destination=destination,
-                    price_per_litre=price_per_litre,  # FIXED: Use correct field name
-                    import_date=import_date.date(),
-                    notes=f"Auto-created from TR830: {filename}",
-                )
-                
-                print(f"🔥 DEBUG: Created shipment: {shipment}")
-                
-                # Clear processing state
-                self._clear_tr830_state(chat_id)
-                
-                # Generate success response
-                total_cost = quantity * price_per_litre
-                response_msg = f"✅ *TR830 Shipment Created Successfully!*\n\n"
+                for entry_data in entries:
+                    vessel = entry_data['vessel']
+                    product_type = entry_data['product_type']
+                    quantity = Decimal(entry_data['quantity'])
+                    destination_name = entry_data['destination_name']
+                    
+                    # Get or create product
+                    product, _ = Product.objects.get_or_create(name=product_type)
+                    
+                    # Get or create destination
+                    destination, _ = Destination.objects.get_or_create(name=destination_name)
+                    
+                    # Calculate total cost
+                    total_cost = quantity * price_per_litre
+                    
+                    # Create shipment
+                    shipment = Shipment.objects.create(
+                        vessel_id_tag=vessel,
+                        supplier=supplier,
+                        product=product,
+                        destination=destination,
+                        quantity_loaded=quantity,
+                        quantity_remaining=quantity,
+                        price_per_litre=price_per_litre,
+                        total_cost=total_cost,
+                        import_date=import_date,
+                        notes=f"Created via Telegram Bot from {tr830_state['filename']}"
+                    )
+                    
+                    created_shipments.append(shipment)
+                    
+                    print(f"🔥 DEBUG: Created shipment {shipment.id}: {vessel} - {product_type}")
+            
+            # Clear the TR830 state
+            self._clear_tr830_state(chat_id)
+            
+            # Create success response
+            if len(created_shipments) == 1:
+                shipment = created_shipments[0]
+                response_msg = f"🎉 *Shipment Created Successfully!*\n\n"
                 response_msg += f"🆔 *Shipment ID:* {shipment.id}\n"
                 response_msg += f"🚢 *Vessel:* {vessel}\n"
                 response_msg += f"🏭 *Supplier:* {supplier}\n"
@@ -718,8 +608,17 @@ Use /help for a complete list of commands."""
                 response_msg += f"💸 *Total Cost:* ${total_cost:,.2f}\n"
                 response_msg += f"📅 *Import Date:* {import_date.strftime('%d/%m/%Y')}\n\n"
                 response_msg += f"🎉 The shipment has been added to your inventory!"
+            else:
+                response_msg = f"🎉 *{len(created_shipments)} Shipments Created Successfully!*\n\n"
+                total_value = sum(s.total_cost for s in created_shipments)
+                total_quantity = sum(s.quantity_loaded for s in created_shipments)
+                response_msg += f"🏭 *Supplier:* {supplier}\n"
+                response_msg += f"📊 *Total Quantity:* {total_quantity:,.0f}L\n"
+                response_msg += f"💸 *Total Value:* ${total_value:,.2f}\n"
+                response_msg += f"📅 *Import Date:* {import_date.strftime('%d/%m/%Y')}\n\n"
+                response_msg += f"🎉 All shipments have been added to your inventory!"
                 
-                return response_msg
+            return response_msg
                 
         except Exception as e:
             logger.error(f"Error creating TR830 shipment: {e}")
@@ -729,25 +628,34 @@ Use /help for a complete list of commands."""
             self._clear_tr830_state(chat_id)
             return f"❌ Error creating shipment: {str(e)}\n\nPlease try the process again or contact support."
 
-
-# Webhook view function for Django URLs
-def telegram_webhook(request):
-    """Django view to handle Telegram webhook"""
-    if request.method == 'POST':
+    def _get_tr830_state(self, chat_id):
+        """Get TR830 processing state for user"""
         try:
-            import json
-            webhook_data = json.loads(request.body.decode('utf-8'))
-            
-            bot = TelegramBot()
-            result = bot.webhook_handler(webhook_data)
-            
-            from django.http import JsonResponse
-            return JsonResponse(result)
-            
+            cache_key = f"tr830_state_{chat_id}"
+            state = cache.get(cache_key)
+            print(f"🔥 DEBUG: Retrieved TR830 state for {chat_id}: {state is not None}")
+            return state
         except Exception as e:
-            logger.error(f"Error in telegram webhook view: {e}")
-            from django.http import JsonResponse
-            return JsonResponse({'status': 'error', 'message': str(e)})
-    
-    from django.http import HttpResponseNotAllowed
-    return HttpResponseNotAllowed(['POST'])
+            print(f"🔥 DEBUG: Error getting TR830 state: {e}")
+            logger.error(f"Error getting TR830 state: {e}")
+            return None
+
+    def _save_tr830_state(self, chat_id, state_data):
+        """Save TR830 processing state for user"""
+        try:
+            cache_key = f"tr830_state_{chat_id}"
+            cache.set(cache_key, state_data, timeout=3600)  # 1 hour timeout
+            print(f"🔥 DEBUG: Saved TR830 state for {chat_id}: step={state_data.get('step')}")
+        except Exception as e:
+            print(f"🔥 DEBUG: Error saving TR830 state: {e}")
+            logger.error(f"Error saving TR830 state: {e}")
+
+    def _clear_tr830_state(self, chat_id):
+        """Clear TR830 processing state for user"""
+        try:
+            cache_key = f"tr830_state_{chat_id}"
+            cache.delete(cache_key)
+            print(f"🔥 DEBUG: Cleared TR830 state for {chat_id}")
+        except Exception as e:
+            print(f"🔥 DEBUG: Error clearing TR830 state: {e}")
+            logger.error(f"Error clearing TR830 state: {e}")
