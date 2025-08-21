@@ -1,527 +1,303 @@
-<!-- TR830 Single Upload Template -->
-<!-- File: templates/shipments/upload_tr830.html -->
-
+<!-- shipments/templates/shipments/bulk_upload_tr830.html -->
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ page_title }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .upload-area {
-        border: 3px dashed #e5e7eb;
-        border-radius: 12px;
-        padding: 3rem;
-        text-align: center;
-        transition: all 0.3s ease;
-        background: #f9fafb;
-    }
-    
-    .upload-area:hover {
-        border-color: #3b82f6;
-        background: #eff6ff;
-    }
-    
-    .upload-area.dragover {
-        border-color: #1d4ed8;
-        background: #dbeafe;
-        transform: scale(1.02);
-    }
-    
-    .file-input {
-        display: none;
-    }
-    
-    .upload-icon {
-        width: 64px;
-        height: 64px;
-        margin: 0 auto 1rem;
-        color: #6b7280;
-    }
-    
-    .progress-container {
-        display: none;
-        margin-top: 1rem;
-    }
-    
-    .progress-bar {
-        width: 100%;
-        height: 8px;
-        background: #e5e7eb;
-        border-radius: 4px;
-        overflow: hidden;
-    }
-    
-    .progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #3b82f6, #1d4ed8);
-        width: 0%;
-        transition: width 0.3s ease;
-    }
-    
-    .file-info {
-        background: #f3f4f6;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-top: 1rem;
-        display: none;
-    }
-    
-    .help-section {
-        background: #fef3c7;
-        border: 1px solid #fbbf24;
-        border-radius: 8px;
-        padding: 1rem;
-        margin-bottom: 2rem;
-    }
-    
-    .feature-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 1rem;
-        margin-top: 2rem;
-    }
-    
-    .feature-card {
-        background: white;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        padding: 1.5rem;
-        text-align: center;
-    }
-    
-    .feature-icon {
-        width: 48px;
-        height: 48px;
-        margin: 0 auto 1rem;
-        color: #3b82f6;
-    }
-</style>
-{% endblock %}
+{% block title %}{{ page_title|default:"Bulk Upload TR830 Documents" }}{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ page_title }}</h1>
-        <p class="text-gray-600">{{ help_text }}</p>
+<div class="max-w-4xl mx-auto">
+    <!-- Header Section -->
+    <div class="sakina-card p-8 mb-8">
+        <div class="flex items-center gap-6">
+            <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 20 20">
+                    <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4V7h12v8z"/>
+                    <path d="M6 9h8v2H6V9zm0 3h8v1H6v-1z"/>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-4xl font-bold text-gray-900">{{ page_title|default:"Bulk Upload TR830 Documents" }}</h2>
+                <p class="text-gray-600 mt-2">{{ help_text|default:"Upload multiple TR830 documents at once for batch processing and automatic shipment creation." }}</p>
+            </div>
+        </div>
     </div>
 
-    <!-- Help Section -->
-    <div class="help-section">
-        <h3 class="text-lg font-semibold text-amber-800 mb-2">📄 TR830 Document Upload</h3>
-        <p class="text-amber-700 mb-2">
-            Upload TR830 transit documents to automatically create shipments in the system. 
-            The system will extract vessel information, product types, quantities, and destinations.
-        </p>
-        <ul class="text-amber-700 text-sm space-y-1">
-            <li>• Supports PDF format only</li>
-            <li>• Maximum file size: 10MB</li>
-            <li>• Automatically detects product types (PMS/AGO)</li>
-            <li>• Creates shipments with FIFO stock management</li>
-        </ul>
+    <!-- Upload Type Toggle -->
+    <div class="sakina-card p-6 mb-8">
+        <div class="text-center">
+            <div class="inline-flex rounded-md shadow-sm" role="group">
+                <a href="{% url 'shipments:upload-tr830' %}" class="px-6 py-3 text-sm font-medium text-gray-700 bg-white border border-purple-300 rounded-l-lg hover:bg-gray-100 focus:z-10 focus:ring-2 focus:ring-purple-500 focus:bg-gray-100 transition-colors duration-200">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                    </svg>
+                    Single Upload
+                </a>
+                <button type="button" class="px-6 py-3 text-sm font-medium text-purple-700 bg-purple-100 border-t border-b border-r border-purple-300 rounded-r-lg hover:bg-purple-200 focus:z-10 focus:ring-2 focus:ring-purple-500 focus:bg-purple-200">
+                    <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+                    </svg>
+                    Bulk Upload
+                </button>
+            </div>
+            <p class="text-sm text-gray-500 mt-3">Choose single upload for one document or bulk upload for multiple TR830 documents at once</p>
+        </div>
+    </div>
+
+    <!-- Information Section -->
+    <div class="sakina-card p-6 mb-8">
+        <div class="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-lg p-4">
+            <h3 class="text-lg font-semibold text-purple-800 mb-2 flex items-center">
+                <span class="mr-2">📁</span>
+                Bulk TR830 Processing
+            </h3>
+            <p class="text-purple-700 mb-3">
+                Upload multiple TR830 documents simultaneously for efficient batch processing. 
+                Each document will be parsed individually and shipments created automatically.
+            </p>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-purple-700">
+                <div class="flex items-center">
+                    <span class="text-green-600 mr-1">✓</span>
+                    Maximum 10 files per batch
+                </div>
+                <div class="flex items-center">
+                    <span class="text-green-600 mr-1">✓</span>
+                    10MB per file limit
+                </div>
+                <div class="flex items-center">
+                    <span class="text-green-600 mr-1">✓</span>
+                    Progress tracking per file
+                </div>
+                <div class="flex items-center">
+                    <span class="text-green-600 mr-1">✓</span>
+                    Individual error reports
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Upload Form -->
-    <div class="bg-white rounded-lg shadow-lg p-6">
-        <form id="tr830UploadForm" method="post" enctype="multipart/form-data">
+    <div class="sakina-card p-8">
+        <form method="post" enctype="multipart/form-data" id="bulk-tr830-form">
             {% csrf_token %}
-            
-            <!-- Drag & Drop Upload Area -->
-            <div class="upload-area" id="uploadArea">
-                <svg class="upload-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
-                </svg>
-                <h3 class="text-xl font-semibold text-gray-700 mb-2">Upload TR830 Document</h3>
-                <p class="text-gray-500 mb-4">Drag and drop your TR830 PDF file here, or click to browse</p>
-                <button type="button" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                        onclick="document.getElementById('tr830FileInput').click()">
-                    Choose File
-                </button>
-                <input type="file" id="tr830FileInput" name="tr830_file" class="file-input" 
-                       accept=".pdf" required>
-            </div>
 
-            <!-- File Info Display -->
-            <div id="fileInfo" class="file-info">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="font-medium text-gray-900" id="fileName"></p>
-                        <p class="text-sm text-gray-500" id="fileSize"></p>
-                    </div>
-                    <button type="button" class="text-red-600 hover:text-red-800" onclick="clearFile()">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
+            <!-- File Upload Area -->
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Multiple TR830 PDF Files</label>
+                <div class="bulk-upload-area border-3 border-dashed border-gray-300 rounded-xl p-8 text-center hover:border-purple-400 hover:bg-purple-50 transition-all duration-300 cursor-pointer" id="bulkUploadArea">
+                    <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+                    </svg>
+                    <h3 class="text-xl font-semibold text-gray-700 mb-2">Drop multiple TR830 PDFs here</h3>
+                    <p class="text-gray-500 mb-4">or click to browse and select multiple files</p>
+                    <button type="button" class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition-colors"
+                            onclick="document.getElementById('{{ form.tr830_files.id_for_label }}').click()">
+                        Choose Files
                     </button>
+                    {{ form.tr830_files }}
+                    <p class="text-xs text-gray-400 mt-2">PDF format • Maximum 10 files • 10MB each</p>
+                </div>
+
+                <!-- Selected Files List -->
+                <div id="selectedFiles" class="mt-6" style="display: none;">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-3">Selected Files</h4>
+                    <div id="fileList" class="bg-gray-50 border border-gray-200 rounded-lg max-h-80 overflow-y-auto">
+                        <!-- Files will be listed here -->
+                    </div>
+                    
+                    <div class="mt-4 flex justify-between items-center">
+                        <span id="fileCount" class="text-sm text-gray-600">0 files selected</span>
+                        <button type="button" onclick="clearAllFiles()" 
+                                class="text-red-600 hover:text-red-800 text-sm font-medium">
+                            Clear All Files
+                        </button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Progress Bar -->
-            <div id="progressContainer" class="progress-container">
-                <div class="flex justify-between text-sm text-gray-600 mb-2">
-                    <span>Processing TR830 document...</span>
-                    <span id="progressPercent">0%</span>
+            <!-- Additional Form Fields -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label for="{{ form.default_supplier.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.default_supplier.label }}
+                    </label>
+                    {{ form.default_supplier }}
+                    <p class="text-xs text-gray-500 mt-1">{{ form.default_supplier.help_text }}</p>
                 </div>
-                <div class="progress-bar">
-                    <div id="progressFill" class="progress-fill"></div>
+
+                <div>
+                    <label for="{{ form.default_price_per_litre.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                        {{ form.default_price_per_litre.label }}
+                    </label>
+                    {{ form.default_price_per_litre }}
+                    <p class="text-xs text-gray-500 mt-1">{{ form.default_price_per_litre.help_text }}</p>
                 </div>
             </div>
 
             <!-- Submit Button -->
-            <div class="mt-6 flex space-x-4">
-                <button type="submit" id="submitBtn" 
-                        class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l2 2 4-4"/>
+            <div class="text-center">
+                <button type="submit" id="bulkSubmitBtn" disabled 
+                        class="sakina-btn-primary px-8 py-3 rounded-lg font-semibold text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed">
+                    <svg class="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
                     </svg>
-                    Process TR830 Document
+                    Process All TR830 Documents
                 </button>
-                
-                <a href="{% url 'shipments:bulk-upload-tr830' %}" 
-                   class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium">
-                    <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                    </svg>
-                    Bulk Upload
-                </a>
+            </div>
+
+            <!-- Progress Section -->
+            <div id="progressSection" class="mt-8" style="display: none;">
+                <div class="bg-gray-50 rounded-lg p-6">
+                    <h4 class="text-lg font-semibold text-gray-900 mb-4">Processing Files</h4>
+                    
+                    <!-- Overall Progress -->
+                    <div class="mb-4">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-sm font-medium text-gray-700">Overall Progress</span>
+                            <span class="text-sm text-gray-600" id="overallProgressText">0%</span>
+                        </div>
+                        <div class="bg-gray-200 rounded-full h-3">
+                            <div id="overallProgressFill" class="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Individual File Progress -->
+                    <div id="fileProgressList" class="space-y-3">
+                        <!-- Individual file progress items will be added here -->
+                    </div>
+
+                    <!-- Processing Status -->
+                    <div id="processingStatus" class="mt-4 text-center text-sm text-gray-600">
+                        Ready to start processing...
+                    </div>
+                </div>
             </div>
         </form>
     </div>
 
     <!-- Features Section -->
-    <div class="feature-grid">
-        <div class="feature-card">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-            </svg>
-            <h4 class="font-semibold text-gray-900 mb-2">Automatic Processing</h4>
-            <p class="text-gray-600 text-sm">Extracts vessel information, products, and quantities automatically</p>
-        </div>
-        
-        <div class="feature-card">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-            </svg>
-            <h4 class="font-semibold text-gray-900 mb-2">Stock Management</h4>
-            <p class="text-gray-600 text-sm">Creates shipments with proper FIFO inventory tracking</p>
-        </div>
-        
-        <div class="feature-card">
-            <svg class="feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                      d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
-            </svg>
-            <h4 class="font-semibold text-gray-900 mb-2">Data Validation</h4>
-            <p class="text-gray-600 text-sm">Validates quantities, products, and destinations before creating shipments</p>
-        </div>
-    </div>
-</div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const uploadArea = document.getElementById('uploadArea');
-    const fileInput = document.getElementById('tr830FileInput');
-    const fileInfo = document.getElementById('fileInfo');
-    const form = document.getElementById('tr830UploadForm');
-    const submitBtn = document.getElementById('submitBtn');
-    const progressContainer = document.getElementById('progressContainer');
-    const progressFill = document.getElementById('progressFill');
-    const progressPercent = document.getElementById('progressPercent');
-
-    // Drag and drop functionality
-    uploadArea.addEventListener('dragover', function(e) {
-        e.preventDefault();
-        uploadArea.classList.add('dragover');
-    });
-
-    uploadArea.addEventListener('dragleave', function(e) {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-    });
-
-    uploadArea.addEventListener('drop', function(e) {
-        e.preventDefault();
-        uploadArea.classList.remove('dragover');
-        
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            fileInput.files = files;
-            displayFileInfo(files[0]);
-        }
-    });
-
-    // File input change
-    fileInput.addEventListener('change', function(e) {
-        if (e.target.files.length > 0) {
-            displayFileInfo(e.target.files[0]);
-        }
-    });
-
-    // Form submission
-    form.addEventListener('submit', function(e) {
-        if (!fileInput.files.length) {
-            e.preventDefault();
-            alert('Please select a TR830 file to upload.');
-            return;
-        }
-
-        const file = fileInput.files[0];
-        if (!file.name.toLowerCase().endsWith('.pdf')) {
-            e.preventDefault();
-            alert('Please select a PDF file.');
-            return;
-        }
-
-        // Show progress
-        submitBtn.disabled = true;
-        progressContainer.style.display = 'block';
-        simulateProgress();
-    });
-
-    function displayFileInfo(file) {
-        document.getElementById('fileName').textContent = file.name;
-        document.getElementById('fileSize').textContent = formatFileSize(file.size);
-        fileInfo.style.display = 'block';
-    }
-
-    function formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-
-    function simulateProgress() {
-        let progress = 0;
-        const interval = setInterval(() => {
-            progress += Math.random() * 15;
-            if (progress > 90) progress = 90;
-            
-            progressFill.style.width = progress + '%';
-            progressPercent.textContent = Math.round(progress) + '%';
-            
-            if (progress >= 90) {
-                clearInterval(interval);
-            }
-        }, 200);
-    }
-
-    window.clearFile = function() {
-        fileInput.value = '';
-        fileInfo.style.display = 'none';
-        uploadArea.classList.remove('dragover');
-    };
-});
-</script>
-{% endblock %}
-
-
-<!-- ============================================= -->
-<!-- TR830 Bulk Upload Template -->
-<!-- File: templates/shipments/bulk_upload_tr830.html -->
-
-{% extends 'base.html' %}
-{% load static %}
-
-{% block title %}{{ page_title }}{% endblock %}
-
-{% block extra_css %}
-<style>
-    .bulk-upload-area {
-        border: 3px dashed #e5e7eb;
-        border-radius: 12px;
-        padding: 3rem;
-        text-align: center;
-        transition: all 0.3s ease;
-        background: #f9fafb;
-    }
-    
-    .bulk-upload-area:hover {
-        border-color: #3b82f6;
-        background: #eff6ff;
-    }
-    
-    .bulk-upload-area.dragover {
-        border-color: #1d4ed8;
-        background: #dbeafe;
-        transform: scale(1.02);
-    }
-    
-    .file-list {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
-        background: white;
-    }
-    
-    .file-item {
-        padding: 1rem;
-        border-bottom: 1px solid #f3f4f6;
-        display: flex;
-        align-items: center;
-        justify-content: between;
-    }
-    
-    .file-item:last-child {
-        border-bottom: none;
-    }
-    
-    .file-item.error {
-        background: #fef2f2;
-        border-left: 4px solid #ef4444;
-    }
-    
-    .file-item.success {
-        background: #f0fdf4;
-        border-left: 4px solid #10b981;
-    }
-    
-    .progress-section {
-        display: none;
-        background: #f8fafc;
-        border-radius: 8px;
-        padding: 1.5rem;
-        margin-top: 1.5rem;
-    }
-    
-    .overall-progress {
-        background: #e5e7eb;
-        height: 8px;
-        border-radius: 4px;
-        overflow: hidden;
-        margin-bottom: 1rem;
-    }
-    
-    .overall-progress-fill {
-        height: 100%;
-        background: linear-gradient(90deg, #10b981, #059669);
-        width: 0%;
-        transition: width 0.3s ease;
-    }
-</style>
-{% endblock %}
-
-{% block content %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="mb-8">
-        <h1 class="text-3xl font-bold text-gray-900 mb-2">{{ page_title }}</h1>
-        <p class="text-gray-600">{{ help_text }}</p>
-        
-        <div class="mt-4">
-            <a href="{% url 'shipments:upload-tr830' %}" 
-               class="text-blue-600 hover:text-blue-800 font-medium">
-                ← Back to Single Upload
-            </a>
-        </div>
-    </div>
-
-    <!-- Bulk Upload Form -->
-    <div class="bg-white rounded-lg shadow-lg p-6">
-        <form id="bulkTr830Form" method="post" enctype="multipart/form-data">
-            {% csrf_token %}
-            
-            <!-- Bulk Upload Area -->
-            <div class="bulk-upload-area" id="bulkUploadArea">
-                <svg class="w-16 h-16 mx-auto mb-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+        <div class="sakina-card p-6 text-center">
+            <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
                 </svg>
-                <h3 class="text-xl font-semibold text-gray-700 mb-2">Upload Multiple TR830 Documents</h3>
-                <p class="text-gray-500 mb-4">Drag and drop multiple TR830 PDF files here, or click to browse</p>
-                <button type="button" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                        onclick="document.getElementById('bulkFileInput').click()">
-                    Choose Files
-                </button>
-                <input type="file" id="bulkFileInput" name="tr830_files" class="hidden" 
-                       accept=".pdf" multiple required>
-                <p class="text-xs text-gray-400 mt-2">Maximum 10 files, 10MB each</p>
             </div>
-
-            <!-- Selected Files List -->
-            <div id="selectedFiles" class="mt-6" style="display: none;">
-                <h4 class="text-lg font-semibold text-gray-900 mb-3">Selected Files</h4>
-                <div id="fileList" class="file-list">
-                    <!-- Files will be listed here -->
-                </div>
-                
-                <div class="mt-4 flex justify-between items-center">
-                    <span id="fileCount" class="text-sm text-gray-600"></span>
-                    <button type="button" onclick="clearAllFiles()" 
-                            class="text-red-600 hover:text-red-800 text-sm font-medium">
-                        Clear All Files
-                    </button>
-                </div>
+            <h4 class="font-semibold text-gray-900 mb-2">Batch Processing</h4>
+            <p class="text-gray-600 text-sm">Process up to 10 TR830 documents simultaneously with real-time progress tracking and error reporting.</p>
+        </div>
+        
+        <div class="sakina-card p-6 text-center">
+            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+                </svg>
             </div>
-
-            <!-- Progress Section -->
-            <div id="progressSection" class="progress-section">
-                <h4 class="text-lg font-semibold text-gray-900 mb-3">Processing Files...</h4>
-                
-                <div class="overall-progress">
-                    <div id="overallProgressFill" class="overall-progress-fill"></div>
-                </div>
-                
-                <div class="flex justify-between text-sm text-gray-600 mb-4">
-                    <span>Overall Progress</span>
-                    <span id="overallProgressText">0%</span>
-                </div>
-                
-                <div id="processingStatus" class="text-sm text-gray-700">
-                    Preparing upload...
-                </div>
+            <h4 class="font-semibold text-gray-900 mb-2">Progress Monitoring</h4>
+            <p class="text-gray-600 text-sm">Monitor the processing status of each file individually with detailed success and error reporting.</p>
+        </div>
+        
+        <div class="sakina-card p-6 text-center">
+            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mx-auto mb-4">
+                <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
             </div>
-
-            <!-- Submit Button -->
-            <div class="mt-6">
-                <button type="submit" id="bulkSubmitBtn" 
-                        class="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed">
-                    <svg class="inline w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 12l2 2 4-4"/>
-                    </svg>
-                    Process All TR830 Documents
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Instructions -->
-    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 class="text-lg font-semibold text-blue-900 mb-3">📋 Bulk Upload Instructions</h3>
-        <ul class="text-blue-800 space-y-2">
-            <li>• Select up to 10 TR830 PDF files at once</li>
-            <li>• Each file must be under 10MB in size</li>
-            <li>• Files will be processed sequentially to prevent system overload</li>
-            <li>• Invalid files will be skipped with error messages</li>
-            <li>• Successfully processed files will create shipments automatically</li>
-            <li>• You can monitor progress and see results for each file</li>
-        </ul>
+            <h4 class="font-semibold text-gray-900 mb-2">Quality Control</h4>
+            <p class="text-gray-600 text-sm">Each document is validated and processed independently, ensuring data integrity and proper error handling.</p>
+        </div>
     </div>
 </div>
-{% endblock %}
+
+<style>
+.bulk-upload-area {
+    border: 3px dashed #e5e7eb;
+    border-radius: 12px;
+    padding: 3rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    background: #f9fafb;
+}
+
+.bulk-upload-area:hover {
+    border-color: #8b5cf6;
+    background: #f5f3ff;
+}
+
+.bulk-upload-area.dragover {
+    border-color: #7c3aed;
+    background: #ede9fe;
+    transform: scale(1.02);
+}
+
+.file-input {
+    display: none;
+}
+
+.file-item {
+    padding: 1rem;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+.file-item:last-child {
+    border-bottom: none;
+}
+
+.file-item:hover {
+    background: #f8fafc;
+}
+
+.file-item.error {
+    background: #fef2f2;
+    border-left: 4px solid #ef4444;
+}
+
+.file-item.success {
+    background: #f0fdf4;
+    border-left: 4px solid #10b981;
+}
+
+.file-progress {
+    width: 100%;
+    height: 6px;
+    background: #e5e7eb;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.file-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #8b5cf6, #3b82f6);
+    width: 0%;
+    transition: width 0.3s ease;
+}
+
+.progress-section {
+    display: none;
+    margin-top: 2rem;
+}
+</style>
+{% endblock content %}
 
 {% block extra_js %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const bulkUploadArea = document.getElementById('bulkUploadArea');
-    const bulkFileInput = document.getElementById('bulkFileInput');
+    const fileInput = document.getElementById('{{ form.tr830_files.id_for_label }}');
     const selectedFiles = document.getElementById('selectedFiles');
     const fileList = document.getElementById('fileList');
     const fileCount = document.getElementById('fileCount');
-    const form = document.getElementById('bulkTr830Form');
+    const form = document.getElementById('bulk-tr830-form');
     const submitBtn = document.getElementById('bulkSubmitBtn');
     const progressSection = document.getElementById('progressSection');
     const overallProgressFill = document.getElementById('overallProgressFill');
     const overallProgressText = document.getElementById('overallProgressText');
+    const fileProgressList = document.getElementById('fileProgressList');
     const processingStatus = document.getElementById('processingStatus');
     
     let selectedFilesList = [];
@@ -546,7 +322,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     // File input change
-    bulkFileInput.addEventListener('change', function(e) {
+    fileInput.addEventListener('change', function(e) {
         const files = Array.from(e.target.files);
         handleFileSelection(files);
     });
@@ -576,70 +352,54 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedFilesList = [];
         fileList.innerHTML = '';
 
-        // Process each file
+        // Validate and add files
         files.forEach((file, index) => {
-            const fileItem = {
-                file: file,
-                id: index,
-                status: 'pending',
-                error: null
-            };
-
-            // Validate file
-            if (!file.name.toLowerCase().endsWith('.pdf')) {
-                fileItem.status = 'error';
-                fileItem.error = 'Not a PDF file';
-            } else if (file.size > 10 * 1024 * 1024) {
-                fileItem.status = 'error';
-                fileItem.error = 'File too large (max 10MB)';
+            if (file.type === 'application/pdf') {
+                if (file.size <= 10 * 1024 * 1024) { // 10MB limit
+                    selectedFilesList.push(file);
+                    addFileToList(file, index);
+                } else {
+                    alert(`File "${file.name}" is too large. Maximum size is 10MB.`);
+                }
             } else {
-                fileItem.status = 'valid';
+                alert(`File "${file.name}" is not a PDF. Only PDF files are allowed.`);
             }
-
-            selectedFilesList.push(fileItem);
-            displayFileItem(fileItem);
         });
 
-        // Update UI
         updateFileCount();
-        selectedFiles.style.display = 'block';
         
-        // Update form input
-        const dataTransfer = new DataTransfer();
-        selectedFilesList.forEach(item => {
-            if (item.status === 'valid') {
-                dataTransfer.items.add(item.file);
-            }
-        });
-        bulkFileInput.files = dataTransfer.files;
+        if (selectedFilesList.length > 0) {
+            selectedFiles.style.display = 'block';
+            submitBtn.disabled = false;
+        } else {
+            selectedFiles.style.display = 'none';
+            submitBtn.disabled = true;
+        }
     }
 
-    function displayFileItem(fileItem) {
-        const fileDiv = document.createElement('div');
-        fileDiv.className = `file-item ${fileItem.status === 'error' ? 'error' : ''}`;
-        fileDiv.innerHTML = `
-            <div class="flex-1">
-                <div class="flex items-center justify-between">
-                    <span class="font-medium text-gray-900">${fileItem.file.name}</span>
-                    <span class="text-sm text-gray-500">${formatFileSize(fileItem.file.size)}</span>
-                </div>
-                ${fileItem.error ? `<p class="text-red-600 text-sm mt-1">${fileItem.error}</p>` : ''}
-                ${fileItem.status === 'valid' ? '<p class="text-green-600 text-sm mt-1">✓ Ready to upload</p>' : ''}
-            </div>
-            <button type="button" onclick="removeFile(${fileItem.id})" 
-                    class="ml-4 text-red-600 hover:text-red-800">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+    function addFileToList(file, index) {
+        const fileItem = document.createElement('div');
+        fileItem.className = 'file-item';
+        fileItem.innerHTML = `
+            <div class="flex items-center">
+                <svg class="w-8 h-8 text-red-600 mr-3" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h8a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 0v12h8V4H6z" clip-rule="evenodd"/>
                 </svg>
+                <div>
+                    <p class="font-medium text-gray-900">${file.name}</p>
+                    <p class="text-sm text-gray-600">${formatFileSize(file.size)}</p>
+                </div>
+            </div>
+            <button type="button" onclick="removeFile(${index})" class="text-red-600 hover:text-red-800 text-sm font-medium">
+                Remove
             </button>
         `;
-        fileList.appendChild(fileDiv);
+        fileList.appendChild(fileItem);
     }
 
     function updateFileCount() {
-        const validFiles = selectedFilesList.filter(item => item.status === 'valid').length;
-        const totalFiles = selectedFilesList.length;
-        fileCount.textContent = `${validFiles} valid files of ${totalFiles} selected`;
+        const count = selectedFilesList.length;
+        fileCount.textContent = `${count} file${count !== 1 ? 's' : ''} selected`;
     }
 
     function formatFileSize(bytes) {
@@ -649,54 +409,72 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function simulateBulkProgress() {
-        const validFiles = selectedFilesList.filter(item => item.status === 'valid');
-        let processedFiles = 0;
+        processingStatus.textContent = 'Starting bulk processing...';
         
-        const processFile = () => {
-            if (processedFiles < validFiles.length) {
-                const currentFile = validFiles[processedFiles];
-                processingStatus.textContent = `Processing: ${currentFile.file.name}`;
-                
-                // Simulate file processing time
-                setTimeout(() => {
-                    processedFiles++;
-                    const progress = (processedFiles / validFiles.length) * 100;
-                    overallProgressFill.style.width = progress + '%';
-                    overallProgressText.textContent = Math.round(progress) + '%';
+        // Create progress items for each file
+        selectedFilesList.forEach((file, index) => {
+            const progressItem = document.createElement('div');
+            progressItem.className = 'file-progress-item';
+            progressItem.innerHTML = `
+                <div class="flex justify-between items-center mb-1">
+                    <span class="text-sm font-medium text-gray-700">${file.name}</span>
+                    <span class="text-sm text-gray-600" id="fileProgress${index}">0%</span>
+                </div>
+                <div class="file-progress">
+                    <div id="fileProgressFill${index}" class="file-progress-fill"></div>
+                </div>
+            `;
+            fileProgressList.appendChild(progressItem);
+        });
+
+        // Simulate processing each file
+        let overallProgress = 0;
+        let completedFiles = 0;
+        const totalFiles = selectedFilesList.length;
+
+        selectedFilesList.forEach((file, index) => {
+            setTimeout(() => {
+                simulateFileProgress(index, () => {
+                    completedFiles++;
+                    overallProgress = (completedFiles / totalFiles) * 100;
+                    overallProgressFill.style.width = overallProgress + '%';
+                    overallProgressText.textContent = Math.round(overallProgress) + '%';
                     
-                    if (processedFiles < validFiles.length) {
-                        processFile();
-                    } else {
-                        processingStatus.textContent = 'Upload completed!';
+                    if (completedFiles === totalFiles) {
+                        processingStatus.textContent = 'All files processed successfully!';
                     }
-                }, 1000 + Math.random() * 2000); // Random delay between 1-3 seconds
-            }
-        };
-        
-        processFile();
+                });
+            }, index * 500); // Stagger the start of each file processing
+        });
     }
 
-    // Global functions
-    window.removeFile = function(fileId) {
-        selectedFilesList = selectedFilesList.filter(item => item.id !== fileId);
+    function simulateFileProgress(fileIndex, onComplete) {
+        let progress = 0;
+        const progressFill = document.getElementById(`fileProgressFill${fileIndex}`);
+        const progressText = document.getElementById(`fileProgress${fileIndex}`);
         
-        // Rebuild file list display
-        fileList.innerHTML = '';
-        selectedFilesList.forEach(displayFileItem);
-        updateFileCount();
-        
-        // Update form input
-        const dataTransfer = new DataTransfer();
-        selectedFilesList.forEach(item => {
-            if (item.status === 'valid') {
-                dataTransfer.items.add(item.file);
+        const interval = setInterval(() => {
+            progress += Math.random() * 20;
+            if (progress > 100) progress = 100;
+            
+            progressFill.style.width = progress + '%';
+            progressText.textContent = Math.round(progress) + '%';
+            
+            if (progress >= 100) {
+                clearInterval(interval);
+                if (onComplete) onComplete();
             }
-        });
-        bulkFileInput.files = dataTransfer.files;
+        }, 300);
+    }
+
+    window.removeFile = function(index) {
+        selectedFilesList.splice(index, 1);
+        updateFileList();
+        updateFileCount();
         
         if (selectedFilesList.length === 0) {
             selectedFiles.style.display = 'none';
-            bulkFileInput.value = '';
+            submitBtn.disabled = true;
         }
     };
 
@@ -704,9 +482,17 @@ document.addEventListener('DOMContentLoaded', function() {
         selectedFilesList = [];
         fileList.innerHTML = '';
         selectedFiles.style.display = 'none';
-        bulkFileInput.value = '';
-        bulkUploadArea.classList.remove('dragover');
+        submitBtn.disabled = true;
+        fileInput.value = '';
+        updateFileCount();
     };
+
+    function updateFileList() {
+        fileList.innerHTML = '';
+        selectedFilesList.forEach((file, index) => {
+            addFileToList(file, index);
+        });
+    }
 });
 </script>
-{% endblock %>
+{% endblock %}

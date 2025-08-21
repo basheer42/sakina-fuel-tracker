@@ -189,7 +189,7 @@ class Trip(models.Model):
         ('DELIVERED', 'Delivered to Customer'),
         ('CANCELLED', 'Cancelled'),
     ]
-    
+
     # Statuses that trigger depletion based on *requested* quantities
     INITIAL_DEPLETION_TRIGGER_STATUSES = ['KPC_APPROVED']
     # Statuses that trigger depletion based on *actual L20* quantities from BoL
@@ -620,6 +620,44 @@ class UserProfile(models.Model):
         verbose_name = "User Profile"
         verbose_name_plural = "User Profiles"
 
+# Add this to shipments/models.py
+
+class TR830ProcessingState(models.Model):
+    """Model to store TR830 processing state when cache fails"""
+    chat_id = models.CharField(max_length=50, unique=True, db_index=True)
+    filename = models.CharField(max_length=255)
+    import_date = models.DateTimeField()
+    vessel = models.CharField(max_length=100)
+    product_type = models.CharField(max_length=50)
+    destination = models.CharField(max_length=100)
+    quantity = models.DecimalField(max_digits=15, decimal_places=2)
+    description = models.TextField()
+    step = models.CharField(max_length=20)  # 'supplier' or 'price'
+    user_id = models.IntegerField()
+    supplier = models.CharField(max_length=200, blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def to_dict(self):
+        """Convert to dictionary format for compatibility"""
+        return {
+            'filename': self.filename,
+            'import_date': self.import_date.isoformat(),
+            'vessel': self.vessel,
+            'product_type': self.product_type,
+            'destination': self.destination,
+            'quantity': str(self.quantity),
+            'description': self.description,
+            'step': self.step,
+            'user_id': self.user_id,
+            'supplier': self.supplier,
+        }
+
+    def __str__(self):
+        return f"TR830 State {self.chat_id} - {self.step}"
 
 # Signal to create UserProfile automatically when User is created
 from django.db.models.signals import post_save
