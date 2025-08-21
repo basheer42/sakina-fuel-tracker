@@ -1525,26 +1525,136 @@ def setup_admin(request):
 @csrf_exempt
 @require_http_methods(["POST", "GET"])
 def telegram_webhook(request):
-    """Django view to handle Telegram webhook"""
+    """
+    FIXED Django view to handle Telegram webhook
+    Now includes proper error handling to prevent 500 errors
+    """
+    # Handle GET requests (for webhook verification)
     if request.method == 'GET':
-        return JsonResponse({'status': 'ok', 'message': 'Telegram webhook endpoint is active'})
+        return JsonResponse({
+            'status': 'ok',
+            'message': 'Telegram webhook endpoint is active',
+            'timestamp': timezone.now().isoformat()
+        })
 
+    # Handle POST requests (webhook messages)
     if request.method == 'POST':
         try:
-            webhook_data = json.loads(request.body.decode('utf-8'))
+            # Step 1: Parse JSON data from Telegram
+            try:
+                webhook_data = json.loads(request.body.decode('utf-8'))
+                print(f"🔥 DEBUG: Telegram webhook received data: {webhook_data}")
+            except (json.JSONDecodeError, UnicodeDecodeError) as e:
+                logger.error(f"Invalid JSON in webhook request: {e}")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Invalid JSON data'
+                }, status=400)
 
-            from .telegram_bot import TelegramBot
-            bot = TelegramBot()
-            result = bot.webhook_handler(webhook_data)
+            # Step 2: Validate webhook data structure
+            if 'message' not in webhook_data:
+                logger.info("Webhook received without message field (probably edited message or other update)")
+                return JsonResponse({
+                    'status': 'ignored',
+                    'reason': 'No message in webhook'
+                })
 
-            return JsonResponse(result)
+            # Step 3: Initialize and use the bot with proper error handling
+            try:
+                print(f"🔥 DEBUG: Importing TelegramBot...")
+                from .telegram_bot import TelegramBot
+
+                print(f"🔥 DEBUG: Initializing TelegramBot...")
+                bot = TelegramBot()
+
+                print(f"🔥 DEBUG: Processing webhook with bot...")
+                result = bot.webhook_handler(webhook_data)
+
+                print(f"🔥 DEBUG: Bot processing result: {result}")
+                return JsonResponse(result)
+
+            except ValueError as e:
+                # Handle bot token configuration errors
+                logger.error(f"Bot configuration error: {e}")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Bot configuration error'
+                }, status=500)
+
+            except ImportError as e:
+                # Handle import errors
+                logger.error(f"Import error in telegram bot: {e}")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Bot module import failed'
+                }, status=500)
+
+            except Exception as e:
+                # Handle all other bot processing errors
+                logger.error(f"Error in telegram bot processing: {e}", exc_info=True)
+                print(f"🔥 DEBUG: Bot processing error: {e}")
+                return JsonResponse({
+                    'status': 'error',
+                    'message': 'Bot processing failed'
+                }, status=500)
 
         except Exception as e:
-            import logging
-            logging.error(f"Error in telegram webhook view: {e}")
-            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+            # Handle any unexpected errors in the view itself
+            logger.error(f"Unexpected error in telegram webhook view: {e}", exc_info=True)
+            print(f"🔥 DEBUG: Webhook view error: {e}")
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Internal server error'
+            }, status=500)
 
-    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
+    # Handle other HTTP methods
+    return JsonResponse({
+        'status': 'error',
+        'message': 'Method not allowed'
+    }, status=405)
+
+
+# ADDITIONAL: Health check endpoint
+@csrf_exempt
+@require_http_methods(["GET"])
+def telegram_health_check(request):
+    """
+    Health check endpoint for monitoring the Telegram bot service
+    """
+    try:
+        print(f"🔥 DEBUG: Health check called")
+
+        # Try to initialize the bot
+        from .telegram_bot import TelegramBot
+        bot = TelegramBot()
+
+        # Check if bot token is configured
+        if not bot.bot_token:
+            return JsonResponse({
+                'status': 'error',
+                'message': 'Bot token not configured'
+            }, status=500)
+
+        # Check database connectivity
+        from .models import TR830ProcessingState
+        state_count = TR830ProcessingState.objects.count()
+
+        return JsonResponse({
+            'status': 'healthy',
+            'message': 'Telegram bot service is operational',
+            'bot_token_configured': bool(bot.bot_token),
+            'bot_token_length': len(bot.bot_token) if bot.bot_token else 0,
+            'active_tr830_states': state_count,
+            'timestamp': timezone.now().isoformat()
+        })
+
+    except Exception as e:
+        logger.error(f"Health check failed: {e}", exc_info=True)
+        return JsonResponse({
+            'status': 'unhealthy',
+            'message': str(e),
+            'timestamp': timezone.now().isoformat()
+        }, status=500)
 
 # --- Shipment Views ---
 @login_required

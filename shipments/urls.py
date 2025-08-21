@@ -45,6 +45,7 @@ urlpatterns = [
     # EXTERNAL INTEGRATIONS
     # ===================================================================
     path('webhooks/telegram/', views.telegram_webhook, name='telegram_webhook'),
+    path('telegram/health/', views.telegram_health_check, name='telegram_health_check'),
 
     # ===================================================================
     # REPORTS & ANALYTICS
@@ -62,12 +63,12 @@ urlpatterns = [
     # API ENDPOINTS (if needed for future expansion)
     # ===================================================================
     # Note: Add API endpoints here when implemented
-    
+
     # ===================================================================
     # AUTHENTICATION & USER PROFILES
     # ===================================================================
     # Note: Django auth URLs are handled in main urls.py via include('django.contrib.auth.urls')
-    
+
     # ===================================================================
     # CUSTOMER MANAGEMENT (if implemented)
     # ===================================================================
