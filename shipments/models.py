@@ -1,4 +1,4 @@
-# shipments/models.py
+# shipments/models.py - COMPLETE FIXED VERSION
 from django.db import models, transaction
 from django.utils import timezone
 from django.contrib.auth import get_user_model
@@ -77,8 +77,6 @@ class Vehicle(models.Model):
             raise ValidationError('Plate number must be at least 3 characters long')
         if self.plate_number:
             self.plate_number = self.plate_number.strip().upper()
-        if self.trailer_number:
-            self.trailer_number = self.trailer_number.strip().upper()
 
     class Meta:
         ordering = ['plate_number']
@@ -88,7 +86,7 @@ class Vehicle(models.Model):
 
 
 class Destination(models.Model):
-    name = models.CharField(max_length=100, unique=True, help_text="e.g., South Sudan, DRC, Local Nairobi")
+    name = models.CharField(max_length=200, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -108,11 +106,10 @@ class Destination(models.Model):
 
 
 class Shipment(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
     vessel_id_tag = models.CharField(
-        max_length=100, unique=True,
-        verbose_name="Vessel ID / Shipment Unique ID",
-        help_text="The unique identification tag for the shipment (e.g., AGO KG09/2025). This field is required and must be unique."
+        max_length=100, unique=True, 
+        help_text="Unique identifier for the vessel/shipment. This field is required and must be unique."
     )
     import_date = models.DateField(default=timezone.now)
     supplier_name = models.CharField(max_length=200)
@@ -149,59 +146,43 @@ class Shipment(models.Model):
             raise ValidationError('Price per litre must be positive')
         if self.quantity_remaining and self.quantity_remaining < 0:
             raise ValidationError('Quantity remaining cannot be negative')
-        if self.vessel_id_tag and len(self.vessel_id_tag.strip()) < 3:
-            raise ValidationError('Vessel ID must be at least 3 characters long')
-        if (self.quantity_litres is not None and self.quantity_remaining is not None and
-            self.quantity_remaining > self.quantity_litres):
-            raise ValidationError('Quantity remaining cannot exceed total quantity')
 
     def save(self, *args, **kwargs):
+        is_new = not self.pk
         self.full_clean()
-        is_new = self.pk is None
-        if is_new and self.quantity_litres is not None:
+        if is_new:
             self.quantity_remaining = self.quantity_litres
-        if self.pk:
-            cache.delete(f"shipment_total_cost_{self.pk}")
         super().save(*args, **kwargs)
 
     class Meta:
         ordering = ['-import_date', '-created_at']
         indexes = [
+            models.Index(fields=['vessel_id_tag']),
             models.Index(fields=['import_date']),
             models.Index(fields=['product', 'destination']),
-            models.Index(fields=['quantity_remaining']),
             models.Index(fields=['user', 'import_date']),
-            models.Index(fields=['vessel_id_tag']),
-            models.Index(fields=['product', 'import_date']),
-            models.Index(fields=['supplier_name', 'import_date']),
+            models.Index(fields=['quantity_remaining']),
+            models.Index(fields=['supplier_name']),
         ]
 
 
 class Trip(models.Model):
     STATUS_CHOICES = [
-        ('PENDING', 'Pending KPC Action'),
-        ('KPC_APPROVED', 'KPC Approved (Stock Booked)'),
-        ('KPC_REJECTED', 'KPC Rejected'),
-        ('LOADING', 'Loading @ Depot'),
-        ('LOADED', 'Loaded from Depot (BoL Received)'),
-        ('GATEPASSED', 'Gatepassed from Depot'),
-        ('TRANSIT', 'In Transit to Customer'),
-        ('DELIVERED', 'Delivered to Customer'),
+        ('PENDING', 'Pending Authority'),
+        ('KPC_APPROVED', 'KPC Approved'),
+        ('LOADING', 'Loading in Progress'),
+        ('LOADED', 'Loaded (BoL Issued)'),
+        ('GATEPASSED', 'Gate Passed'),
+        ('TRANSIT', 'In Transit'),
+        ('DELIVERED', 'Delivered'),
         ('CANCELLED', 'Cancelled'),
     ]
 
-    # Statuses that trigger depletion based on *requested* quantities
-    INITIAL_DEPLETION_TRIGGER_STATUSES = ['KPC_APPROVED']
-    # Statuses that trigger depletion based on *actual L20* quantities from BoL
-    ACTUAL_L20_DEPLETION_TRIGGER_STATUSES = ['LOADED']
-    # All statuses where stock should be considered depleted/committed in some form
-    DEPLETED_STOCK_STATUSES = ['KPC_APPROVED', 'LOADING', 'LOADED', 'GATEPASSED', 'TRANSIT', 'DELIVERED']
-
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.PROTECT)
     vehicle = models.ForeignKey(Vehicle, on_delete=models.PROTECT)
-    customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    destination = models.ForeignKey(Destination, on_delete=models.PROTECT, null=False, blank=False, help_text="Destination for this loading.")
+    customer = models.ForeignKey(Customer, on_delete=models.PROTECT)
+    destination = models.ForeignKey(Destination, on_delete=models.PROTECT)
     kpc_order_number = models.CharField(max_length=100, unique=True, help_text="KPC Loading Order No (e.g., Sxxxxx) from Authority PDF. Required and must be unique.")
     bol_number = models.CharField(max_length=100, blank=True, null=True, unique=True, verbose_name="Final BoL No / KPC Shipment No")
     loading_date = models.DateField(default=timezone.now, verbose_name="Authority/BOL Date")
@@ -268,231 +249,55 @@ class Trip(models.Model):
              return result
         return Decimal('0.00')
 
-    def _log_message(self, writer, message, style_name='NOTICE'):
-        if writer and hasattr(writer, 'style') and hasattr(writer.style, style_name) and hasattr(writer, 'stdout'):
-            style_func = getattr(writer.style, style_name)
-            writer.stdout.write(style_func(message + "\n"))
-        elif writer and hasattr(writer, 'write'):
-            writer.write(f"LOG-{style_name}: {message}\n")
-        else:
-            log_func = getattr(logger, style_name.lower(), logger.info)
-            log_func(message)
-
-    def perform_stock_depletion(self, stdout_writer, use_actual_l20=False, raise_error=True):
-        with transaction.atomic():
-            self._log_message(stdout_writer, f"Trip {self.id}: --- ENTERING perform_stock_depletion ---", 'DEBUG')
-            self._log_message(stdout_writer, f"Trip {self.id}: use_actual_l20={use_actual_l20}", 'DEBUG')
-
-            if ShipmentDepletion.objects.filter(trip=self).exists():
-                self._log_message(stdout_writer, f"Trip {self.id} ({self.kpc_order_number}): Stock depletion already performed and not reversed. Skipping duplicate depletion attempt.", 'WARNING')
-                return True, "Depletion already performed."
-
-            total_quantity_to_deplete = Decimal('0.00')
-            depletion_basis = ""
-
-            if use_actual_l20:
-                total_quantity_to_deplete = self.total_actual_l20_from_compartments
-                depletion_basis = "actual L20 from BoL/compartments"
-                self._log_message(stdout_writer, f"Trip {self.id}: L20 Depletion. Total to deplete: {total_quantity_to_deplete} based on {depletion_basis}", 'DEBUG')
-                if total_quantity_to_deplete <= Decimal('0.00'):
-                    self._log_message(stdout_writer, f"Trip {self.id}: Total actual L20 quantity is zero or not set ({total_quantity_to_deplete}L from {depletion_basis}). No stock will be depleted based on L20 actuals.", 'WARNING')
-                    return True, f"L20 actuals ({depletion_basis}) are zero."
-            else: # use_requested_quantities
-                total_quantity_to_deplete = self.total_requested_from_compartments
-                depletion_basis = "requested quantities from Loading Authority"
-                self._log_message(stdout_writer, f"Trip {self.id}: Requested Qty Depletion. Total to deplete: {total_quantity_to_deplete}", 'DEBUG')
-
-            self._log_message(stdout_writer, f"Trip {self.id} ({self.kpc_order_number}): Attempting stock depletion of {total_quantity_to_deplete}L based on {depletion_basis} for {self.product.name} to {self.destination.name if self.destination else 'Unknown Destination'}", 'NOTICE')
-
-            if total_quantity_to_deplete <= Decimal('0.00'):
-                self._log_message(stdout_writer, f"Trip {self.id}: Quantity to deplete is zero or less ({total_quantity_to_deplete}L based on {depletion_basis}). Skipping actual depletion steps.", 'NOTICE')
-                return True, "Quantity to deplete is zero or less."
-
-            if not self.destination:
-                 msg = "Cannot perform stock depletion: Trip destination is not set."
-                 self._log_message(stdout_writer, msg, 'ERROR')
-                 if raise_error: raise ValidationError(msg)
-                 return False, msg
-
-            self._log_message(stdout_writer, f"Trip {self.id}: Fetching available shipments for Product: {self.product.name}, Destination: {self.destination.name}", 'DEBUG')
-            available_shipments = Shipment.objects.select_for_update().filter(
-                product=self.product, destination=self.destination,
-                quantity_remaining__gt=Decimal('0.00')
-            ).order_by('import_date', 'created_at')
-
-            current_stock_for_product_dest = available_shipments.aggregate(total=Sum('quantity_remaining'))['total'] or Decimal('0.00')
-            self._log_message(stdout_writer, f"Trip {self.id}: Current available stock for {self.product.name} to {self.destination.name}: {current_stock_for_product_dest}L. Required: {total_quantity_to_deplete}L", 'DEBUG')
-
-            if total_quantity_to_deplete > current_stock_for_product_dest:
-                error_message = (f"Insufficient stock for {self.product.name} destined for {self.destination.name}. Available: {current_stock_for_product_dest}L, Required: {total_quantity_to_deplete}L ({depletion_basis}).")
-                logger.error(error_message)
-                self._log_message(stdout_writer, error_message, 'ERROR')
-                if raise_error: raise ValidationError({'__all__': error_message})
-                return False, error_message
-
-            depleted_amount_for_trip = Decimal('0.00')
-            self._log_message(stdout_writer, f"Trip {self.id}: Starting depletion loop. Found {available_shipments.count()} available shipment batches.", 'DEBUG')
-            for batch_count, batch in enumerate(available_shipments):
-                self._log_message(stdout_writer, f"Trip {self.id}: Processing batch {batch_count+1} (ID: {batch.id}, Remaining: {batch.quantity_remaining}L)", 'DEBUG')
-                if depleted_amount_for_trip >= total_quantity_to_deplete:
-                    self._log_message(stdout_writer, f"Trip {self.id}: Target depletion {total_quantity_to_deplete}L met. Breaking loop.", 'DEBUG')
-                    break
-
-                can_take_from_batch = batch.quantity_remaining
-                take_this_much = min(can_take_from_batch, total_quantity_to_deplete - depleted_amount_for_trip)
-
-                self._log_message(stdout_writer, f"Trip {self.id}: Can take {can_take_from_batch}L from batch. Need to take {take_this_much}L.", 'DEBUG')
-
-                if take_this_much > 0:
-                    ShipmentDepletion.objects.create(trip=self, shipment_batch=batch, quantity_depleted=take_this_much)
-                    batch.quantity_remaining -= take_this_much
-                    batch.save(update_fields=['quantity_remaining', 'updated_at'])
-                    depleted_amount_for_trip += take_this_much
-                    self._log_message(stdout_writer, f"Trip {self.id}: Depleted {take_this_much}L from Batch ID {batch.id}. Batch remaining: {batch.quantity_remaining}L. Trip total depleted so far: {depleted_amount_for_trip}L", 'INFO')
-
-            if depleted_amount_for_trip < total_quantity_to_deplete:
-                error_message = (f"Critical Error: Trip {self.id} ({self.kpc_order_number}) for {self.product.name} to {self.destination.name}. Attempted: {total_quantity_to_deplete}L, Sourced: {depleted_amount_for_trip}L ({depletion_basis}). Stock inconsistency?")
-                logger.error(error_message)
-                self._log_message(stdout_writer, error_message, 'ERROR')
-                if raise_error: raise ValidationError({'__all__': error_message})
-                return False, error_message
-
-            cache.delete(f"trip_total_loaded_{self.pk}")
-            success_msg = f"Trip {self.id}: Stock depletion successful. Depleted: {depleted_amount_for_trip}L based on {depletion_basis}."
-            self._log_message(stdout_writer, success_msg, 'SUCCESS')
-            self._log_message(stdout_writer, f"Trip {self.id}: --- EXITING perform_stock_depletion (Success) ---", 'DEBUG')
-            return True, success_msg
-
-    def reverse_stock_depletion(self, stdout_writer=None):
-        with transaction.atomic():
-            self._log_message(stdout_writer, f"Trip {self.id} ({self.kpc_order_number}): Attempting to reverse stock depletions.", 'NOTICE')
-            depletions = ShipmentDepletion.objects.filter(trip=self)
-            if not depletions.exists():
-                msg = f"Trip {self.id}: No depletions found to reverse."
-                self._log_message(stdout_writer, msg, 'WARNING')
-                return True, msg
-
-            reversal_successful_overall = True
-            total_reversed_qty = Decimal('0.00')
-            for depletion in depletions:
-                try:
-                    shipment_batch = Shipment.objects.select_for_update().get(pk=depletion.shipment_batch_id)
-                    shipment_batch.quantity_remaining += depletion.quantity_depleted
-                    shipment_batch.save(update_fields=['quantity_remaining', 'updated_at'])
-                    total_reversed_qty += depletion.quantity_depleted
-                    self._log_message(stdout_writer, f"  Reversed {depletion.quantity_depleted}L to Shpmt ID {shipment_batch.id} ({getattr(shipment_batch, 'vessel_id_tag', 'N/A')})", 'NOTICE')
-                except Shipment.DoesNotExist:
-                    error_msg = f"ERROR: Shipment batch ID {depletion.shipment_batch_id} not found during reversal for Trip {self.id}."
-                    logger.error(error_msg)
-                    self._log_message(stdout_writer, error_msg, 'ERROR')
-                    reversal_successful_overall = False; break
-                except Exception as e:
-                    error_msg = f"ERROR reversing depletion for shipment_batch {depletion.shipment_batch_id} on Trip {self.id}: {e}"
-                    logger.error(error_msg, exc_info=True)
-                    self._log_message(stdout_writer, error_msg, 'ERROR')
-                    reversal_successful_overall = False; break
-
-            if reversal_successful_overall:
-                num_deleted, _ = depletions.delete()
-                cache.delete(f"trip_total_loaded_{self.pk}")
-                success_msg = f"Trip {self.id}: Successfully reversed {total_reversed_qty}L and deleted {num_deleted} depletion records."
-                self._log_message(stdout_writer, success_msg, 'SUCCESS')
-                return True, success_msg
-            else:
-                fail_msg = f"Trip {self.id}: Stock reversal failed or incomplete. Depletion records NOT deleted. Transaction will be rolled back by caller."
-                self._log_message(stdout_writer, fail_msg, 'ERROR')
-                return False, fail_msg
-
     def clean(self):
         super().clean()
-        if self.kpc_order_number and not self.kpc_order_number.upper().startswith('S'):
-            raise ValidationError('KPC Order Number should start with "S"')
-        if self.loading_date and self.loading_date > (timezone.now() + datetime.timedelta(days=1)).date():
-            raise ValidationError('Loading date cannot be in the far future')
-        if self.kpc_order_number:
-            self.kpc_order_number = self.kpc_order_number.upper()
-        if self.bol_number:
-            self.bol_number = self.bol_number.upper()
+        if self.loading_date and self.loading_date > timezone.now().date() + datetime.timedelta(days=7):
+            raise ValidationError('Loading date cannot be more than 7 days in the future')
 
     def save(self, *args, **kwargs):
-        stdout_writer_param = kwargs.pop('stdout_writer', None)
-
-        if not kwargs.get('skip_full_clean', False):
-            self.full_clean()
-
-        is_new = self.pk is None
-        original_status_in_db = None
-
-        if not is_new:
-            try:
-                original_status_in_db = Trip.objects.get(pk=self.pk).status
-            except Trip.DoesNotExist:
-                is_new = True
-
+        self.full_clean()
         status_being_saved = self.status
-
-        # Perform the actual database save of the Trip instance first
-        super(Trip, self).save(*args, **kwargs)
-
-        # Clear relevant caches *after* the save
-        cache.delete_many([
-            f"trip_requested_{self.pk}", f"trip_actual_l20_{self.pk}", f"trip_total_loaded_{self.pk}"
-        ])
+        original_status = self._get_original_status()
+        
+        stdout_writer_param = kwargs.pop('stdout_writer', None)
+        
+        def _log_message(writer, message, level='INFO'):
+            if writer and hasattr(writer, 'write'):
+                if level == 'ERROR':
+                    writer.write(f"ERROR: {message}")
+                else:
+                    writer.write(message)
+            if level == 'ERROR':
+                logger.error(message)
+            else:
+                logger.info(message)
 
         try:
-            with transaction.atomic(savepoint=False): # Outer transaction for stock ops
-                deplete_now = False
-                use_l20_for_this_depletion = False
-                status_has_changed = (original_status_in_db != status_being_saved)
-
-                # Determine if depletion is needed and which quantity to use
-                if status_being_saved in self.INITIAL_DEPLETION_TRIGGER_STATUSES:
-                    if is_new or (status_has_changed and original_status_in_db not in self.DEPLETED_STOCK_STATUSES):
-                        deplete_now = True
-                        use_l20_for_this_depletion = False # Use requested
-                        self._log_message(stdout_writer_param, f"Trip {self.id}: Status '{status_being_saved}' triggers initial depletion (using requested quantities).", 'NOTICE')
-
-                elif status_being_saved in self.ACTUAL_L20_DEPLETION_TRIGGER_STATUSES:
-                    # This depletion happens when status becomes LOADED (typically after BoL)
-                    # It should always use L20 actuals.
-                    # Reversal of previous (requested) depletion should happen *before* this.
-                    deplete_now = True
-                    use_l20_for_this_depletion = True # Use L20 actuals
-                    self._log_message(stdout_writer_param, f"Trip {self.id}: Status '{status_being_saved}' triggers actuals depletion (using L20 from BoL/compartments).", 'NOTICE')
-
-                # --- Reversal Logic ---
-                # Reverse if:
-                # 1. We are about to deplete now (to ensure idempotency if re-saving in a trigger status).
-                # 2. Status changed from a depleted state to a non-depleted one.
-                existing_depletions = ShipmentDepletion.objects.filter(trip=self)
-                needs_reversal = False
-                if existing_depletions.exists():
-                    if deplete_now: # If we will deplete, reverse previous first
-                        needs_reversal = True
-                        self._log_message(stdout_writer_param, f"Trip {self.id}: Reversing existing depletions before re-depleting for status '{status_being_saved}'.", 'NOTICE')
-                    elif status_has_changed and original_status_in_db in self.DEPLETED_STOCK_STATUSES and status_being_saved not in self.DEPLETED_STOCK_STATUSES:
-                        needs_reversal = True
-                        self._log_message(stdout_writer_param, f"Trip {self.id}: Status changed from '{original_status_in_db}' to non-depleted '{status_being_saved}'. Reversing depletions...", 'NOTICE')
-
-                if needs_reversal:
-                    reversal_ok, reversal_msg = self.reverse_stock_depletion(stdout_writer=stdout_writer_param)
-                    if not reversal_ok:
-                        raise ValidationError(f"Failed to reverse existing stock depletions: {reversal_msg}")
-
-                # --- Depletion Logic ---
-                if deplete_now:
-                    depletion_ok, depletion_msg = self.perform_stock_depletion(
-                        stdout_writer=stdout_writer_param,
-                        use_actual_l20=use_l20_for_this_depletion,
-                        raise_error=True
-                    )
-                    if not depletion_ok:
-                         raise ValidationError(f"Stock depletion failed: {depletion_msg}")
-
-        except ValidationError as e:
-            error_msg_detail = e.message_dict if hasattr(e, 'message_dict') else str(e)
-            error_msg = f"VALIDATION ERROR in Trip.save() stock logic for Trip {self.id} (attempted status: {status_being_saved}): {error_msg_detail}"
-            logger.error(error_msg, exc_info=True)
+            with transaction.atomic():
+                super().save(*args, **kwargs)
+                
+                if original_status != status_being_saved and status_being_saved == 'LOADED':
+                    _log_message(stdout_writer_param, f"Trip {self.id} status changed from {original_status} to LOADED. Initiating FIFO stock depletion.")
+                    
+                    from .fifo_manager import FIFOStockManager
+                    fifo_manager = FIFOStockManager()
+                    
+                    try:
+                        result = fifo_manager.deplete_stock_for_trip(self, stdout_writer=stdout_writer_param)
+                        if result['success']:
+                            _log_message(stdout_writer_param, f"✅ FIFO depletion completed for Trip {self.id}")
+                        else:
+                            error_msg = f"❌ FIFO depletion failed for Trip {self.id}: {result.get('error', 'Unknown error')}"
+                            _log_message(stdout_writer_param, error_msg, 'ERROR')
+                            raise ValidationError(f"Stock depletion failed: {result.get('error', 'Unknown error')}")
+                    except Exception as fifo_error:
+                        error_msg = f"FIFO STOCK DEPLETION ERROR for Trip {self.id}: {fifo_error}"
+                        _log_message(stdout_writer_param, error_msg, 'ERROR')
+                        raise
+                        
+        except ValidationError as ve:
+            error_msg = f"VALIDATION ERROR in Trip.save() for Trip {self.id} (attempted status: {status_being_saved}): {ve}"
+            logger.error(error_msg)
             self._log_message(stdout_writer_param, error_msg, 'ERROR')
             raise
         except Exception as e:
@@ -524,9 +329,7 @@ class Trip(models.Model):
 class LoadingCompartment(models.Model):
     trip = models.ForeignKey(Trip, related_name='requested_compartments', on_delete=models.CASCADE)
     compartment_number = models.PositiveIntegerField()
-    # This field stores the quantity from the initial Loading Authority
     quantity_requested_litres = models.DecimalField(max_digits=10, decimal_places=2)
-    # This field stores the actual L20 quantity from the BoL
     quantity_actual_l20 = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     temperature = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     density = models.DecimalField(max_digits=7, decimal_places=4, null=True, blank=True)
@@ -620,44 +423,49 @@ class UserProfile(models.Model):
         verbose_name = "User Profile"
         verbose_name_plural = "User Profiles"
 
-# Add this to shipments/models.py
 
 class TR830ProcessingState(models.Model):
-    """Model to store TR830 processing state when cache fails"""
-    chat_id = models.CharField(max_length=50, unique=True, db_index=True)
-    filename = models.CharField(max_length=255)
-    import_date = models.DateTimeField()
-    vessel = models.CharField(max_length=100)
-    product_type = models.CharField(max_length=50)
-    destination = models.CharField(max_length=100)
-    quantity = models.DecimalField(max_digits=15, decimal_places=2)
-    description = models.TextField()
-    step = models.CharField(max_length=20)  # 'supplier' or 'price'
-    user_id = models.IntegerField()
-    supplier = models.CharField(max_length=200, blank=True, null=True)
+    """Model to store TR830 processing state when users upload documents via Telegram"""
+    chat_id = models.CharField(max_length=50, unique=True, help_text="Telegram chat ID")
+    filename = models.CharField(max_length=255, help_text="Original filename of TR830 document")
+    import_date = models.DateTimeField(help_text="Import date extracted from TR830")
+    vessel = models.CharField(max_length=200, help_text="Vessel name from TR830")
+    product_type = models.CharField(max_length=50, help_text="Product type (AGO, PMS, etc.)")
+    destination = models.CharField(max_length=200, help_text="Destination from TR830")
+    quantity = models.DecimalField(max_digits=12, decimal_places=2, help_text="Quantity in litres")
+    description = models.TextField(help_text="Description from TR830")
+    step = models.CharField(max_length=20, choices=[
+        ('supplier', 'Waiting for Supplier'),
+        ('price', 'Waiting for Price'),
+    ], help_text="Current step in processing flow")
+    user = models.ForeignKey(User, on_delete=models.CASCADE, help_text="User processing this TR830")
+    supplier = models.CharField(max_length=200, blank=True, default='', help_text="Supplier name entered by user")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    
     class Meta:
-        ordering = ['-updated_at']
-
-    def to_dict(self):
-        """Convert to dictionary format for compatibility"""
-        return {
-            'filename': self.filename,
-            'import_date': self.import_date.isoformat(),
-            'vessel': self.vessel,
-            'product_type': self.product_type,
-            'destination': self.destination,
-            'quantity': str(self.quantity),
-            'description': self.description,
-            'step': self.step,
-            'user_id': self.user_id,
-            'supplier': self.supplier,
-        }
-
+        verbose_name = "TR830 Processing State"
+        verbose_name_plural = "TR830 Processing States"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['chat_id']),
+            models.Index(fields=['user', 'created_at']),
+        ]
+    
     def __str__(self):
-        return f"TR830 State {self.chat_id} - {self.step}"
+        return f"TR830 {self.filename} - Step: {self.step} - User: {self.user.username}"
+
+    def clean(self):
+        super().clean()
+        if self.quantity and self.quantity <= 0:
+            raise ValidationError('Quantity must be positive')
+        if not self.chat_id.strip():
+            raise ValidationError('Chat ID cannot be empty')
+            
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
 
 # Signal to create UserProfile automatically when User is created
 from django.db.models.signals import post_save

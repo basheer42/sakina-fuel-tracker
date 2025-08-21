@@ -1518,6 +1518,29 @@ def setup_admin(request):
         'example_url': '/setup-admin/?phone=+254703616091'
     })
 
+@csrf_exempt
+@require_http_methods(["POST", "GET"])
+def telegram_webhook(request):
+    """Django view to handle Telegram webhook"""
+    if request.method == 'GET':
+        return JsonResponse({'status': 'ok', 'message': 'Telegram webhook endpoint is active'})
+
+    if request.method == 'POST':
+        try:
+            webhook_data = json.loads(request.body.decode('utf-8'))
+
+            from .telegram_bot import TelegramBot
+            bot = TelegramBot()
+            result = bot.webhook_handler(webhook_data)
+
+            return JsonResponse(result)
+
+        except Exception as e:
+            import logging
+            logging.error(f"Error in telegram webhook view: {e}")
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
+
+    return JsonResponse({'status': 'error', 'message': 'Method not allowed'}, status=405)
 
 # --- Shipment Views ---
 @login_required

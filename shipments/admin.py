@@ -4,7 +4,8 @@ from django.db.models import Sum, DecimalField as DjangoDecimalField
 from decimal import Decimal
 from .models import (
     Shipment, Customer, Vehicle, Product, Destination,
-    Trip, LoadingCompartment, ShipmentDepletion, UserProfile
+    Trip, LoadingCompartment, ShipmentDepletion, UserProfile,
+    TR830ProcessingState
 )
 
 @admin.register(Destination)
@@ -126,3 +127,81 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_filter = ['created_at', 'department']
     search_fields = ['user__username', 'phone_number', 'telegram_chat_id']
     readonly_fields = ['created_at', 'updated_at']
+
+# Add this to your shipments/admin.py file
+
+@admin.register(TR830ProcessingState)
+class TR830ProcessingStateAdmin(admin.ModelAdmin):
+    list_display = [
+        'chat_id',
+        'filename',
+        'vessel',
+        'product_type',
+        'destination',
+        'step',
+        'user',
+        'created_at'
+    ]
+    list_filter = [
+        'step',
+        'product_type',
+        'destination',
+        'created_at',
+        'user'
+    ]
+    search_fields = [
+        'chat_id',
+        'filename',
+        'vessel',
+        'supplier',
+        'user__username'
+    ]
+    readonly_fields = [
+        'chat_id',
+        'filename',
+        'import_date',
+        'vessel',
+        'product_type',
+        'destination',
+        'quantity',
+        'description',
+        'user',
+        'created_at',
+        'updated_at'
+    ]
+
+    fieldsets = (
+        ('Document Info', {
+            'fields': ('filename', 'import_date', 'chat_id', 'user')
+        }),
+        ('TR830 Data', {
+            'fields': ('vessel', 'product_type', 'destination', 'quantity', 'description')
+        }),
+        ('Processing State', {
+            'fields': ('step', 'supplier')
+        }),
+        ('Timestamps', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        })
+    )
+
+    actions = ['clear_processing_states']
+
+    def clear_processing_states(self, request, queryset):
+        """Clear selected TR830 processing states"""
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(
+            request,
+            f"Successfully cleared {count} TR830 processing state(s)."
+        )
+    clear_processing_states.short_description = "Clear selected processing states"
+
+    def has_add_permission(self, request):
+        # Prevent manual creation - only via Telegram bot
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        # Only allow viewing, not editing
+        return False
