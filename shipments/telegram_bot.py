@@ -12,12 +12,14 @@ from django.core.cache import cache
 from django.db import transaction
 from django.contrib.auth.models import User
 from django.utils import timezone
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 class TelegramBot:
     def __init__(self):
-        self.bot_token = os.getenv('TELEGRAM_BOT_TOKEN')
+        # FIXED: Token loading to work with Django settings
+        self.bot_token = getattr(settings, 'TELEGRAM_BOT_TOKEN', '') or os.getenv('TELEGRAM_BOT_TOKEN')
         if not self.bot_token:
             raise ValueError("TELEGRAM_BOT_TOKEN not found in environment variables")
         
@@ -80,7 +82,7 @@ class TelegramBot:
             data = {
                 'chat_id': chat_id,
                 'text': text,
-                'parse_mode': 'Markdown'
+                'parse_mode': 'HTML'  # FIXED: Use HTML instead of Markdown to avoid parsing errors
             }
             response = requests.post(url, json=data)
             if response.status_code != 200:
@@ -158,11 +160,11 @@ class TelegramBot:
             user_context = self.get_user_context(chat_id)
             
             if not user_context.get('user_id'):
-                return f"""❌ *Registration Required*
+                return f"""❌ <b>Registration Required</b>
                 
 Please register your Telegram account in the system to upload documents.
 
-Contact your administrator to link your Telegram ID: `{chat_id}`"""
+Contact your administrator to link your Telegram ID: <code>{chat_id}</code>"""
             
             print(f"🔥 DEBUG: User context found: {user_context['username']}")
             
@@ -221,11 +223,11 @@ Contact your administrator to link your Telegram ID: `{chat_id}`"""
         if user_context.get('user_id'):
             return f"""👋 Welcome back, {username or 'there'}!
 
-🤖 *Sakina Gas Telegram Bot*
+🤖 <b>Sakina Gas Telegram Bot</b>
 
 I can help you with:
 📋 Upload loading authorities (PDF/images)
-📄 Process TR830 documents (PDF) - *Interactive mode*
+📄 Process TR830 documents (PDF) - <i>Interactive mode</i>
 📊 Check stock levels
 🚛 View trip status
 📈 Business summaries
@@ -234,9 +236,9 @@ Just send a document or use /help for commands."""
         else:
             return f"""👋 Hello {username or 'there'}!
 
-🤖 *Sakina Gas Telegram Bot*
+🤖 <b>Sakina Gas Telegram Bot</b>
 
-Your Telegram ID: `{chat_id}`
+Your Telegram ID: <code>{chat_id}</code>
 
 To get started, please contact your administrator to link this Telegram account to your system user account.
 
@@ -249,28 +251,28 @@ Once linked, you can:
 
     def _handle_help_command(self):
         """Handle /help command"""
-        return """🤖 *Sakina Gas Telegram Bot - Help*
+        return """🤖 <b>Sakina Gas Telegram Bot - Help</b>
 
-*Available Commands:*
+<b>Available Commands:</b>
 📄 Send PDF → Auto-detect document type
 📋 Loading Authority → Auto-create trips
-📄 TR830 Document → *Interactive processing*
-📊 `stock` → Current fuel inventory
-🚛 `trips` → Recent truck loadings
-📦 `shipments` → Latest arrivals
-📈 `summary` → Business dashboard
-❓ `/help` → Show this menu
-🏠 `/start` → Main menu
-❌ `/cancel` → Cancel current process
+📄 TR830 Document → <i>Interactive processing</i>
+📊 <code>stock</code> → Current fuel inventory
+🚛 <code>trips</code> → Recent truck loadings
+📦 <code>shipments</code> → Latest arrivals
+📈 <code>summary</code> → Business dashboard
+❓ <code>/help</code> → Show this menu
+🏠 <code>/start</code> → Main menu
+❌ <code>/cancel</code> → Cancel current process
 
-*TR830 Interactive Processing:*
+<b>TR830 Interactive Processing:</b>
 1. Upload TR830 PDF
 2. Bot parses vessel, product, quantity, destination
 3. You provide supplier name
 4. You provide price per litre
 5. Shipment created automatically
 
-*Quick Actions:*
+<b>Quick Actions:</b>
 • Send PDF documents for instant processing
 • Ask about stock levels by product
 • Check trip status by order number
@@ -303,11 +305,11 @@ Just send a document or type a command!"""
             return """ℹ️ I didn't understand your request.
 
 Try one of these:
-📊 Type `stock` for inventory levels
-🚛 Type `trips` for recent loadings
-📦 Type `shipments` for vessel arrivals
+📊 Type <code>stock</code> for inventory levels
+🚛 Type <code>trips</code> for recent loadings
+📦 Type <code>shipments</code> for vessel arrivals
 📄 Upload a TR830 PDF for processing
-❓ Use `/help` for all commands"""
+❓ Use <code>/help</code> for all commands"""
 
     def _handle_stock_query(self, user_context):
         """Handle stock/inventory queries"""
@@ -315,7 +317,7 @@ Try one of these:
             from .models import Shipment, Product
             
             products = Product.objects.all()
-            stock_info = "📊 *Current Stock Levels*\n\n"
+            stock_info = "📊 <b>Current Stock Levels</b>\n\n"
             
             for product in products:
                 total_quantity = sum(
@@ -325,7 +327,7 @@ Try one of these:
                         quantity_remaining__gt=0
                     )
                 )
-                stock_info += f"⛽ *{product.name}*: {total_quantity:,.0f}L\n"
+                stock_info += f"⛽ <b>{product.name}</b>: {total_quantity:,.0f}L\n"
             
             return stock_info or "📊 No stock information available."
             
@@ -345,14 +347,14 @@ Try one of these:
             if not recent_trips:
                 return "🚛 No recent trips found."
             
-            trips_info = "🚛 *Recent Trips*\n\n"
+            trips_info = "🚛 <b>Recent Trips</b>\n\n"
             for trip in recent_trips:
-                trips_info += f"📋 *Order:* {trip.kpc_order_number or 'N/A'}\n"
-                trips_info += f"⛽ *Product:* {trip.product.name}\n"
-                trips_info += f"📊 *Quantity:* {trip.quantity_loaded:,.0f}L\n"
-                trips_info += f"📅 *Date:* {trip.loading_date.strftime('%d/%m/%Y')}\n"
-                trips_info += f"🚛 *Vehicle:* {trip.vehicle.plate_number}\n"
-                trips_info += f"📍 *Status:* {trip.get_status_display()}\n\n"
+                trips_info += f"📋 <b>Order:</b> {trip.kpc_order_number or 'N/A'}\n"
+                trips_info += f"⛽ <b>Product:</b> {trip.product.name}\n"
+                trips_info += f"📊 <b>Quantity:</b> {trip.total_loaded:,.0f}L\n"
+                trips_info += f"📅 <b>Date:</b> {trip.loading_date.strftime('%d/%m/%Y')}\n"
+                trips_info += f"🚛 <b>Vehicle:</b> {trip.vehicle.plate_number}\n"
+                trips_info += f"📍 <b>Status:</b> {trip.status.title()}\n\n"
             
             return trips_info
             
@@ -370,12 +372,12 @@ Try one of these:
             if not recent_shipments:
                 return "📦 No recent shipments found."
             
-            shipments_info = "📦 *Recent Shipments*\n\n"
+            shipments_info = "📦 <b>Recent Shipments</b>\n\n"
             for shipment in recent_shipments:
-                shipments_info += f"🚢 *Vessel:* {shipment.vessel_id_tag}\n"
-                shipments_info += f"⛽ *Product:* {shipment.product.name}\n"
-                shipments_info += f"📊 *Remaining:* {shipment.quantity_remaining:,.0f}L\n"
-                shipments_info += f"📅 *Arrival:* {shipment.import_date.strftime('%d/%m/%Y')}\n\n"
+                shipments_info += f"🚢 <b>Vessel:</b> {shipment.vessel_id_tag}\n"
+                shipments_info += f"⛽ <b>Product:</b> {shipment.product.name}\n"
+                shipments_info += f"📊 <b>Remaining:</b> {shipment.quantity_remaining:,.0f}L\n"
+                shipments_info += f"📅 <b>Arrival:</b> {shipment.import_date.strftime('%d/%m/%Y')}\n\n"
             
             return shipments_info
             
@@ -448,7 +450,7 @@ Try one of these:
                 temp_path = tmp_file.name
             
             try:
-                # Parse the TR830 document using the parser
+                # Parse the TR830 document using existing parser method
                 import_date, entries = self.tr830_parser.parse_pdf(temp_path)
                 
                 if not entries:
@@ -456,37 +458,38 @@ Try one of these:
                 
                 print(f"🔥 DEBUG: Parsed {len(entries)} entries from TR830")
                 
-                # Store parsed data in cache for interactive processing
+                # Store parsed data in cache for interactive processing - FIXED ATTRIBUTES
                 tr830_data = {
                     'step': 'awaiting_supplier',
                     'filename': filename,
                     'import_date': import_date.isoformat(),
                     'entries': [
                         {
-                            'vessel': entry.vessel,
+                            'vessel': entry.marks,  # FIXED: Use marks attribute
                             'product_type': entry.product_type,
-                            'quantity': str(entry.quantity),
-                            'destination_name': entry.destination_name
+                            'quantity': str(entry.avalue),  # FIXED: Use avalue attribute
+                            'destination_name': entry.destination  # FIXED: Use destination attribute
                         } for entry in entries
                     ],
                     'user_id': user_context['user_id']
                 }
                 
-                self._save_tr830_state(chat_id, tr830_data)
+                # FIXED: Use longer timeout and better cache key
+                self._save_tr830_state(chat_id, tr830_data, timeout=7200)  # 2 hours
                 
-                # Create initial response with parsed data
-                response = "✅ *TR830 Document Parsed Successfully!*\n\n"
-                response += f"📄 *File:* {filename}\n"
-                response += f"📅 *Import Date:* {import_date.strftime('%d/%m/%Y')}\n\n"
+                # Create initial response with parsed data - FIXED ATTRIBUTES AND HTML
+                response = "✅ <b>TR830 Document Parsed Successfully!</b>\n\n"
+                response += f"📄 <b>File:</b> {filename}\n"
+                response += f"📅 <b>Import Date:</b> {import_date.strftime('%d/%m/%Y')}\n\n"
                 
-                response += "*🚢 Parsed Shipment Data:*\n"
+                response += "<b>🚢 Parsed Shipment Data:</b>\n"
                 for i, entry in enumerate(entries, 1):
-                    response += f"{i}. *Vessel:* {entry.vessel}\n"
-                    response += f"   *Product:* {entry.product_type}\n"
-                    response += f"   *Quantity:* {entry.quantity:,.0f}L\n"
-                    response += f"   *Destination:* {entry.destination_name}\n\n"
+                    response += f"{i}. <b>Vessel:</b> {entry.marks}\n"  # FIXED: Use marks
+                    response += f"   <b>Product:</b> {entry.product_type}\n"
+                    response += f"   <b>Quantity:</b> {entry.avalue:,.0f}L\n"  # FIXED: Use avalue
+                    response += f"   <b>Destination:</b> {entry.destination}\n\n"  # FIXED: Use destination
                 
-                response += "🏭 *Step 1: Please provide the supplier name*\n"
+                response += "🏭 <b>Step 1: Please provide the supplier name</b>\n"
                 response += "Type the supplier company name (e.g., 'Kuwait Petroleum Corporation'):"
                 
                 return response
@@ -506,17 +509,19 @@ Try one of these:
         try:
             current_step = tr830_state.get('step')
             print(f"🔥 DEBUG: Handling TR830 input for step: {current_step}")
+            print(f"🔥 DEBUG: Current state: {tr830_state}")
             
             if current_step == 'awaiting_supplier':
                 # User provided supplier name
                 tr830_state['supplier'] = message_text.strip()
                 tr830_state['step'] = 'awaiting_price'
                 
-                self._save_tr830_state(chat_id, tr830_state)
+                # FIXED: Use longer timeout to prevent state loss
+                self._save_tr830_state(chat_id, tr830_state, timeout=7200)
                 
-                return f"""✅ *Supplier Set:* {message_text}
+                return f"""✅ <b>Supplier Set:</b> {message_text}
 
-💰 *Step 2: Please provide the price per litre*
+💰 <b>Step 2: Please provide the price per litre</b>
 Type the price in USD (e.g., '0.65' for $0.65 per litre):"""
             
             elif current_step == 'awaiting_price':
@@ -547,6 +552,7 @@ Type the price in USD (e.g., '0.65' for $0.65 per litre):"""
         """Create shipment from TR830 data"""
         try:
             print(f"🔥 DEBUG: Creating TR830 shipment")
+            print(f"🔥 DEBUG: State data: {tr830_state}")
             
             from .models import Shipment, Product, Destination
             
@@ -554,6 +560,7 @@ Type the price in USD (e.g., '0.65' for $0.65 per litre):"""
             price_per_litre = Decimal(tr830_state['price_per_litre'])
             import_date = datetime.fromisoformat(tr830_state['import_date'])
             entries = tr830_state['entries']
+            user = User.objects.get(id=tr830_state['user_id'])
             
             created_shipments = []
             
@@ -570,21 +577,19 @@ Type the price in USD (e.g., '0.65' for $0.65 per litre):"""
                     # Get or create destination
                     destination, _ = Destination.objects.get_or_create(name=destination_name)
                     
-                    # Calculate total cost
-                    total_cost = quantity * price_per_litre
-                    
-                    # Create shipment
+                    # FIXED: Create shipment WITHOUT total_cost (it's calculated automatically)
                     shipment = Shipment.objects.create(
+                        user=user,
                         vessel_id_tag=vessel,
-                        supplier=supplier,
+                        supplier_name=supplier,  # FIXED: Use correct field name
                         product=product,
                         destination=destination,
-                        quantity_loaded=quantity,
+                        quantity_litres=quantity,  # FIXED: Use correct field name
                         quantity_remaining=quantity,
                         price_per_litre=price_per_litre,
-                        total_cost=total_cost,
                         import_date=import_date,
                         notes=f"Created via Telegram Bot from {tr830_state['filename']}"
+                        # REMOVED: total_cost - it's calculated automatically as a property
                     )
                     
                     created_shipments.append(shipment)
@@ -597,25 +602,25 @@ Type the price in USD (e.g., '0.65' for $0.65 per litre):"""
             # Create success response
             if len(created_shipments) == 1:
                 shipment = created_shipments[0]
-                response_msg = f"🎉 *Shipment Created Successfully!*\n\n"
-                response_msg += f"🆔 *Shipment ID:* {shipment.id}\n"
-                response_msg += f"🚢 *Vessel:* {vessel}\n"
-                response_msg += f"🏭 *Supplier:* {supplier}\n"
-                response_msg += f"⛽ *Product:* {product_type}\n"
-                response_msg += f"🌍 *Destination:* {destination_name}\n"
-                response_msg += f"📊 *Quantity:* {quantity:,.0f}L\n"
-                response_msg += f"💰 *Price:* ${price_per_litre}/L\n"
-                response_msg += f"💸 *Total Cost:* ${total_cost:,.2f}\n"
-                response_msg += f"📅 *Import Date:* {import_date.strftime('%d/%m/%Y')}\n\n"
+                response_msg = f"🎉 <b>Shipment Created Successfully!</b>\n\n"
+                response_msg += f"🆔 <b>Shipment ID:</b> {shipment.id}\n"
+                response_msg += f"🚢 <b>Vessel:</b> {vessel}\n"
+                response_msg += f"🏭 <b>Supplier:</b> {supplier}\n"
+                response_msg += f"⛽ <b>Product:</b> {product_type}\n"
+                response_msg += f"🌍 <b>Destination:</b> {destination_name}\n"
+                response_msg += f"📊 <b>Quantity:</b> {quantity:,.0f}L\n"
+                response_msg += f"💰 <b>Price:</b> ${price_per_litre}/L\n"
+                response_msg += f"💸 <b>Total Cost:</b> ${shipment.total_cost:,.2f}\n"  # Use calculated property
+                response_msg += f"📅 <b>Import Date:</b> {import_date.strftime('%d/%m/%Y')}\n\n"
                 response_msg += f"🎉 The shipment has been added to your inventory!"
             else:
-                response_msg = f"🎉 *{len(created_shipments)} Shipments Created Successfully!*\n\n"
+                response_msg = f"🎉 <b>{len(created_shipments)} Shipments Created Successfully!</b>\n\n"
                 total_value = sum(s.total_cost for s in created_shipments)
-                total_quantity = sum(s.quantity_loaded for s in created_shipments)
-                response_msg += f"🏭 *Supplier:* {supplier}\n"
-                response_msg += f"📊 *Total Quantity:* {total_quantity:,.0f}L\n"
-                response_msg += f"💸 *Total Value:* ${total_value:,.2f}\n"
-                response_msg += f"📅 *Import Date:* {import_date.strftime('%d/%m/%Y')}\n\n"
+                total_quantity = sum(s.quantity_litres for s in created_shipments)  # FIXED: Use quantity_litres
+                response_msg += f"🏭 <b>Supplier:</b> {supplier}\n"
+                response_msg += f"📊 <b>Total Quantity:</b> {total_quantity:,.0f}L\n"
+                response_msg += f"💸 <b>Total Value:</b> ${total_value:,.2f}\n"
+                response_msg += f"📅 <b>Import Date:</b> {import_date.strftime('%d/%m/%Y')}\n\n"
                 response_msg += f"🎉 All shipments have been added to your inventory!"
                 
             return response_msg
@@ -634,18 +639,28 @@ Type the price in USD (e.g., '0.65' for $0.65 per litre):"""
             cache_key = f"tr830_state_{chat_id}"
             state = cache.get(cache_key)
             print(f"🔥 DEBUG: Retrieved TR830 state for {chat_id}: {state is not None}")
+            if state:
+                print(f"🔥 DEBUG: State details: step={state.get('step')}, keys={list(state.keys())}")
             return state
         except Exception as e:
             print(f"🔥 DEBUG: Error getting TR830 state: {e}")
             logger.error(f"Error getting TR830 state: {e}")
             return None
 
-    def _save_tr830_state(self, chat_id, state_data):
+    def _save_tr830_state(self, chat_id, state_data, timeout=3600):
         """Save TR830 processing state for user"""
         try:
             cache_key = f"tr830_state_{chat_id}"
-            cache.set(cache_key, state_data, timeout=3600)  # 1 hour timeout
-            print(f"🔥 DEBUG: Saved TR830 state for {chat_id}: step={state_data.get('step')}")
+            cache.set(cache_key, state_data, timeout=timeout)
+            print(f"🔥 DEBUG: Saved TR830 state for {chat_id}: step={state_data.get('step')} (timeout={timeout}s)")
+            
+            # Verify it was saved
+            verify_state = cache.get(cache_key)
+            if verify_state:
+                print(f"🔥 DEBUG: State save verified successfully")
+            else:
+                print(f"🔥 DEBUG: WARNING: State save verification failed!")
+                
         except Exception as e:
             print(f"🔥 DEBUG: Error saving TR830 state: {e}")
             logger.error(f"Error saving TR830 state: {e}")
