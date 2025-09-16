@@ -1,9 +1,9 @@
+# shipments/views.py
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 import json
-# shipments/views.py
-import datetime
+from datetime import datetime as dt
 import logging
 import os
 import re
@@ -152,7 +152,7 @@ def get_user_accessible_trips(user):
 def validate_file_upload(uploaded_file, max_size_mb=None, allowed_extensions=None):
     """Validate uploaded file for security and size constraints."""
     if max_size_mb is None:
-        max_size_mb = getattr(settings, 'FUEL_TRACKER_SETTINGS', {}).get('MAX_FILE_UPLOAD_SIZE_MB', MAX_PDF_SIZE_MB)
+        max_size_mb = MAX_PDF_SIZE_MB
 
     max_size_bytes = max_size_mb * 1024 * 1024
 
@@ -173,6 +173,7 @@ def validate_file_upload(uploaded_file, max_size_mb=None, allowed_extensions=Non
         uploaded_file.seek(0)
 
     return True
+
 
 
 # --- PDF Parsing Functions ---
@@ -221,115 +222,78 @@ def parse_pdf_fields(text_content):
         # Parse DATE
         date_patterns = [
             r"DATE\s*[:\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})",
-            r"Delivery Date\s*[:\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})", # More specific for BoL
-            r"(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})",
+            r"Delivery Date\s*[:\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})",
+            r"Loading Date\s*[:\-]?\s*(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})",
+            r"(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{4})"
         ]
-
-        # Define the order of date formats to try
-        # You mentioned wanting MM/DD/YYYY for loading authorities.
-        # BoL shows DD.MM.YYYY. Let's make the list comprehensive.
-        date_formats_to_try = [
-            '%m/%d/%Y',  # MM/DD/YYYY (e.g., 06/11/2025 for June 11) - Your preferred for LA
-            '%d.%m.%Y',  # DD.MM.YYYY (e.g., 11.06.2025 for June 11) - Seen on BoL
-            '%d/%m/%Y',  # DD/MM/YYYY (e.g., 11/06/2025 for June 11)
-            '%m.%d.%Y',  # MM.DD.YYYY
-            '%m-%d-%Y',  # MM-DD-YYYY
-            '%d-%m-%Y',  # DD-MM-YYYY
-            '%Y-%m-%d',  # YYYY-MM-DD (ISO)
-        ]
-
-        extracted_date_str = None # To store the string that successfully matched a pattern
 
         for pattern in date_patterns:
             match = re.search(pattern, text_content, re.IGNORECASE)
             if match:
-                # A pattern might have multiple groups, we usually want the one with the date.
-                # If the pattern is just (\d{1,2}...), group(1) will be the date.
-                # If it's "DATE\s*:\s*(\d{1,2}...), group(1) is also the date.
-                # Iterate through groups if necessary, or make regex more specific.
-                # For simplicity, assuming the first relevant group contains the date string.
-                if len(match.groups()) > 0:
-                    extracted_date_str = match.group(1) # Get the captured date string
-                    logger.info(f"Date pattern '{pattern}' matched. Extracted date string: '{extracted_date_str}'")
-                    break # Found a date string with a pattern
+                date_str = match.group(1)
+                logger.info(f"Date pattern '{pattern}' matched. Extracted date string: '{date_str}'")
 
-        if extracted_date_str:
-            parsed_successfully = False
-            for fmt in date_formats_to_try:
-                try:
-                    parsed_date_obj = datetime.datetime.strptime(extracted_date_str, fmt).date()
+                # Try different date formats
+                date_formats = [
+                    '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d',
+                    '%m-%d-%Y', '%d-%m-%Y', '%Y-%m-%d',
+                    '%m.%d.%Y', '%d.%m.%Y', '%Y.%m.%d'
+                ]
 
-                    # MIN_DATE and MAX_DATE validation
-                    # MAX_DATE = datetime.date.today() + datetime.timedelta(days=365*2) # Allow up to 2 years from today for MAX_DATE
-                    # MIN_DATE = datetime.date(2000, 1, 1)
-                    if MIN_DATE <= parsed_date_obj <= MAX_DATE: # Ensure MIN_DATE and MAX_DATE are defined
-                        extracted['loading_date'] = parsed_date_obj
-                        logger.info(f"Successfully parsed date: {extracted['loading_date']} using format {fmt} from string '{extracted_date_str}'")
-                        parsed_successfully = True
-                        break # Break from inner loop (formats)
-                    else:
-                        logger.warning(f"Date '{extracted_date_str}' with format {fmt} parsed to {parsed_date_obj}, but it's outside MIN/MAX range ({MIN_DATE} to {MAX_DATE}).")
-                except ValueError:
-                    continue
-            if not parsed_successfully:
-                 logger.error(f"Could not parse the extracted date string '{extracted_date_str}' with any of the known formats.")
+                for date_format in date_formats:
+                    try:
+                        parsed_date = datetime.strptime(date_str, date_format).date()
+                        if REASONABLE_YEAR_RANGE[0] <= parsed_date.year <= REASONABLE_YEAR_RANGE[1]:
+                            extracted['loading_date'] = parsed_date
+                            logger.info(f"Successfully parsed date: {parsed_date} using format {date_format} from string '{date_str}'")
+                            break
+                    except ValueError:
+                        continue
 
-        if 'loading_date' not in extracted:
-            logger.warning(f"Could not parse a valid date from PDF content. Text snippet for date search: {text_content[:300]}")
-
-        # Parse PRODUCT
-        product_mapping = {
-            'PMS': 'PMS',
-            'AGO': 'AGO',
-            'DIESEL': 'AGO'
-        }
-
-        for keyword, product_name in product_mapping.items():
-            if keyword in text_content.upper():
-                extracted['product_name'] = product_name
-                logger.info(f"Found product: {product_name} (from {keyword})")
-                break
-
-        # Parse CUSTOMER/CLIENT
-        client_patterns = [
-            r"CLIENT\s*[:\-]?\s*([A-Z][A-Z\s\-&\.]+?)(?=\s+TRANSPORTER)",
-            r"CLIENT\s*[:\-]?\s*([A-Z][A-Z\s\-&\.]+?)(?=\s+ORDER)",
-            r"CLIENT\s*[:\-]?\s*([A-Z][A-Z\s\-&\.]+?)(?=\s+DEPOT)",
-            r"CLIENT\s*[:\-]?\s*([A-Z][A-Z\s\-&\.]+?)(?=\s*$)",
-            r"CLIENT\s*[:\-]?\s*([A-Z\s\-&\.]{3,40})",
-            r"CUSTOMER\s*[:\-]?\s*([A-Z][A-Z\s\-&\.]+?)(?=\s+TRANSPORTER)",
-            r"CUSTOMER\s*[:\-]?\s*([A-Z\s\-&\.]{3,40})",
-        ]
-
-        for pattern in client_patterns:
-            matches = re.findall(pattern, text_content, re.IGNORECASE)
-            if matches:
-                client = matches[0].strip()
-                client = re.sub(r'\s+', ' ', client)
-                if len(client) >= 3:
-                    extracted['customer_name'] = client.upper()
-                    logger.info(f"Found customer: {extracted['customer_name']}")
+                if 'loading_date' in extracted:
                     break
 
-        # Fallback for customer
-        if 'customer_name' not in extracted:
-            company_patterns = ['BRIDGE', 'PETROLEUM', 'ENERGY', 'OIL', 'GAS']
-            for company in company_patterns:
-                if company in text_content.upper():
-                    company_match = re.search(rf'{company}[A-Z\s]*', text_content, re.IGNORECASE)
-                    if company_match:
-                        extracted['customer_name'] = company_match.group(0).strip().upper()
-                        logger.info(f"Found company pattern: {extracted['customer_name']}")
-                        break
+        # Parse PRODUCT
+        product_patterns = [
+            r"\b(PMS)\b",
+            r"\b(AGO)\b",
+            r"\b(DIESEL)\b",
+            r"PRODUCT\s*[:\-]?\s*(PMS|AGO|DIESEL)",
+            r"FUEL\s*[:\-]?\s*(PMS|AGO|DIESEL)",
+        ]
 
-        # Parse QUANTITY AND COMPARTMENTS
-        _parse_quantity_and_compartments(text_content, extracted)
+        for pattern in product_patterns:
+            match = re.search(pattern, text_content, re.IGNORECASE)
+            if match:
+                product = match.group(1).upper()
+                extracted['product_name'] = product
+                logger.info(f"Found product: {product} (from {match.group(0)})")
+                break
+
+        # Parse CUSTOMER/COMPANY
+        customer_patterns = [
+            r"([A-Z]+\s+[A-Z]+(?:\s+[A-Z]+)*)\s+OORRDDEERR\s+NNUUMMBBEERR",
+            r"CUSTOMER\s*[:\-]?\s*([A-Z][A-Z\s]+?)(?=\s+ORDER|\s+PRODUCT|\s+DATE)",
+            r"COMPANY\s*[:\-]?\s*([A-Z][A-Z\s]+?)(?=\s+ORDER|\s+PRODUCT|\s+DATE)",
+            r"([A-Z]{2,}\s+[A-Z]{2,}(?:\s+[A-Z]{2,})*)\s+(?:ORDER|PRODUCT|DATE)",
+        ]
+
+        for pattern in customer_patterns:
+            matches = re.findall(pattern, text_content, re.IGNORECASE)
+            if matches:
+                customer = matches[0].strip()
+                customer = re.sub(r'\s+', ' ', customer)
+                if len(customer) >= 3 and not re.match(r'^(ORDER|PRODUCT|DATE|TRUCK|VEHICLE)', customer, re.IGNORECASE):
+                    extracted['customer_name'] = customer.upper()
+                    if 'OORRDDEERR' in pattern:
+                        logger.info(f"Found company pattern: {customer}")
+                    else:
+                        logger.info(f"Found customer: {customer}")
+                    break
 
         # Parse DESTINATION
         dest_patterns = [
-            r"DESTINATION\s*[:\-]?\s*(SOUTH\s+SUDAN)",
-            r"DESTINATION\s*[:\-]?\s*(DRC\s+CONGO)",
-            r"DESTINATION\s*[:\-]?\s*([A-Z][A-Z\s\-]+?)(?=\s+ID\s+NO)",
+            r"DESTINATION\s*[:\-]?\s*([A-Z\s\-]{3,25})(?=\s+ID\s+NO)",
             r"DESTINATION\s*[:\-]?\s*([A-Z\s\-]{3,25})(?=\s+ID|\s+TRUCK)",
         ]
 
@@ -359,6 +323,9 @@ def parse_pdf_fields(text_content):
                     logger.info(f"Found truck: {extracted['truck_plate']}")
                     break
 
+
+        _parse_quantity_and_compartments(text_content, extracted)
+
     except Exception as e:
         logger.error(f"Error in PDF parsing: {e}", exc_info=True)
 
@@ -368,11 +335,21 @@ def parse_pdf_fields(text_content):
 
 def _parse_quantity_and_compartments(text_content, extracted):
     """Helper function to parse quantity and compartment data."""
+    # Enhanced quantity patterns to handle various formats including the special character issue
     quantity_patterns = [
-        r"(?:PMS|AGO|DIESEL)\s+([\d\.]+)\s*mÂ³",
-        r"QUANTITY\s+([\d\.]+)\s*mÂ³",
-        r"TOTAL\s+([\d\.]+)\s*mÂ³",
-        r"([\d\.]+)\s*mÂ³"
+        r"(?:PMS|AGO|DIESEL)\s+([\d\.]+)\s*m[Ââ³³]",  # Handle special characters in m³
+        r"QUANTITY\s+([\d\.]+)\s*m[Ââ³³]",
+        r"TOTAL\s+([\d\.]+)\s*m[Ââ³³]",
+        r"([\d\.]+)\s*m[Ââ³³]",
+        r"(?:PMS|AGO|DIESEL)\s+([\d\.]+)\s*m³",  # Standard m³
+        r"QUANTITY\s+([\d\.]+)\s*m³",
+        r"TOTAL\s+([\d\.]+)\s*m³",
+        r"([\d\.]+)\s*m³",
+        r"(?:PMS|AGO|DIESEL)\s+([\d\.]+)\s*CUBIC",  # Alternative patterns
+        r"QUANTITY\s+([\d\.]+)\s*CUBIC",
+        r"TOTAL\s+([\d\.]+)\s*CUBIC",
+        r"VOL(?:UME)?\s*[:\-]?\s*([\d\.]+)",
+        r"QTY\s*[:\-]?\s*([\d\.]+)",
     ]
 
     quantity_found = False
@@ -383,14 +360,27 @@ def _parse_quantity_and_compartments(text_content, extracted):
                 qty_m3 = Decimal(match.group(1))
                 if Decimal('1') <= qty_m3 <= Decimal('100'):
                     extracted['total_quantity_litres'] = qty_m3 * Decimal('1000')
-                    logger.info(f"Found quantity: {qty_m3} mÂ³ = {extracted['total_quantity_litres']} litres")
+                    logger.info(f"Found quantity: {qty_m3} m³ = {extracted['total_quantity_litres']} litres")
                     quantity_found = True
                     break
             except (ValueError, InvalidOperation):
                 continue
 
-    # Look for compartment breakdown
-    compartment_match = re.search(r"COMPARTMENT.*?(\d{1,2}:\d{1,2}:\d{1,2})", text_content, re.IGNORECASE)
+    # Enhanced compartment patterns
+    compartment_patterns = [
+        r"COMPARTMENT.*?(\d{1,2}:\d{1,2}:\d{1,2})",
+        r"COMP.*?(\d{1,2}:\d{1,2}:\d{1,2})",
+        r"(\d{1,2}:\d{1,2}:\d{1,2})\s*m[Ââ³³]",
+        r"(\d{1,2}:\d{1,2}:\d{1,2})\s*m³",
+        r"(\d{1,2}:\d{1,2}:\d{1,2})",  # Generic pattern as fallback
+    ]
+
+    compartment_match = None
+    for pattern in compartment_patterns:
+        compartment_match = re.search(pattern, text_content, re.IGNORECASE)
+        if compartment_match:
+            break
+
     if compartment_match:
         compartment_str = compartment_match.group(1)
         logger.info(f"Found compartment string: {compartment_str}")
@@ -400,15 +390,16 @@ def _parse_quantity_and_compartments(text_content, extracted):
             compartment_volumes = []
 
             for part in compartment_parts:
-                if part.strip().isdigit():
-                    vol = Decimal(part.strip())
+                part = part.strip()
+                if part.isdigit():
+                    vol = Decimal(part)
                     if Decimal('1') <= vol <= Decimal('50'):
                         compartment_volumes.append(vol * Decimal('1000'))
 
             if compartment_volumes:
                 extracted['compartment_quantities_litres'] = compartment_volumes
                 compartment_total = sum(compartment_volumes)
-                logger.info(f"Found compartments: {compartment_parts} mÂ³ = {compartment_volumes} litres")
+                logger.info(f"Found compartments: {compartment_parts} m³ = {compartment_volumes} litres")
 
                 if not quantity_found:
                     extracted['total_quantity_litres'] = compartment_total
@@ -416,6 +407,29 @@ def _parse_quantity_and_compartments(text_content, extracted):
 
         except (ValueError, InvalidOperation) as e:
             logger.warning(f"Error parsing compartments '{compartment_str}': {e}")
+
+    # If no quantity found at all, try alternative fallback patterns
+    if not quantity_found and 'total_quantity_litres' not in extracted:
+        fallback_patterns = [
+            r"(\d{2,5})\s*L",  # Direct litre values
+            r"(\d{2,5})\s*LITR",
+            r"(\d{2,5})\s*LTR",
+            r"TOTAL.*?(\d{2,5})",
+            r"SUM.*?(\d{2,5})",
+        ]
+
+        for pattern in fallback_patterns:
+            match = re.search(pattern, text_content, re.IGNORECASE)
+            if match:
+                try:
+                    qty_litres = Decimal(match.group(1))
+                    if Decimal('1000') <= qty_litres <= Decimal('100000'):  # Reasonable litre range
+                        extracted['total_quantity_litres'] = qty_litres
+                        logger.info(f"Found quantity (fallback): {qty_litres} litres")
+                        break
+                except (ValueError, InvalidOperation):
+                    continue
+
 
 
 def parse_loading_authority_pdf(pdf_file_obj, request_for_messages=None):
